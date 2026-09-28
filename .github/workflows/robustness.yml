@@ -11,8 +11,8 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  # The scanner depends on the C library (e.g. `iswalpha`), and the Rust binding compiles it natively, so the
-  # tests run on other common platforms too; the Test workflow covers ubuntu-latest.
+  # The tests compile the parser and scanner natively against each platform's C library, which the scanner
+  # depends on (e.g. `iswspace`), so they run on other common platforms too; the Test workflow covers ubuntu-latest.
   test:
     strategy:
       fail-fast: false
