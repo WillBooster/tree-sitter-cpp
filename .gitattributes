@@ -41,3 +41,5 @@ dist/** linguist-generated=true
 src/*.json linguist-generated
 src/parser.c linguist-generated
 src/tree_sitter/* linguist-generated
+Cargo.lock linguist-generated
+bun.lock linguist-generated

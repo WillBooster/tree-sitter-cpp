@@ -12,3 +12,5 @@ ignore_patterns:
   - 'src/*.json'
   - 'src/parser.c'
   - 'src/tree_sitter/**'
+  - 'Cargo.lock'
+  - 'bun.lock'

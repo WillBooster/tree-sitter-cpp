@@ -7,5 +7,11 @@
       "matchPackageNames": ["tree-sitter-cli", "web-tree-sitter"],
       "groupName": "tree-sitter",
     },
+    {
+      // grammar.js extends tree-sitter-c, so a bump changes the generated parser; it is pinned to the version
+      // upstream's package-lock.json resolved.
+      "matchPackageNames": ["tree-sitter-c"],
+      "enabled": false,
+    },
   ],
 }
