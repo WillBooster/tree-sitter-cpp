@@ -31,7 +31,8 @@ jobs:
       - run: bun run build/ci
       # The packages ship the committed src/, so it must match what tree-sitter generate writes from grammar.js
       # with the pinned tree-sitter-cli and tree-sitter-c, which the tests below exercise.
-      - run: git diff --exit-code -- src/
+      # `git add -N` makes files that generate adds but nobody committed show up in the diff too.
+      - run: git add --intent-to-add -- src/ && git diff --exit-code -- src/
       - run: bun run test/ci
   # Runs the parser under libFuzzer with AddressSanitizer and UndefinedBehaviorSanitizer, seeded with the
   # input of each corpus case. A grammar change alters which tokens the scanner is asked for, so it runs
