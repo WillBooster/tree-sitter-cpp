@@ -28,3 +28,7 @@ trim_trailing_whitespace = unset
 [*.{scm,toml}]
 indent_size = 2
 indent_style = space
+
+[*.{c,cc,h,rs}]
+indent_size = 4
+indent_style = space
