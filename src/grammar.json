@@ -10051,7 +10051,7 @@
             "members": [
               {
                 "type": "PATTERN",
-                "value": "[-\\+]"
+                "value": "[-+]"
               },
               {
                 "type": "BLANK"
@@ -10303,7 +10303,7 @@
                                 "members": [
                                   {
                                     "type": "PATTERN",
-                                    "value": "[-\\+]"
+                                    "value": "[-+]"
                                   },
                                   {
                                     "type": "BLANK"
@@ -10437,7 +10437,7 @@
                                     "members": [
                                       {
                                         "type": "PATTERN",
-                                        "value": "[-\\+]"
+                                        "value": "[-+]"
                                       },
                                       {
                                         "type": "BLANK"
@@ -10537,7 +10537,7 @@
                                     "members": [
                                       {
                                         "type": "PATTERN",
-                                        "value": "[-\\+]"
+                                        "value": "[-+]"
                                       },
                                       {
                                         "type": "BLANK"
@@ -10767,7 +10767,7 @@
                                 "members": [
                                   {
                                     "type": "PATTERN",
-                                    "value": "[-\\+]"
+                                    "value": "[-+]"
                                   },
                                   {
                                     "type": "BLANK"
