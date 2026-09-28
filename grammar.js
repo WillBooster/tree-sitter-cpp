@@ -750,6 +750,7 @@ module.exports = grammar(C, {
         '<',
         commaSep(
           choice(
+            prec.dynamic(3, alias($._template_argument_type_identifier, $.type_descriptor)),
             prec.dynamic(3, $.type_descriptor),
             prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
             prec.dynamic(1, $.expression)
@@ -757,6 +758,12 @@ module.exports = grammar(C, {
         ),
         alias(token(prec(1, '>')), '>')
       ),
+
+    // A lone identifier as a template argument is resolved to a type statically instead of by GLR with
+    // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
+    // an earlier error recovery, tree-sitter's version limit dropped the type interpretation, and incremental
+    // parsing then reused that subtree after the error was gone.
+    _template_argument_type_identifier: ($) => prec(1, field('type', $._type_identifier)),
 
     namespace_definition: ($) =>
       seq(

@@ -14186,6 +14186,19 @@
                       "type": "PREC_DYNAMIC",
                       "value": 3,
                       "content": {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_template_argument_type_identifier"
+                        },
+                        "named": true,
+                        "value": "type_descriptor"
+                      }
+                    },
+                    {
+                      "type": "PREC_DYNAMIC",
+                      "value": 3,
+                      "content": {
                         "type": "SYMBOL",
                         "name": "type_descriptor"
                       }
@@ -14225,6 +14238,19 @@
                       {
                         "type": "CHOICE",
                         "members": [
+                          {
+                            "type": "PREC_DYNAMIC",
+                            "value": 3,
+                            "content": {
+                              "type": "ALIAS",
+                              "content": {
+                                "type": "SYMBOL",
+                                "name": "_template_argument_type_identifier"
+                              },
+                              "named": true,
+                              "value": "type_descriptor"
+                            }
+                          },
                           {
                             "type": "PREC_DYNAMIC",
                             "value": 3,
@@ -14283,6 +14309,18 @@
           "value": ">"
         }
       ]
+    },
+    "_template_argument_type_identifier": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "FIELD",
+        "name": "type",
+        "content": {
+          "type": "SYMBOL",
+          "name": "_type_identifier"
+        }
+      }
     },
     "namespace_definition": {
       "type": "SEQ",
