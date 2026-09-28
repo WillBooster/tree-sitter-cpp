@@ -42,8 +42,8 @@ jobs:
       - run: |
           mkdir -p .tmp/fuzz-seeds
           awk -v dir=.tmp/fuzz-seeds '
-            state != 2 && /^=+$/ { if (++state == 2) file = sprintf("%s/%d", dir, ++n); next }
-            state == 2 && /^---+$/ { state = 0; close(file); next }
+            state != 2 && /^=+\r?$/ { if (++state == 2) file = sprintf("%s/%d", dir, ++n); next }
+            state == 2 && /^---+\r?$/ { state = 0; close(file); next }
             state == 2 { print > file }
           ' $(find test/corpus -name '*.txt' | LC_ALL=C sort)
       - uses: tree-sitter/fuzz-action@v4
