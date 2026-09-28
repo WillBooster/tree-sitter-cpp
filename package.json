@@ -15,7 +15,6 @@
   "license": "MIT",
   "author": "WillBooster Inc.",
   "files": [
-    "grammar.js",
     "tree-sitter.json",
     "src/node-types.json",
     "*.wasm"

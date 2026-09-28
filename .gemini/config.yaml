@@ -9,4 +9,6 @@ code_review:
     code_review: true
 ignore_patterns:
   - '**/__generated__'
-  - 'src/**'
+  - 'src/*.json'
+  - 'src/parser.c'
+  - 'src/tree_sitter/**'
