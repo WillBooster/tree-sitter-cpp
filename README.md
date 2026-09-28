@@ -69,7 +69,7 @@ cargo test --locked
   linear time, since consumers parse files while they are being edited. It loads the Wasm build through
   web-tree-sitter, which `bun run build/ci` rebuilds after regenerating the parser.
 
-CI also runs these tests on Linux arm64 and macOS, where the Rust binding compiles the parser natively, and fuzzes the parser with libFuzzer and sanitizers
+CI also runs these tests on Linux arm64 and macOS, where the parser and scanner are compiled natively against each platform's C library, and fuzzes the parser with libFuzzer and sanitizers
 (`.github/workflows/robustness.yml`).
 
 ### References
