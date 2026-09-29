@@ -1,8 +1,6 @@
 * text=auto
 
 .gitignore -text
-# The corpus case tests CRLF line endings.
-test/corpus/c/crlf.txt -text
 
 *.lockb binary diff=lockb
 *.vcproj text eol=crlf
@@ -37,9 +35,3 @@ test/corpus/c/crlf.txt -text
 *.md text eol=lf
 
 dist/** linguist-generated=true
-
-src/*.json linguist-generated
-src/parser.c linguist-generated
-src/tree_sitter/* linguist-generated
-Cargo.lock linguist-generated
-bun.lock linguist-generated
