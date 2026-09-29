@@ -1,0 +1,3 @@
+# The corpus case tests input with CRLF line endings, so git must keep them. Kept here because
+# wbfy regenerates the root .gitattributes.
+crlf.txt -text
