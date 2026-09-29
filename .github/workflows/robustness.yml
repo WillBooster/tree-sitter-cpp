@@ -33,6 +33,7 @@ jobs:
       # with the pinned tree-sitter-cli and tree-sitter-c, which the tests below exercise.
       # `git add -N` makes files that generate adds but nobody committed show up in the diff too.
       - run: git add --intent-to-add -- src/ && git diff --exit-code -- src/
+      - run: bun run test/ci-setup
       - run: bun run test/ci
   # Runs the parser under libFuzzer with AddressSanitizer and UndefinedBehaviorSanitizer, seeded with the
   # input of each corpus case. A grammar change alters which tokens the scanner is asked for, so it runs
