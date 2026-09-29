@@ -968,11 +968,23 @@ module.exports = grammar(C, {
           'new',
           field('placement', optional($.argument_list)),
           field('type', $.type_specifier),
-          field('declarator', optional($.new_declarator)),
+          field('declarator', optional($._new_declarator)),
           field('arguments', optional(choice($.argument_list, $.initializer_list)))
         )
       ),
 
+    // new-declarator: ptr-operator new-declarator? | noptr-new-declarator ([expr.new]). The `&` and `&&` operators
+    // are left out, since a new-type-id must denote an object type.
+    _new_declarator: ($) => choice(alias($.new_pointer_declarator, $.abstract_pointer_declarator), $.new_declarator),
+    new_pointer_declarator: ($) =>
+      prec.right(
+        seq(
+          '*',
+          repeat($.ms_pointer_modifier),
+          repeat($.type_qualifier),
+          field('declarator', optional($._new_declarator))
+        )
+      ),
     new_declarator: ($) => prec.right(seq('[', field('length', $.expression), ']', optional($.new_declarator))),
 
     delete_expression: ($) => seq(optional('::'), 'delete', optional(seq('[', ']')), $.expression),

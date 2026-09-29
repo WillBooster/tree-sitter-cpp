@@ -210,6 +210,64 @@ int main() {
             (identifier)))))))
 
 ================================================================================
+New expressions of pointer types
+================================================================================
+
+void f() {
+  int **p = new int *[4];
+  T **q = new T *const *[n][3]();
+  auto r = new (buf) int *{};
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (pointer_declarator
+            (pointer_declarator
+              (identifier)))
+          (new_expression
+            (primitive_type)
+            (abstract_pointer_declarator
+              (new_declarator
+                (number_literal))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (pointer_declarator
+              (identifier)))
+          (new_expression
+            (type_identifier)
+            (abstract_pointer_declarator
+              (type_qualifier)
+              (abstract_pointer_declarator
+                (new_declarator
+                  (identifier)
+                  (new_declarator
+                    (number_literal)))))
+            (argument_list))))
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (new_expression
+            (argument_list
+              (identifier))
+            (primitive_type)
+            (abstract_pointer_declarator)
+            (initializer_list)))))))
+
+================================================================================
 Initializer lists as arguments
 ================================================================================
 
