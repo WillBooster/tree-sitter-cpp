@@ -180,6 +180,10 @@
         "named": true
       },
       {
+        "type": "builtin_available_expression",
+        "named": true
+      },
+      {
         "type": "call_expression",
         "named": true
       },
@@ -1243,6 +1247,21 @@
     "type": "break_statement",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "builtin_available_expression",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "platform_version",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "call_expression",
@@ -4488,9 +4507,13 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
-      "required": true,
+      "multiple": true,
+      "required": false,
       "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
         {
           "type": "identifier",
           "named": true
@@ -4506,6 +4529,10 @@
       "multiple": false,
       "required": true,
       "types": [
+        {
+          "type": "ms_pointer_size_modifier",
+          "named": true
+        },
         {
           "type": "ms_restrict_modifier",
           "named": true
@@ -4524,6 +4551,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "ms_pointer_size_modifier",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "ms_unaligned_ptr_modifier",
@@ -5101,6 +5133,32 @@
           "named": true
         }
       ]
+    }
+  },
+  {
+    "type": "platform_version",
+    "named": true,
+    "fields": {
+      "platform": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "version": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "version_number",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
@@ -8297,6 +8355,10 @@
     "named": false
   },
   {
+    "type": "__builtin_available",
+    "named": false
+  },
+  {
     "type": "__cdecl",
     "named": false
   },
@@ -8338,6 +8400,14 @@
   },
   {
     "type": "__leave",
+    "named": false
+  },
+  {
+    "type": "__ptr32",
+    "named": false
+  },
+  {
+    "type": "__ptr64",
     "named": false
   },
   {
@@ -8804,6 +8874,10 @@
   {
     "type": "using",
     "named": false
+  },
+  {
+    "type": "version_number",
+    "named": true
   },
   {
     "type": "virtual",

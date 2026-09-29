@@ -1253,3 +1253,60 @@ void fn (int *__restrict__ rptr) {
           (pointer_expression
             (identifier))
           (number_literal))))))
+
+================================================================================
+__builtin_available
+================================================================================
+
+void f(void) {
+  if (__builtin_available(macOS 10.11, iOS 9.0, *)) {
+    g();
+  }
+  if (!__builtin_available(macOS 10, watchOS 2.0.1, *))
+    return;
+  int ok = __builtin_available(*) && x;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (builtin_available_expression
+            (platform_version
+              (identifier)
+              (version_number))
+            (platform_version
+              (identifier)
+              (version_number))))
+        (compound_statement
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (if_statement
+        (condition_clause
+          (unary_expression
+            (builtin_available_expression
+              (platform_version
+                (identifier)
+                (version_number))
+              (platform_version
+                (identifier)
+                (version_number)))))
+        (return_statement))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (binary_expression
+            (builtin_available_expression)
+            (identifier)))))))
