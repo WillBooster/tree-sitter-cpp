@@ -1,9 +1,11 @@
 # @willbooster/tree-sitter-cpp
 
+[![npm version](https://img.shields.io/npm/v/@willbooster/tree-sitter-cpp.svg)](https://www.npmjs.com/package/@willbooster/tree-sitter-cpp)
+[![license](https://img.shields.io/npm/l/@willbooster/tree-sitter-cpp.svg)](https://www.npmjs.com/package/@willbooster/tree-sitter-cpp)
 [![Test](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test.yml/badge.svg)](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test.yml)
 [![Test rust](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test-rust.yml/badge.svg)](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test-rust.yml)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
-[![wbfy](https://img.shields.io/badge/wbfy-20.24.0-1e90ff.svg)](https://github.com/WillBooster/shared/tree/main/packages/wbfy)
+[![wbfy](https://img.shields.io/badge/wbfy-20.26.0-1e90ff.svg)](https://github.com/WillBooster/shared/tree/main/packages/wbfy)
 [![crates.io](https://img.shields.io/crates/v/willbooster-tree-sitter-cpp.svg)](https://crates.io/crates/willbooster-tree-sitter-cpp)
 
 C++ grammar for [tree-sitter](https://github.com/tree-sitter/tree-sitter), forked from
@@ -14,17 +16,49 @@ This fork fixes parsing bugs and raises conformance with the ISO C++ standard ([
 
 ## Usage
 
-The npm package ships `tree-sitter-cpp.wasm` for [web-tree-sitter](https://www.npmjs.com/package/web-tree-sitter):
+The npm package ships `tree-sitter-cpp.wasm` for
+[@willbooster/web-tree-sitter](https://www.npmjs.com/package/@willbooster/web-tree-sitter), which runs in Node.js, Bun,
+browsers, and Cloudflare Workers. Install both:
+
+```sh
+npm install @willbooster/tree-sitter-cpp @willbooster/web-tree-sitter
+```
+
+In Node.js and Bun, load the `.wasm` file from its path:
 
 ```js
 import { fileURLToPath } from 'node:url';
-import { Language, Parser } from 'web-tree-sitter';
+import { Language, Parser } from '@willbooster/web-tree-sitter';
 
 await Parser.init();
 const parser = new Parser();
 const wasmPath = fileURLToPath(import.meta.resolve('@willbooster/tree-sitter-cpp/tree-sitter-cpp.wasm'));
 parser.setLanguage(await Language.load(wasmPath));
 const tree = parser.parse('int main() {}\n');
+```
+
+In browsers, serve both `.wasm` files and load them by URL. With Vite:
+
+```js
+import { Language, Parser } from '@willbooster/web-tree-sitter';
+import runtimeUrl from '@willbooster/web-tree-sitter/web-tree-sitter.wasm?url';
+import cppUrl from '@willbooster/tree-sitter-cpp/tree-sitter-cpp.wasm?url';
+
+await Parser.init({ locateFile: () => runtimeUrl });
+const parser = new Parser();
+parser.setLanguage(await Language.load(cppUrl));
+```
+
+In Cloudflare Workers, which do not allow compiling Wasm at run time, import both `.wasm` files as modules:
+
+```js
+import { Language, Parser } from '@willbooster/web-tree-sitter';
+import runtime from '@willbooster/web-tree-sitter/web-tree-sitter.wasm';
+import cpp from '@willbooster/tree-sitter-cpp/tree-sitter-cpp.wasm';
+
+await Parser.init({ wasmModule: runtime });
+const parser = new Parser();
+parser.setLanguage(await Language.load(cpp));
 ```
 
 The package also ships the node types in `src/node-types.json`.
@@ -65,7 +99,9 @@ cargo test --locked
   it; review its diff before committing;
 - a performance check (`test/unit/performance.test.ts`) that recovering from an error on each of 10,000 lines takes
   linear time, since consumers parse files while they are being edited. It loads the Wasm build through
-  web-tree-sitter, which `bun run build/ci` rebuilds after regenerating the parser.
+  @willbooster/web-tree-sitter, which `bun run build/ci` rebuilds after regenerating the parser;
+- checks that the Wasm build parses in Chromium (`test/unit/browser/`) and in Cloudflare Workers with and without
+  Node.js compatibility (`test/unit/workers.test.ts`). Run `bun run test/ci-setup` once to install Chromium.
 
 CI also runs these tests on Linux arm64 and macOS, where the parser and scanner are compiled natively against each platform's C library, and fuzzes the parser with libFuzzer and sanitizers
 (`.github/workflows/robustness.yml`).
