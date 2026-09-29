@@ -10,9 +10,9 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
-// @ts-expect-error -- tree-sitter-c ships no type declarations.
+// @ts-expect-error -- @willbooster/tree-sitter-c ships no type declarations.
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
-const C = require('tree-sitter-c/grammar');
+const C = require('@willbooster/tree-sitter-c/grammar');
 
 const PREC = Object.assign(C.PREC, {
   LAMBDA: 18,

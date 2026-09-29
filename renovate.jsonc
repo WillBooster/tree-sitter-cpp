@@ -9,9 +9,9 @@
       "groupName": "tree-sitter",
     },
     {
-      // grammar.js extends tree-sitter-c, so a bump changes the generated parser; it is pinned to the version
-      // upstream's package-lock.json resolved.
-      "matchPackageNames": ["tree-sitter-c"],
+      // grammar.js extends @willbooster/tree-sitter-c, so a bump changes the generated parser and needs a
+      // regenerated src/, which Renovate cannot produce.
+      "matchPackageNames": ["@willbooster/tree-sitter-c"],
       "enabled": false,
     },
   ],

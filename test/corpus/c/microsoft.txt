@@ -191,3 +191,164 @@ __fastcall void mymethod(){
       parameters: (parameter_list))
     body: (compound_statement
       (return_statement))))
+
+================================================================================
+declaration specs with arguments
+================================================================================
+
+__declspec(align(8)) int x;
+void f(void) { __declspec(align(8)) char buffer[8192]; }
+__declspec(deprecated("use g2")) void g(void);
+__declspec(dllimport noreturn) void h(void);
+__declspec(property(get = get_y, put = put_y)) int y;
+__declspec() int z;
+struct __declspec(align(16)) s { int a; };
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (ms_declspec_modifier
+      (identifier)
+      (argument_list
+        (number_literal)))
+    (primitive_type)
+    (identifier))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (declaration
+        (ms_declspec_modifier
+          (identifier)
+          (argument_list
+            (number_literal)))
+        (primitive_type)
+        (array_declarator
+          (identifier)
+          (number_literal)))))
+  (declaration
+    (ms_declspec_modifier
+      (identifier)
+      (argument_list
+        (string_literal
+          (string_content))))
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)))))
+  (declaration
+    (ms_declspec_modifier
+      (identifier)
+      (identifier))
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)))))
+  (declaration
+    (ms_declspec_modifier
+      (identifier)
+      (argument_list
+        (assignment_expression
+          (identifier)
+          (identifier))
+        (assignment_expression
+          (identifier)
+          (identifier))))
+    (primitive_type)
+    (identifier))
+  (declaration
+    (ms_declspec_modifier)
+    (primitive_type)
+    (identifier))
+  (struct_specifier
+    (ms_declspec_modifier
+      (identifier)
+      (argument_list
+        (number_literal)))
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)))))
+
+================================================================================
+pointer size modifiers
+================================================================================
+
+char * __ptr32 p;
+int f(void) { return (int)((char *__ptr32 *__ptr32 *)0)[4][214]; }
+void * __ptr64 __restrict q;
+struct s { int * __ptr64 a; };
+typedef char * __ptr32 P32;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (pointer_declarator
+      (ms_pointer_modifier
+        (ms_pointer_size_modifier))
+      (identifier)))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (return_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (subscript_expression
+            (subscript_expression
+              (parenthesized_expression
+                (cast_expression
+                  (type_descriptor
+                    (primitive_type)
+                    (abstract_pointer_declarator
+                      (ms_pointer_modifier
+                        (ms_pointer_size_modifier))
+                      (abstract_pointer_declarator
+                        (ms_pointer_modifier
+                          (ms_pointer_size_modifier))
+                        (abstract_pointer_declarator))))
+                  (number_literal)))
+              (subscript_argument_list
+                (number_literal)))
+            (subscript_argument_list
+              (number_literal)))))))
+  (declaration
+    (primitive_type)
+    (pointer_declarator
+      (ms_pointer_modifier
+        (ms_pointer_size_modifier))
+      (ms_pointer_modifier
+        (ms_restrict_modifier))
+      (identifier)))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (pointer_declarator
+          (ms_pointer_modifier
+            (ms_pointer_size_modifier))
+          (field_identifier)))))
+  (type_definition
+    (primitive_type)
+    (pointer_declarator
+      (ms_pointer_modifier
+        (ms_pointer_size_modifier))
+      (type_identifier))))

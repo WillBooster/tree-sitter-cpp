@@ -30,7 +30,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build/ci
       # The packages ship the committed src/, so it must match what tree-sitter generate writes from grammar.js
-      # with the pinned tree-sitter-cli and tree-sitter-c, which the tests below exercise.
+      # with the pinned tree-sitter-cli and @willbooster/tree-sitter-c, which the tests below exercise.
       # `git add -N` makes files that generate adds but nobody committed show up in the diff too.
       - run: git add --intent-to-add -- src/ && git diff --exit-code -- src/
       - run: bun run test/ci-setup
