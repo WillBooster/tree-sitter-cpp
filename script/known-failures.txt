@@ -211,7 +211,6 @@ examples/leveldb/db/db_impl.h
 examples/leveldb/db/db_test.cc
 examples/leveldb/db/fault_injection_test.cc
 examples/leveldb/db/skiplist_test.cc
-examples/leveldb/db/version_set.cc
 examples/leveldb/db/version_set.h
 examples/leveldb/helpers/memenv/memenv.cc
 examples/leveldb/helpers/memenv/memenv.h

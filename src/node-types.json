@@ -623,6 +623,10 @@
           {
             "type": "_abstract_declarator",
             "named": true
+          },
+          {
+            "type": "new_declarator",
+            "named": true
           }
         ]
       }
@@ -4659,6 +4663,10 @@
         "multiple": false,
         "required": false,
         "types": [
+          {
+            "type": "abstract_pointer_declarator",
+            "named": true
+          },
           {
             "type": "new_declarator",
             "named": true
