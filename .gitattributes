@@ -1,37 +1,45 @@
-* text=auto eol=lf
+* text=auto
 
-# Generated source files
+.gitignore -text
+# The corpus case tests CRLF line endings.
+test/corpus/c/crlf.txt -text
+
+*.lockb binary diff=lockb
+*.vcproj text eol=crlf
+
+*.cjs text eol=lf
+*.cpp text eol=lf
+*.cts text eol=lf
+*.dart text eol=lf
+*.htm text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.json5 text eol=lf
+*.jsonc text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.mts text eol=lf
+*.pu text eol=lf
+*.puml text eol=lf
+*.rb text eol=lf
+*.sh text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.vue text eol=lf
+*.xml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.go text eol=lf
+*.gradle text eol=lf
+*.java text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+
+dist/** linguist-generated=true
+
 src/*.json linguist-generated
 src/parser.c linguist-generated
 src/tree_sitter/* linguist-generated
-
-# C bindings
-bindings/c/* linguist-generated
-CMakeLists.txt linguist-generated
-Makefile linguist-generated
-
-# Rust bindings
-bindings/rust/* linguist-generated
-Cargo.toml linguist-generated
 Cargo.lock linguist-generated
-
-# Node.js bindings
-bindings/node/* linguist-generated
-binding.gyp linguist-generated
-package.json linguist-generated
-package-lock.json linguist-generated
-
-# Python bindings
-bindings/python/** linguist-generated
-setup.py linguist-generated
-pyproject.toml linguist-generated
-
-# Go bindings
-bindings/go/* linguist-generated
-go.mod linguist-generated
-go.sum linguist-generated
-
-# Swift bindings
-bindings/swift/** linguist-generated
-Package.swift linguist-generated
-Package.resolved linguist-generated
+bun.lock linguist-generated
