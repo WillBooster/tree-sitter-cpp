@@ -673,7 +673,13 @@ module.exports = grammar(C, {
       ),
 
     _field_declarator: ($, /** @type {Rule} */ original) =>
-      choice(original, alias($.reference_field_declarator, $.reference_declarator), $.template_method, $.operator_name),
+      choice(
+        original,
+        alias($.reference_field_declarator, $.reference_declarator),
+        alias($.qualified_pointer_field_declarator, $.qualified_identifier),
+        $.template_method,
+        $.operator_name
+      ),
 
     _type_declarator: ($, /** @type {Rule} */ original) =>
       choice(original, alias($.reference_type_declarator, $.reference_declarator)),
@@ -681,6 +687,18 @@ module.exports = grammar(C, {
     _abstract_declarator: ($, /** @type {Rule} */ original) => choice(original, $.abstract_reference_declarator),
 
     reference_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
+    // A pointer to member (`S::*pm`), shaped like the qualified_identifier that _declarator parses it as.
+    qualified_pointer_field_declarator: ($) =>
+      seq(
+        $._scope_resolution,
+        field(
+          'name',
+          choice(
+            alias($.qualified_pointer_field_declarator, $.qualified_identifier),
+            alias($.pointer_field_declarator, $.pointer_declarator)
+          )
+        )
+      ),
     reference_field_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
     reference_type_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
     abstract_reference_declarator: ($) => prec.right(seq(choice('&', '&&'), optional($._abstract_declarator))),
