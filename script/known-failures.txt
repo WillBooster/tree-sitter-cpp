@@ -21,7 +21,6 @@ examples/fmt/test/args-test.cc
 examples/fmt/test/chrono-test.cc
 examples/fmt/test/compile-test.cc
 examples/fmt/test/core-test.cc
-examples/fmt/test/enum-test.cc
 examples/fmt/test/format-impl-test.cc
 examples/fmt/test/format-test.cc
 examples/fmt/test/gtest-extra-test.cc

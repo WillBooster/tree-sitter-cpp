@@ -935,6 +935,45 @@ struct C {
         (field_identifier)))))
 
 ================================================================================
+Annotations on enums
+================================================================================
+
+enum class [[=1]] E { A };
+enum [[=1]] F { A };
+enum struct [[deprecated]] [[=1, =2]] G : int;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (enum_specifier
+    (attribute_declaration
+      (annotation
+        (number_literal)))
+    (type_identifier)
+    (enumerator_list
+      (enumerator
+        (identifier))))
+  (enum_specifier
+    (attribute_declaration
+      (annotation
+        (number_literal)))
+    (type_identifier)
+    (enumerator_list
+      (enumerator
+        (identifier))))
+  (enum_specifier
+    (attribute_declaration
+      (attribute
+        (identifier)))
+    (attribute_declaration
+      (annotation
+        (number_literal))
+      (annotation
+        (number_literal)))
+    (type_identifier)
+    (primitive_type)))
+
+================================================================================
 Expansion statements
 ================================================================================
 
