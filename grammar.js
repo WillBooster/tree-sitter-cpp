@@ -343,6 +343,7 @@ module.exports = grammar(C, {
         seq(
           'enum',
           optional(choice('class', 'struct')),
+          repeat($.attribute_declaration),
           choice(
             seq(
               field('name', $._class_name),
