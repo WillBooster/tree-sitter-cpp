@@ -2249,6 +2249,70 @@ int main() {
         (number_literal)))))
 
 ================================================================================
+Pointers to members in class members
+================================================================================
+
+struct S {
+  void (S::*pm)();
+  int S::*pi;
+  void (S::*const table[2])(int) = {};
+  int (ns::T<int>::*get)() const;
+};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (parenthesized_declarator
+            (qualified_identifier
+              (namespace_identifier)
+              (pointer_declarator
+                (field_identifier))))
+          (parameter_list)))
+      (field_declaration
+        (primitive_type)
+        (qualified_identifier
+          (namespace_identifier)
+          (pointer_declarator
+            (field_identifier))))
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (parenthesized_declarator
+            (qualified_identifier
+              (namespace_identifier)
+              (pointer_declarator
+                (type_qualifier)
+                (array_declarator
+                  (field_identifier)
+                  (number_literal)))))
+          (parameter_list
+            (parameter_declaration
+              (primitive_type))))
+        (initializer_list))
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (parenthesized_declarator
+            (qualified_identifier
+              (namespace_identifier)
+              (qualified_identifier
+                (template_type
+                  (type_identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (primitive_type))))
+                (pointer_declarator
+                  (field_identifier)))))
+          (parameter_list)
+          (type_qualifier))))))
+
+================================================================================
 Unnamed default parameter
 ================================================================================
 

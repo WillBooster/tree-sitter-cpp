@@ -3833,6 +3833,15 @@
           "value": "reference_declarator"
         },
         {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "qualified_pointer_field_declarator"
+          },
+          "named": true,
+          "value": "qualified_identifier"
+        },
+        {
           "type": "SYMBOL",
           "name": "template_method"
         },
@@ -13601,6 +13610,42 @@
           ]
         }
       }
+    },
+    "qualified_pointer_field_declarator": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_scope_resolution"
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "qualified_pointer_field_declarator"
+                },
+                "named": true,
+                "value": "qualified_identifier"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "pointer_field_declarator"
+                },
+                "named": true,
+                "value": "pointer_declarator"
+              }
+            ]
+          }
+        }
+      ]
     },
     "reference_field_declarator": {
       "type": "PREC_DYNAMIC",

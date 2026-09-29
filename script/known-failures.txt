@@ -197,7 +197,6 @@ examples/json/tests/src/unit-wstring.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerInterface.h
 examples/json/tests/thirdparty/Fuzzer/FuzzerLoop.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerMutate.cpp
-examples/json/tests/thirdparty/Fuzzer/FuzzerMutate.h
 examples/json/tests/thirdparty/Fuzzer/FuzzerTracePC.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerUtilWindows.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerValueBitMap.h
