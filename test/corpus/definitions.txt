@@ -262,6 +262,7 @@ Defaulted and deleted definitions outside classes
 Env::Env() = default;
 Env::~Env() = default;
 Env::Env(const Env &) = delete;
+Env::~Env() = delete;
 Env &Env::operator=(const Env &) = default;
 Env &Env::operator=(Env &&) noexcept = default;
 void f() = delete;
@@ -299,6 +300,14 @@ Env::~Env() = default;
           (type_qualifier)
           (type_identifier)
           (abstract_reference_declarator))))
+    (delete_method_clause))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (destructor_name
+          (identifier)))
+      (parameter_list))
     (delete_method_clause))
   (function_definition
     (type_identifier)
@@ -372,6 +381,45 @@ Env::~Env() = default;
               (identifier)))
           (parameter_list))
         (default_method_clause)))))
+
+================================================================================
+Keywords as preprocessor identifiers
+================================================================================
+
+#define F(default) default
+#if default || defined(default) || F(default)
+#elifdef default
+#endif
+struct S {
+#ifndef default
+#endif
+};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_function_def
+    (identifier)
+    (preproc_params
+      (identifier))
+    (preproc_arg))
+  (preproc_if
+    (binary_expression
+      (binary_expression
+        (identifier)
+        (preproc_defined
+          (identifier)))
+      (call_expression
+        (identifier)
+        (argument_list
+          (identifier))))
+    (preproc_elifdef
+      (identifier)))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (preproc_ifdef
+        (identifier)))))
 
 ================================================================================
 Destructor definitions

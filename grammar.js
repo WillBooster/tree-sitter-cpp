@@ -93,6 +93,8 @@ module.exports = grammar(C, {
   // also parses as an assignment expression and can win over the function definition.
   reserved: {
     global: () => ['default'],
+    // The preprocessor treats keywords as ordinary identifiers (e.g., `#if defined(default)`).
+    preprocessor: () => [],
   },
 
   conflicts: ($) => [
@@ -194,8 +196,25 @@ module.exports = grammar(C, {
         alias($.operator_cast_declaration, $.declaration)
       ),
 
-    ...preprocIf('', (/** @type {GrammarSymbols<string>} */ $) => $._top_level_item),
-    ...preprocIf('_in_block', (/** @type {GrammarSymbols<string>} */ $) => $._block_item),
+    ...withPreprocessorIdentifiersIn(preprocIf('', (/** @type {GrammarSymbols<string>} */ $) => $._top_level_item)),
+    ...withPreprocessorIdentifiersIn(
+      preprocIf('_in_block', (/** @type {GrammarSymbols<string>} */ $) => $._block_item)
+    ),
+    preproc_ifdef_in_field_declaration_list: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    preproc_ifdef_in_enumerator_list: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    preproc_ifdef_in_enumerator_list_no_comma: (_, /** @type {Rule} */ original) =>
+      withPreprocessorIdentifiers(original),
+    preproc_elifdef_in_field_declaration_list: (_, /** @type {Rule} */ original) =>
+      withPreprocessorIdentifiers(original),
+    preproc_elifdef_in_enumerator_list: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    preproc_elifdef_in_enumerator_list_no_comma: (_, /** @type {Rule} */ original) =>
+      withPreprocessorIdentifiers(original),
+    preproc_def: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    preproc_function_def: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    preproc_params: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    _preproc_expression: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    preproc_defined: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
+    preproc_call_expression: (_, /** @type {Rule} */ original) => withPreprocessorIdentifiers(original),
 
     // Types
 
@@ -1483,6 +1502,50 @@ module.exports = grammar(C, {
     _namespace_identifier: ($) => alias($.identifier, $.namespace_identifier),
   },
 });
+
+/**
+ * @param {ReturnType<typeof preprocIf>} builders
+ * @returns {ReturnType<typeof preprocIf>}
+ */
+function withPreprocessorIdentifiersIn(builders) {
+  return Object.fromEntries(
+    Object.entries(builders).map(([name, builder]) => [
+      name,
+      (/** @type {GrammarSymbols<string>} */ $) => withPreprocessorIdentifiers(builder($)),
+    ])
+  );
+}
+
+/**
+ * Puts the identifiers of a preprocessor rule in the `preprocessor` reserved word context. Only identifiers the rule
+ * contains directly change, so the items inside a conditional block keep the global reserved words.
+ * @param {Rule} rule
+ * @returns {Rule}
+ */
+function withPreprocessorIdentifiers(rule) {
+  switch (rule.type) {
+    case 'SYMBOL': {
+      return rule.name === 'identifier' ? reserved('preprocessor', rule) : rule;
+    }
+    case 'SEQ':
+    case 'CHOICE': {
+      return { ...rule, members: rule.members.map(withPreprocessorIdentifiers) };
+    }
+    case 'ALIAS':
+    case 'FIELD':
+    case 'PREC':
+    case 'PREC_DYNAMIC':
+    case 'PREC_LEFT':
+    case 'PREC_RIGHT':
+    case 'REPEAT':
+    case 'REPEAT1': {
+      return { ...rule, content: withPreprocessorIdentifiers(rule.content) };
+    }
+    default: {
+      return rule;
+    }
+  }
+}
 
 /**
  * @param {Rule} rule
