@@ -386,7 +386,9 @@ Env::~Env() = default;
 Keywords as preprocessor identifiers
 ================================================================================
 
+#define default 1
 #define F(default) default
+#include default
 #if default || defined(default) || F(default)
 #elifdef default
 #endif
@@ -398,11 +400,16 @@ struct S {
 --------------------------------------------------------------------------------
 
 (translation_unit
+  (preproc_def
+    (identifier)
+    (preproc_arg))
   (preproc_function_def
     (identifier)
     (preproc_params
       (identifier))
     (preproc_arg))
+  (preproc_include
+    (identifier))
   (preproc_if
     (binary_expression
       (binary_expression
