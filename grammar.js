@@ -617,7 +617,7 @@ module.exports = grammar(C, {
           'declarator',
           choice($.operator_cast, alias($.qualified_operator_cast_identifier, $.qualified_identifier))
         ),
-        field('body', choice($.compound_statement, $.try_statement))
+        choice(field('body', choice($.compound_statement, $.try_statement)), $.delete_method_clause)
       ),
 
     operator_cast_declaration: ($) =>

@@ -189,6 +189,7 @@ class A : public B {
   A& operator=(const A&) = default;
   A& operator=(A&&) = delete;
   ~A() = 0;
+  operator bool() const = delete;
 };
 
 --------------------------------------------------------------------------------
@@ -245,7 +246,14 @@ class A : public B {
           (destructor_name
             (identifier))
           (parameter_list))
-        (pure_virtual_clause)))))
+        (pure_virtual_clause))
+      (function_definition
+        (operator_cast
+          (primitive_type)
+          (abstract_function_declarator
+            (parameter_list)
+            (type_qualifier)))
+        (delete_method_clause)))))
 
 ================================================================================
 Defaulted and deleted definitions outside classes
@@ -258,6 +266,7 @@ Env &Env::operator=(const Env &) = default;
 Env &Env::operator=(Env &&) noexcept = default;
 void f() = delete;
 bool operator==(const Env &, const Env &) = default;
+template <> X<int>::operator bool() const = delete;
 namespace n {
 Env::~Env() = default;
 }
@@ -337,6 +346,21 @@ Env::~Env() = default;
           (type_identifier)
           (abstract_reference_declarator))))
     (default_method_clause))
+  (template_declaration
+    (template_parameter_list)
+    (function_definition
+      (qualified_identifier
+        (template_type
+          (type_identifier)
+          (template_argument_list
+            (type_descriptor
+              (primitive_type))))
+        (operator_cast
+          (primitive_type)
+          (abstract_function_declarator
+            (parameter_list)
+            (type_qualifier))))
+      (delete_method_clause)))
   (namespace_definition
     (namespace_identifier)
     (declaration_list
@@ -348,7 +372,6 @@ Env::~Env() = default;
               (identifier)))
           (parameter_list))
         (default_method_clause)))))
-
 
 ================================================================================
 Destructor definitions
