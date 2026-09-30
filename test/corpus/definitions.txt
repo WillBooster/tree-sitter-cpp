@@ -248,6 +248,109 @@ class A : public B {
         (pure_virtual_clause)))))
 
 ================================================================================
+Defaulted and deleted definitions outside classes
+================================================================================
+
+Env::Env() = default;
+Env::~Env() = default;
+Env::Env(const Env &) = delete;
+Env &Env::operator=(const Env &) = default;
+Env &Env::operator=(Env &&) noexcept = default;
+void f() = delete;
+bool operator==(const Env &, const Env &) = default;
+namespace n {
+Env::~Env() = default;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (identifier))
+      (parameter_list))
+    (default_method_clause))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (destructor_name
+          (identifier)))
+      (parameter_list))
+    (default_method_clause))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (identifier))
+      (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (abstract_reference_declarator))))
+    (delete_method_clause))
+  (function_definition
+    (type_identifier)
+    (reference_declarator
+      (function_declarator
+        (qualified_identifier
+          (namespace_identifier)
+          (operator_name))
+        (parameter_list
+          (parameter_declaration
+            (type_qualifier)
+            (type_identifier)
+            (abstract_reference_declarator)))))
+    (default_method_clause))
+  (function_definition
+    (type_identifier)
+    (reference_declarator
+      (function_declarator
+        (qualified_identifier
+          (namespace_identifier)
+          (operator_name))
+        (parameter_list
+          (parameter_declaration
+            (type_identifier)
+            (abstract_reference_declarator)))
+        (noexcept)))
+    (default_method_clause))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (delete_method_clause))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (operator_name)
+      (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (abstract_reference_declarator))
+        (parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (abstract_reference_declarator))))
+    (default_method_clause))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (function_definition
+        (function_declarator
+          (qualified_identifier
+            (namespace_identifier)
+            (destructor_name
+              (identifier)))
+          (parameter_list))
+        (default_method_clause)))))
+
+
+================================================================================
 Destructor definitions
 ================================================================================
 

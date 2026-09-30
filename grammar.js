@@ -89,6 +89,12 @@ module.exports = grammar(C, {
 
   externals: ($) => [$.raw_string_delimiter, $.raw_string_content],
 
+  // Without this, `default` in a state that expects an expression is lexed as an identifier, so `X::~X() = default;`
+  // also parses as an assignment expression and can win over the function definition.
+  reserved: {
+    global: () => ['default'],
+  },
+
   conflicts: ($) => [
     // C
     [$.type_specifier, $._declarator],
@@ -284,7 +290,9 @@ module.exports = grammar(C, {
     function_definition: ($, /** @type {SeqRule} */ original) => ({
       ...original,
       members: original.members.map((e) =>
-        e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
+        e.type === 'FIELD' && e.name === 'body'
+          ? choice(field('body', choice(e.content, $.try_statement)), $.default_method_clause, $.delete_method_clause)
+          : e
       ),
     }),
 
