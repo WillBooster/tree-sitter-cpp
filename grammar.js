@@ -132,7 +132,7 @@ module.exports = grammar(C, {
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
-    [$._declarator, $._function_definition_declarator],
+    [$._declarator, $.function_definition_function_declarator],
   ],
 
   inline: ($, original) => [...original, $._namespace_identifier],
@@ -290,9 +290,9 @@ module.exports = grammar(C, {
             e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
           ),
         },
-        // Only declarators that end in a parameter list take `= default;` or `= delete;`; offering the clause after any
-        // declarator would make `default` a keyword in every initializer, e.g. in `int c = default + 1;` when `default`
-        // is a macro.
+        // Only declarators that name a function take `= default;` or `= delete;`; offering the clause after other
+        // declarators would read an initializer spelled `default` (a macro) as the clause, e.g. in `int c = default + 1;`
+        // or `void (*p)(int) = default;`.
         {
           ...original,
           members: original.members.map((e) => {
@@ -305,9 +305,20 @@ module.exports = grammar(C, {
 
     _function_definition_declarator: ($) =>
       choice(
-        $.function_declarator,
+        alias($.function_definition_function_declarator, $.function_declarator),
         alias($.function_definition_pointer_declarator, $.pointer_declarator),
         alias($.function_definition_reference_declarator, $.reference_declarator)
+      ),
+    function_definition_function_declarator: ($) =>
+      prec.dynamic(
+        1,
+        seq(
+          field(
+            'declarator',
+            choice($.identifier, $.qualified_identifier, $.template_function, $.operator_name, $.destructor_name)
+          ),
+          $._function_declarator_seq
+        )
       ),
     function_definition_pointer_declarator: ($) =>
       withDeclarator(C.grammar.rules.pointer_declarator, $._function_definition_declarator),
@@ -1504,25 +1515,36 @@ module.exports = grammar(C, {
 });
 
 /**
- * Replaces the `declarator` field of a declarator rule.
+ * Replaces the `declarator` field of a declarator rule, failing when the rule has none.
  * @param {Rule} rule
  * @param {Rule} declarator
  * @returns {Rule}
  */
 function withDeclarator(rule, declarator) {
+  const result = replaceDeclarator(rule, declarator);
+  if (JSON.stringify(result) === JSON.stringify(rule)) throw new Error('The rule has no declarator field to replace.');
+  return result;
+}
+
+/**
+ * @param {Rule} rule
+ * @param {Rule} declarator
+ * @returns {Rule}
+ */
+function replaceDeclarator(rule, declarator) {
   switch (rule.type) {
     case 'FIELD': {
       return rule.name === 'declarator' ? field('declarator', declarator) : rule;
     }
     case 'SEQ':
     case 'CHOICE': {
-      return { ...rule, members: rule.members.map((member) => withDeclarator(member, declarator)) };
+      return { ...rule, members: rule.members.map((member) => replaceDeclarator(member, declarator)) };
     }
     case 'PREC':
     case 'PREC_DYNAMIC':
     case 'PREC_LEFT':
     case 'PREC_RIGHT': {
-      return { ...rule, content: withDeclarator(rule.content, declarator) };
+      return { ...rule, content: replaceDeclarator(rule.content, declarator) };
     }
     default: {
       return rule;
