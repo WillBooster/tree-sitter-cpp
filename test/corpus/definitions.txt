@@ -383,7 +383,7 @@ Env::~Env() = default;
         (default_method_clause)))))
 
 ================================================================================
-Keywords as preprocessor identifiers
+Keywords as preprocessor identifiers and macro arguments
 ================================================================================
 
 #define default 1
@@ -396,6 +396,7 @@ struct S {
 #ifndef default
 #endif
 };
+void f() { KEYWORD(default, KEYALL); }
 
 --------------------------------------------------------------------------------
 
@@ -426,7 +427,19 @@ struct S {
     (type_identifier)
     (field_declaration_list
       (preproc_ifdef
-        (identifier)))))
+        (identifier))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (identifier)))))))
 
 ================================================================================
 Destructor definitions
