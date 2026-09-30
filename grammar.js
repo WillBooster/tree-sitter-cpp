@@ -132,7 +132,7 @@ module.exports = grammar(C, {
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
-    [$._declarator, $.function_definition_function_declarator],
+    [$._declarator, $._function_definition_declarator],
   ],
 
   inline: ($, original) => [...original, $._namespace_identifier],
@@ -290,9 +290,9 @@ module.exports = grammar(C, {
             e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
           ),
         },
-        // Only declarators that name a function take `= default;` or `= delete;`; offering the clause after other
-        // declarators would read an initializer spelled `default` (a macro) as the clause, e.g. in `int c = default + 1;`
-        // or `void (*p)(int) = default;`.
+        // Only declarators that end in a parameter list take `= default;` or `= delete;`; offering the clause after any
+        // declarator would make `default` a keyword in every initializer, e.g. in `int c = default + 1;` when `default`
+        // is a macro.
         {
           ...original,
           members: original.members.map((e) => {
@@ -305,20 +305,9 @@ module.exports = grammar(C, {
 
     _function_definition_declarator: ($) =>
       choice(
-        alias($.function_definition_function_declarator, $.function_declarator),
+        $.function_declarator,
         alias($.function_definition_pointer_declarator, $.pointer_declarator),
         alias($.function_definition_reference_declarator, $.reference_declarator)
-      ),
-    function_definition_function_declarator: ($) =>
-      prec.dynamic(
-        1,
-        seq(
-          field(
-            'declarator',
-            choice($.identifier, $.qualified_identifier, $.template_function, $.operator_name, $.destructor_name)
-          ),
-          $._function_declarator_seq
-        )
       ),
     function_definition_pointer_declarator: ($) =>
       withDeclarator(C.grammar.rules.pointer_declarator, $._function_definition_declarator),

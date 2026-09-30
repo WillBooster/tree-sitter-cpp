@@ -12129,13 +12129,8 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "function_definition_function_declarator"
-          },
-          "named": true,
-          "value": "function_declarator"
+          "type": "SYMBOL",
+          "name": "function_declarator"
         },
         {
           "type": "ALIAS",
@@ -12156,48 +12151,6 @@
           "value": "reference_declarator"
         }
       ]
-    },
-    "function_definition_function_declarator": {
-      "type": "PREC_DYNAMIC",
-      "value": 1,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "FIELD",
-            "name": "declarator",
-            "content": {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "identifier"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "qualified_identifier"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "template_function"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "operator_name"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "destructor_name"
-                }
-              ]
-            }
-          },
-          {
-            "type": "SYMBOL",
-            "name": "_function_declarator_seq"
-          }
-        ]
-      }
     },
     "function_definition_pointer_declarator": {
       "type": "PREC_DYNAMIC",
@@ -18860,7 +18813,7 @@
     ],
     [
       "_declarator",
-      "function_definition_function_declarator"
+      "_function_definition_declarator"
     ]
   ],
   "precedences": [
