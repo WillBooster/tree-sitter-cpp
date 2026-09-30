@@ -101,7 +101,8 @@ async function createBranch(branch, commit) {
   try {
     await github('POST', 'git/refs', { ref: `refs/heads/${branch}`, sha: commit });
   } catch (error) {
-    const existing = await github('GET', `git/ref/heads/${branch}`);
-    if (existing.object.sha !== commit) throw error;
+    // Tolerates only a branch that an earlier attempt created at the same commit; any other failure keeps its own error.
+    const existing = await github('GET', `git/ref/heads/${branch}`).catch(() => {});
+    if (existing?.object.sha !== commit) throw error;
   }
 }
