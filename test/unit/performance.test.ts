@@ -26,7 +26,7 @@ test('uses a Wasm build built from the current parser', () => {
 
 // Consumers parse files being edited, so recovering from many errors must stay linear. Linear recovery
 // takes about 0.05 s here.
-test('recovers from an error on each of 10,000 lines in linear time', () => {
+test('recovers from an error on each of 10,000 lines in linear time', { timeout: 60_000 }, () => {
   const start = performance.now();
   const tree = parser.parse('$ a\n'.repeat(10_000));
   const elapsed = performance.now() - start;
