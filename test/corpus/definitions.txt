@@ -397,6 +397,7 @@ struct S {
 #endif
 };
 void f() { KEYWORD(default, KEYALL); }
+int c = default + 1;
 
 --------------------------------------------------------------------------------
 
@@ -439,7 +440,14 @@ void f() { KEYWORD(default, KEYALL); }
           (identifier)
           (argument_list
             (identifier)
-            (identifier)))))))
+            (identifier))))))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (binary_expression
+        (identifier)
+        (number_literal)))))
 
 ================================================================================
 Destructor definitions
