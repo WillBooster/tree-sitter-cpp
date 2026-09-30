@@ -28,20 +28,21 @@ const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: rootDir, encoding
 // The registries trust this workflow file for publishing.
 const dispatch = (ref) => github('POST', 'actions/workflows/release.yml/dispatches', { ref });
 const pendingBranchPrefix = 'release-pending/';
+const args = process.argv.slice(2);
 // The dry-run options of `wb release` and of semantic-release (forwarded after `--`) in every spelling their yargs
-// parsers accept (e.g. `--dry-run=true`, `--dryRun`, `-vd`). `--dry-run=false` also counts, so that no spelling of a
-// dry run can make the remote writes below.
-const dryRun = process.argv
-  .slice(2)
-  .some((arg) => /^--(?:dry|dry-run|dryRun)(?:=|$)/.test(arg) || /^-[A-Za-z]*d/.test(arg));
+// parsers accept (e.g. `--dry-run=true`, `--dryRun`, `-vd`; `--dry-run=false` also counts, so that no spelling of a dry
+// run can make the remote writes below), and semantic-release's own dry run outside CI unless `--no-ci` is given.
+const dryRun =
+  args.some((arg) => /^--(?:dry|dry-run|dryRun)(?:=|$)/.test(arg) || /^-[A-Za-z]*d/.test(arg)) ||
+  (!env.CI && !args.includes('--no-ci'));
 
-if (!dryRun && env.GITHUB_REF_NAME.startsWith(pendingBranchPrefix)) {
+if (!dryRun && env.GITHUB_REF_NAME?.startsWith(pendingBranchPrefix)) {
   await completePendingRelease(env.GITHUB_REF_NAME.slice(pendingBranchPrefix.length));
   await dispatch(releaseConfig.branches[0]);
   // After the dispatch, since the reusable workflow skips re-runs on a deleted branch.
   await github('DELETE', `git/refs/heads/${env.GITHUB_REF_NAME}`);
 } else if (!(await deferToPendingRelease()) || dryRun) {
-  execFileSync('wb', ['release', ...process.argv.slice(2)], { cwd: rootDir, stdio: 'inherit' });
+  execFileSync('wb', ['release', ...args], { cwd: rootDir, stdio: 'inherit' });
 }
 
 async function completePendingRelease(tag) {
