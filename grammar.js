@@ -846,13 +846,14 @@ module.exports = grammar(C, {
     expression_keyword_parameter: ($) =>
       prec.dynamic(
         -20,
-        field(
-          'type',
-          alias(
-            seq(
-              optional('::'),
+        seq(
+          optional('::'),
+          field(
+            'type',
+            alias(
               choice(
-                $.null,
+                'nullptr',
+                'NULL',
                 $.true,
                 $.false,
                 'sizeof',
@@ -869,9 +870,9 @@ module.exports = grammar(C, {
                 'noexcept',
                 'not',
                 'compl'
-              )
-            ),
-            $.type_identifier
+              ),
+              $.type_identifier
+            )
           )
         )
       ),

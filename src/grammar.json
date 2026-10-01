@@ -15091,31 +15091,35 @@
       "type": "PREC_DYNAMIC",
       "value": -20,
       "content": {
-        "type": "FIELD",
-        "name": "type",
-        "content": {
-          "type": "ALIAS",
-          "content": {
-            "type": "SEQ",
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
             "members": [
               {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "FIELD",
+            "name": "type",
+            "content": {
+              "type": "ALIAS",
+              "content": {
                 "type": "CHOICE",
                 "members": [
                   {
                     "type": "STRING",
-                    "value": "::"
+                    "value": "nullptr"
                   },
                   {
-                    "type": "BLANK"
-                  }
-                ]
-              },
-              {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "null"
+                    "type": "STRING",
+                    "value": "NULL"
                   },
                   {
                     "type": "SYMBOL",
@@ -15182,12 +15186,12 @@
                     "value": "compl"
                   }
                 ]
-              }
-            ]
-          },
-          "named": true,
-          "value": "type_identifier"
-        }
+              },
+              "named": true,
+              "value": "type_identifier"
+            }
+          }
+        ]
       }
     },
     "_function_attributes_start": {
