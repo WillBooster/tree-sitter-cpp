@@ -22,6 +22,10 @@
       {
         "type": "abstract_reference_declarator",
         "named": true
+      },
+      {
+        "type": "qualified_identifier",
+        "named": true
       }
     ]
   },
@@ -151,6 +155,10 @@
       },
       {
         "type": "primitive_type",
+        "named": true
+      },
+      {
+        "type": "qualified_identifier",
         "named": true
       },
       {
@@ -5242,44 +5250,6 @@
     }
   },
   {
-    "type": "pointer_type_declarator",
-    "named": true,
-    "fields": {
-      "declarator": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "_type_declarator",
-            "named": true
-          }
-        ]
-      }
-    },
-    "children": {
-      "multiple": true,
-      "required": false,
-      "types": [
-        {
-          "type": "attribute_declaration",
-          "named": true
-        },
-        {
-          "type": "ms_based_modifier",
-          "named": true
-        },
-        {
-          "type": "ms_pointer_modifier",
-          "named": true
-        },
-        {
-          "type": "type_qualifier",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "preproc_call",
     "named": true,
     "fields": {
@@ -6271,6 +6241,10 @@
         "required": true,
         "types": [
           {
+            "type": "abstract_pointer_declarator",
+            "named": true
+          },
+          {
             "type": "dependent_name",
             "named": true
           },
@@ -6296,10 +6270,6 @@
           },
           {
             "type": "pointer_declarator",
-            "named": true
-          },
-          {
-            "type": "pointer_type_declarator",
             "named": true
           },
           {

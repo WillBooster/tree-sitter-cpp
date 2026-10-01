@@ -693,6 +693,7 @@ module.exports = grammar(C, {
       choice(
         original,
         $.reference_declarator,
+        alias($.qualified_pointer_declarator, $.qualified_identifier),
         $.qualified_identifier,
         $.template_function,
         $.operator_name,
@@ -710,23 +711,28 @@ module.exports = grammar(C, {
       ),
 
     _type_declarator: ($, /** @type {Rule} */ original) =>
-      choice(original, alias($.reference_type_declarator, $.reference_declarator)),
+      choice(
+        original,
+        alias($.reference_type_declarator, $.reference_declarator),
+        alias($.qualified_pointer_type_declarator, $.qualified_identifier)
+      ),
 
-    _abstract_declarator: ($, /** @type {Rule} */ original) => choice(original, $.abstract_reference_declarator),
+    _abstract_declarator: ($, /** @type {Rule} */ original) =>
+      choice(
+        original,
+        $.abstract_reference_declarator,
+        alias($.abstract_qualified_pointer_declarator, $.qualified_identifier)
+      ),
 
     reference_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
-    // A pointer to member (`S::*pm`), shaped like the qualified_identifier that _declarator parses it as.
+    // Pointers to members (`S::*pm`) are qualified_identifier nodes whose name is the pointer declarator.
+    qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
     qualified_pointer_field_declarator: ($) =>
-      seq(
-        $._scope_resolution,
-        field(
-          'name',
-          choice(
-            alias($.qualified_pointer_field_declarator, $.qualified_identifier),
-            alias($.pointer_field_declarator, $.pointer_declarator)
-          )
-        )
-      ),
+      pointerToMember($, $.qualified_pointer_field_declarator, alias($.pointer_field_declarator, $.pointer_declarator)),
+    qualified_pointer_type_declarator: ($) =>
+      pointerToMember($, $.qualified_pointer_type_declarator, alias($.pointer_type_declarator, $.pointer_declarator)),
+    abstract_qualified_pointer_declarator: ($) =>
+      pointerToMember($, $.abstract_qualified_pointer_declarator, $.abstract_pointer_declarator),
     reference_field_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
     reference_type_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
     abstract_reference_declarator: ($) => prec.right(seq(choice('&', '&&'), optional($._abstract_declarator))),
@@ -774,6 +780,8 @@ module.exports = grammar(C, {
 
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
+
+    function_type_declarator: ($) => prec(1, seq(field('declarator', $._type_declarator), $._function_declarator_seq)),
 
     abstract_function_declarator: ($) =>
       seq(field('declarator', optional($._abstract_declarator)), $._function_declarator_seq),
@@ -1310,8 +1318,7 @@ module.exports = grammar(C, {
             $.template_function,
             prec.dynamic(1, seq(optional('template'), $.identifier)),
             $.operator_name,
-            $.destructor_name,
-            $.pointer_type_declarator
+            $.destructor_name
           )
         )
       ),
@@ -1503,6 +1510,15 @@ module.exports = grammar(C, {
     _namespace_identifier: ($) => alias($.identifier, $.namespace_identifier),
   },
 });
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {RuleOrLiteral} self
+ * @param {RuleOrLiteral} pointer
+ */
+function pointerToMember($, self, pointer) {
+  return seq($._scope_resolution, field('name', choice(alias(self, $.qualified_identifier), pointer)));
+}
 
 /**
  * Replaces the `declarator` field of a declarator rule, failing when the rule has none.
