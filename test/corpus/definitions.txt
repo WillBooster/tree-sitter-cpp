@@ -400,6 +400,8 @@ struct A {
 };
 void h() = delete("a" "b");
 template <> void t<int>() = delete("no ints");
+A::A(long) = delete("y");
+A::~A() = delete("x");
 
 --------------------------------------------------------------------------------
 
@@ -449,7 +451,28 @@ template <> void t<int>() = delete("no ints");
         (parameter_list))
       (delete_method_clause
         (string_literal
-          (string_content))))))
+          (string_content)))))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (identifier))
+      (parameter_list
+        (parameter_declaration
+          (sized_type_specifier))))
+    (delete_method_clause
+      (string_literal
+        (string_content))))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (destructor_name
+          (identifier)))
+      (parameter_list))
+    (delete_method_clause
+      (string_literal
+        (string_content)))))
 
 
 ================================================================================
