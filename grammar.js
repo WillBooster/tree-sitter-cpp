@@ -20,9 +20,9 @@ const PREC = Object.assign(C.PREC, {
   // Binds looser than casts and tighter than the multiplicative operators; casts are left-associative so that
   // `(T)a.*b` groups as `((T)a).*b`.
   POINTER_TO_MEMBER: C.PREC.CAST,
-  // Where a declaration or type-id reading is certain, outranks the calls (+1 each) of the expression reading of the
-  // same tokens: two in `void (*fp)();`, one in `int(x);` and `^^int()`.
-  CERTAIN_DECLARATION: 2,
+  // Where a declaration or type-id reading is certain, outranks the calls (+1 each) that the expression reading of the
+  // same tokens adds, however many appear in practice: one in `int(x);` and `^^int()`, two in `int(x)[f()];`.
+  CERTAIN_DECLARATION: 10,
   // A function declarator with parentheses outranks a direct initialization of the same tokens, as in
   // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, and a single keyword literal
   // argument outranks it in turn.

@@ -3216,7 +3216,7 @@
         },
         {
           "type": "PREC_DYNAMIC",
-          "value": 2,
+          "value": 10,
           "content": {
             "type": "SEQ",
             "members": [
@@ -6549,7 +6549,7 @@
         },
         {
           "type": "PREC_DYNAMIC",
-          "value": 2,
+          "value": 10,
           "content": {
             "type": "SEQ",
             "members": [
@@ -13741,7 +13741,7 @@
         },
         {
           "type": "PREC_DYNAMIC",
-          "value": 2,
+          "value": 10,
           "content": {
             "type": "SEQ",
             "members": [
@@ -16520,7 +16520,7 @@
         },
         {
           "type": "PREC_DYNAMIC",
-          "value": 2,
+          "value": 10,
           "content": {
             "type": "SEQ",
             "members": [
@@ -19579,7 +19579,7 @@
               },
               {
                 "type": "PREC_DYNAMIC",
-                "value": 2,
+                "value": 10,
                 "content": {
                   "type": "ALIAS",
                   "content": {

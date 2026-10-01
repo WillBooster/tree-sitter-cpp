@@ -180,6 +180,7 @@ void f() {
   int((w)) = 5, u;
   int(i), j(3), k(4);
   int(arr)[3];
+  int(ab)[f()];
   int (*md)[3][5], (mx)[2][2];
   int(fn)();
   bool(bf)(false);
@@ -482,6 +483,14 @@ void f() {
           (parenthesized_declarator
             (identifier))
           (number_literal)))
+      (declaration
+        (primitive_type)
+        (array_declarator
+          (parenthesized_declarator
+            (identifier))
+          (call_expression
+            (identifier)
+            (argument_list))))
       (declaration
         (primitive_type)
         (array_declarator
