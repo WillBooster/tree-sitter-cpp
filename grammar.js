@@ -1581,8 +1581,9 @@ module.exports = grammar(C, {
         alias($.typeid_expression, $.call_expression)
       ),
 
-    // The named casts and `typeid` are keywords, so `static_cast` cannot be read as a type name elsewhere, but they keep
-    // the shapes of the calls that other names make, which queries already match.
+    // The named casts and `typeid` are keywords where an expression may start, so such a call never reads as a
+    // declaration or a type-id there; where only a type name fits, they still lex as one (`static_cast<T> f;` in a
+    // class). They keep the shapes of the calls that other names make, which queries already match.
     named_cast_expression: ($) =>
       prec.dynamic(
         1,
