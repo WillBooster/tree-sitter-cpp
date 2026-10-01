@@ -4237,6 +4237,13 @@
               "type": "REPEAT",
               "content": {
                 "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
                 "name": "ms_pointer_modifier"
               }
             },
@@ -4283,6 +4290,13 @@
             {
               "type": "STRING",
               "value": "*"
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
             },
             {
               "type": "REPEAT",
@@ -4339,6 +4353,13 @@
               "type": "REPEAT",
               "content": {
                 "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
                 "name": "ms_pointer_modifier"
               }
             },
@@ -4373,6 +4394,13 @@
             {
               "type": "STRING",
               "value": "*"
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
             },
             {
               "type": "REPEAT",
@@ -15479,6 +15507,13 @@
           {
             "type": "STRING",
             "value": "*"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "attribute_declaration"
+            }
           },
           {
             "type": "REPEAT",
