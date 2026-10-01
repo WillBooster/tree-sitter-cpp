@@ -158,9 +158,12 @@ function pointer declarators vs calls of function-style casts
 void g(int (*pf)(), char (*a)[3], int ((*h))());
 void g(Callback (*cb)() = nullptr);
 void (*fp)() = nullptr;
+void (*fq)();
 
 void f() {
   int (*a)[3];
+  int (*r)(T);
+  int (*b)(), (*c)[2];
   int (*p)(nullptr);
   f(int(x));
   free(*p);
@@ -222,6 +225,13 @@ void f() {
             (identifier)))
         (parameter_list))
       (null)))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (parenthesized_declarator
+        (pointer_declarator
+          (identifier)))
+      (parameter_list)))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -230,6 +240,27 @@ void f() {
     (compound_statement
       (declaration
         (primitive_type)
+        (array_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (number_literal)))
+      (declaration
+        (primitive_type)
+        (function_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (parameter_list
+            (parameter_declaration
+              (type_identifier)))))
+      (declaration
+        (primitive_type)
+        (function_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (parameter_list))
         (array_declarator
           (parenthesized_declarator
             (pointer_declarator

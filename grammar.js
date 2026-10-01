@@ -332,14 +332,13 @@ module.exports = grammar(C, {
           PREC.REQUIRED_PARENTHESES,
           seq(
             $._built_in_declaration_specifiers,
-            field(
-              'declarator',
-              choice(
-                $._required_parentheses_declarator,
-                alias($.required_parentheses_init_declarator, $.init_declarator)
+            field('declarator', $._built_in_required_parentheses_declarator),
+            repeat(
+              seq(
+                ',',
+                field('declarator', choice($._declaration_declarator, $._built_in_required_parentheses_declarator))
               )
             ),
-            repeat(seq(',', field('declarator', $._declaration_declarator))),
             ';'
           )
         )
@@ -356,6 +355,9 @@ module.exports = grammar(C, {
         ),
         $.init_declarator
       ),
+
+    _built_in_required_parentheses_declarator: ($) =>
+      choice($._required_parentheses_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
 
     _built_in_declaration_specifiers: ($) =>
       prec.right(
@@ -860,10 +862,15 @@ module.exports = grammar(C, {
         alias($.required_parentheses_array_declarator, $.array_declarator)
       ),
 
+    // Like function_declarator's, the precedence prefers `int (*fp)(T);` as a function pointer over a pointer
+    // direct-initialized with `(T)`.
     required_parentheses_function_declarator: ($) =>
-      seq(
-        field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-        $._function_declarator_seq
+      prec.dynamic(
+        1,
+        seq(
+          field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+          $._function_declarator_seq
+        )
       ),
 
     required_parentheses_array_declarator: ($) =>
