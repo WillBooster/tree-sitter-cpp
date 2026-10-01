@@ -29,9 +29,9 @@ jobs:
       - uses: jdx/mise-action@v4.3.0
       - run: bun install --frozen-lockfile
       - run: bun run build/ci
-      # The packages ship the committed src/, so it must match what tree-sitter generate writes from grammar.js
-      # with the pinned tree-sitter-cli and @willbooster/tree-sitter-c, which the tests below exercise.
-      # `git add -N` makes files that generate adds but nobody committed show up in the diff too.
+      # The packages ship the committed src/, so it must be what script/tree-sitter generates from grammar.js and the
+      # pinned @willbooster/tree-sitter-c, which the tests below exercise. `git add -N` makes files that generation adds
+      # but nobody committed show up in the diff too.
       - run: git add --intent-to-add -- src/ && git diff --exit-code -- src/
       - run: bun run test/ci-setup
       - run: bun run test/ci
@@ -48,8 +48,8 @@ jobs:
           persist-credentials: false
       - id: runtime
         run: |
-          version=$(awk '/^name = "willbooster-tree-sitter"$/ { getline; gsub(/version = |"/, ""); print }' Cargo.lock)
-          echo "ref=v${version:?Cargo.lock locks no willbooster-tree-sitter}" >> "$GITHUB_OUTPUT"
+          version=$(script/runtime-version)
+          echo "ref=v$version" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7.0.1
         with:
           repository: WillBooster/tree-sitter
@@ -66,10 +66,12 @@ jobs:
           persist-credentials: false
       - run: |
           mkdir -p .tmp/fuzz-seeds
-          awk -v dir=.tmp/fuzz-seeds '
-            state != 2 && /^=+\r?$/ { if (++state == 2) file = sprintf("%s/%d", dir, ++n); next }
-            state == 2 && /^---+\r?$/ { state = 0; close(file); next }
-            state == 2 { print > file }
+          # Perl keeps NUL characters, at which awk implementations may end a line. The headers of the CRLF corpus files
+          # end with CR LF like their input.
+          perl -ne '
+            if ($state != 2 && /^=+\r?$/) { open $seed, ">", sprintf(".tmp/fuzz-seeds/%d", ++$n) or die $! if ++$state == 2; next }
+            if ($state == 2 && /^---+\r?$/) { $state = 0; close $seed; next }
+            print $seed $_ if $state == 2;
           ' $(find test/corpus -name '*.txt' | LC_ALL=C sort)
       - name: Build the fuzzer
         run: |

@@ -5,7 +5,7 @@
 [![Test](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test.yml/badge.svg)](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test.yml)
 [![Test rust](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test-rust.yml/badge.svg)](https://github.com/WillBooster/tree-sitter-cpp/actions/workflows/test-rust.yml)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
-[![wbfy](https://img.shields.io/badge/wbfy-20.26.0-1e90ff.svg)](https://github.com/WillBooster/shared/tree/main/packages/wbfy)
+[![wbfy](https://img.shields.io/badge/wbfy-20.28.8-1e90ff.svg)](https://github.com/WillBooster/shared/tree/main/packages/wbfy)
 [![crates.io](https://img.shields.io/crates/v/willbooster-tree-sitter-cpp.svg)](https://crates.io/crates/willbooster-tree-sitter-cpp)
 
 C++ grammar for [tree-sitter](https://github.com/tree-sitter/tree-sitter), forked from
@@ -62,7 +62,8 @@ const parser = new Parser();
 parser.setLanguage(await Language.load(cpp));
 ```
 
-The package also ships the node types in `src/node-types.json`.
+The package also ships the node types in `src/node-types.json`, and the queries that `tree-sitter.json` lists: this
+grammar's in `queries/` and, in `c/queries/`, the highlights of the C grammar it extends.
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
@@ -80,6 +81,8 @@ let mut parser = tree_sitter::Parser::new();
 parser.set_language(&tree_sitter_cpp::LANGUAGE.into())?;
 ```
 
+The crate ships the same `tree-sitter.json` and query files as the npm package.
+
 ## Development
 
 ```sh
@@ -91,11 +94,17 @@ script/parse-examples
 cargo test --locked
 ```
 
+The scripts and tests generate, build, test, and parse with `script/tree-sitter`, the tree-sitter CLI of the
+WillBooster/tree-sitter runtime version locked in `Cargo.lock`, since the generator and the runtime of upstream's CLI are
+not the ones this package ships with. Its first run downloads that CLI from the runtime's GitHub Release, or builds it
+with `cargo` (whose build runs the CMake that `mise.toml` pins) when the download fails or the release has no binary
+that runs here. Run other CLI commands through it as well (e.g. `script/tree-sitter parse file.cpp`).
+
 `bun run test` runs:
 
 - the corpus in `test/corpus`, with the native build and with the Wasm build (the first run downloads the WASI SDK);
-- an incremental-parsing check (`test/unit/incremental.test.ts`): `tree-sitter fuzz` edits each corpus case at random,
-  reparses it, undoes the edits, and reparses again. `TREE_SITTER_SEED`, `TREE_SITTER_ITERATIONS`, and
+- an incremental-parsing check (`test/unit/incremental.test.ts`): `script/fuzz-corpus` runs `tree-sitter fuzz`, which
+  edits each corpus case at random, reparses it, undoes the edits, and reparses again. `TREE_SITTER_SEED`, `TREE_SITTER_ITERATIONS`, and
   `TREE_SITTER_EDITS` run other or more edits;
 - a check that the real-world C++ files in `examples/`, the checked-in ones and those of the cloned repositories,
   fail to parse exactly as listed in `script/known-failures.txt`. The first run clones the repositories. The example
@@ -107,9 +116,12 @@ cargo test --locked
 - a check (`test/unit/expressionKeywordParameter.test.ts`) that every keyword that can start an expression but not a
   parameter is expected in the parameters of the function declarators that compete with a direct initialization, so
   that `long(n)(sizeof(b));` stays an initialization;
+- a check (`test/unit/queries.test.ts`) that the queries `tree-sitter.json` lists compile against the grammar, are
+  published in the npm package and the crate, and that `c/queries/` matches the queries of the installed
+  @willbooster/tree-sitter-c; after updating that dependency, `script/copy-c-queries` refreshes the copy;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and
   `willbooster-tree-sitter` in `Cargo.lock` are the same version, since the Wasm tests run on the former and the Rust
-  tests and the fuzzer on the latter;
+  tests, the fuzzer, and the CLI on the latter;
 - checks that the Wasm build parses in Chromium (`test/unit/browser/`) and in Cloudflare Workers with and without
   Node.js compatibility (`test/unit/workers.test.ts`). Run `bun run test/ci-setup` once to install Chromium.
 
