@@ -795,6 +795,10 @@
         {
           "type": "preproc_defined",
           "named": true
+        },
+        {
+          "type": "type_descriptor",
+          "named": true
         }
       ]
     }

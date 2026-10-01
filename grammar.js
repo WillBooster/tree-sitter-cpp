@@ -20,6 +20,13 @@ const PREC = Object.assign(C.PREC, {
   // Binds looser than casts and tighter than the multiplicative operators; casts are left-associative so that
   // `(T)a.*b` groups as `((T)a).*b`.
   POINTER_TO_MEMBER: C.PREC.CAST,
+  // Where a declaration or type-id reading is certain, outranks the calls (+1 each) that the expression reading of the
+  // same tokens adds, however many appear in practice: one in `int(x);` and `^^int()`, two in `int(x)[f()];`.
+  CERTAIN_DECLARATION: 10,
+  // A function declarator with parentheses outranks a direct initialization of the same tokens, as in
+  // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, unless a parameter starts with an
+  // expression keyword (see `expression_keyword_parameter`).
+  FUNCTION_OVER_DIRECT_INITIALIZATION: 10,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -123,9 +130,9 @@ module.exports = grammar(C, {
     [$.structured_binding_declarator, $._lambda_capture_identifier],
     [$.parameter_list, $.argument_list],
     [$.type_specifier, $.call_expression],
-    [$._declaration_specifiers, $._constructor_specifiers],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
+    [$._competing_function_declarator_seq],
     [$.type_specifier, $.sized_type_specifier],
     [$.initializer_pair, $.comma_expression],
     [$.expression_statement, $._for_statement_body],
@@ -135,6 +142,14 @@ module.exports = grammar(C, {
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
+    [$._declarator, $.parenthesized_pointer_declarator],
+    [$._declarator, $.built_in_parenthesized_declarator],
+    [$.required_parentheses_function_declarator, $._direct_initialized_parenthesized_declarator],
+    [$.built_in_parenthesized_function_declarator, $._direct_initialized_declarator],
+    [$._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
+    [$.type_specifier, $._built_in_declaration_specifiers],
+    [$.type_specifier, $.call_expression, $._built_in_declaration_specifiers],
+    [$.type_specifier, $.call_expression, $.built_in_function_type_descriptor],
     [$._declarator, $._function_definition_declarator],
   ],
 
@@ -318,24 +333,72 @@ module.exports = grammar(C, {
       prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._function_definition_declarator))),
 
     declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        commaSep1(
-          field(
-            'declarator',
-            choice(
-              seq(
-                // C uses _declaration_declarator here for some nice macro parsing in function declarators,
-                // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
-                optional($.ms_call_modifier),
-                $._declarator,
-                optional($.gnu_asm_expression)
-              ),
-              $.init_declarator
-            )
+      choice(
+        seq($._declaration_specifiers, commaSep1(field('declarator', declarationItem($))), ';'),
+        // A statement that can be a declaration is one ([stmt.ambig]), but only with a built-in type is the declaration
+        // reading certain: the expression reading of `void (*fp)();` calls a function-style cast, which is never
+        // valid, and that of `int(x);` discards one. With any other type, `foo(*p)();` and `get(*p)[0] = 5;` are
+        // commonly calls, so the declaration reading with parentheses (PREC.PAREN_DECLARATOR) keeps losing to them.
+        prec.dynamic(
+          PREC.CERTAIN_DECLARATION,
+          seq(
+            $._built_in_declaration_specifiers,
+            field('declarator', $._built_in_declarator),
+            // Each further declarator outweighs the call, as `y(3)` in `int(x), y(3);`, that its expression reading may
+            // contain.
+            repeat(seq(',', prec.dynamic(1, field('declarator', choice(declarationItem($), $._built_in_declarator))))),
+            ';'
           )
-        ),
-        ';'
+        )
+      ),
+
+    _built_in_declarator: ($) =>
+      choice($._built_in_parenthesized_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
+
+    // The parenthesized declarators that, with a built-in type, carry no PREC.PAREN_DECLARATOR penalty in declarations
+    // and conditions; parameters take them except the parenthesized name (see `parameter_declaration`).
+    _built_in_parenthesized_declarator: ($) =>
+      choice(
+        $._required_parentheses_declarator,
+        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+        $._built_in_parenthesized_name_declarator
+      ),
+
+    // Parentheses around the name, as in `int(x);`, `int((x)) = 5;`, `int(x)[3];`, and `int(f)();`, without C's
+    // PREC.PAREN_DECLARATOR penalty.
+    _built_in_parenthesized_name_declarator: ($) =>
+      choice(
+        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+        alias($.built_in_parenthesized_array_declarator, $.array_declarator),
+        alias($.built_in_parenthesized_function_declarator, $.function_declarator)
+      ),
+
+    built_in_parenthesized_declarator: ($) =>
+      seq('(', choice($.identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)), ')'),
+    built_in_parenthesized_array_declarator: ($) =>
+      withDeclarator(
+        C.grammar.rules.array_declarator,
+        choice(
+          alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+          alias($.built_in_parenthesized_array_declarator, $.array_declarator)
+        )
+      ),
+    built_in_parenthesized_function_declarator: ($) =>
+      prec.dynamic(
+        PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
+        seq(
+          field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+          $._competing_function_declarator_seq
+        )
+      ),
+
+    _built_in_declaration_specifiers: ($) =>
+      prec.right(
+        seq(
+          repeat($._declaration_modifiers),
+          field('type', choice($.primitive_type, $.sized_type_specifier)),
+          repeat($._declaration_modifiers)
+        )
       ),
 
     virtual_specifier: () =>
@@ -516,29 +579,50 @@ module.exports = grammar(C, {
         )
       ),
 
-    parameter_list: ($) =>
-      seq(
-        '(',
-        commaSep(
-          choice(
-            $.parameter_declaration,
-            $.explicit_object_parameter_declaration,
-            $.optional_parameter_declaration,
-            $.variadic_parameter_declaration,
-            '...'
-          )
-        ),
-        ')'
-      ),
+    parameter_list: ($) => parameterList($),
 
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
 
+    // A parameter list competes with the argument list of a direct initialization. With a built-in type, the argument
+    // reading of a parameter such as `int (*pf)()` calls a function-style cast, which is never valid, and that of
+    // `int (*p)` is a cast that [dcl.ambig.res] reads as a parameter; with any other type, `name(*obj)()` in
+    // `std::string s(name(*obj)());` is commonly a call, so the parameter reading with parentheses
+    // (PREC.PAREN_DECLARATOR) keeps losing to it there.
+    parameter_declaration: ($, /** @type {Rule} */ original) =>
+      choice(
+        original,
+        prec.dynamic(
+          PREC.CERTAIN_DECLARATION,
+          seq(
+            $._built_in_declaration_specifiers,
+            field('declarator', $._parameter_parenthesized_declarator),
+            repeat($.attribute_specifier)
+          )
+        )
+      ),
+
+    // Unlike in declarations, a parenthesized name such as `int (x)` competes here with the function type `int(x)`,
+    // which [dcl.ambig.res] prefers when `x` names a type.
+    _parameter_parenthesized_declarator: ($) =>
+      choice($._required_parentheses_declarator, alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+
     optional_parameter_declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
-        '=',
-        field('default_value', $.expression)
+      choice(
+        seq(
+          $._declaration_specifiers,
+          field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
+          '=',
+          field('default_value', $.expression)
+        ),
+        prec.dynamic(
+          PREC.CERTAIN_DECLARATION,
+          seq(
+            $._built_in_declaration_specifiers,
+            field('declarator', $._parameter_parenthesized_declarator),
+            '=',
+            field('default_value', $.expression)
+          )
+        )
       ),
 
     variadic_parameter_declaration: ($) =>
@@ -747,15 +831,60 @@ module.exports = grammar(C, {
 
     ref_qualifier: () => choice('&', '&&'),
 
-    _function_declarator_seq: ($) =>
-      seq(
-        field('parameters', $.parameter_list),
-        optional($._function_attributes_start),
-        optional($.ref_qualifier),
-        optional($._function_exception_specification),
-        optional($._function_attributes_end),
-        optional($.trailing_return_type),
-        optional($._function_postfix)
+    _function_declarator_seq: ($) => functionDeclaratorSeq($, $.parameter_list),
+
+    // The function forms that compete with a direct initialization of the same tokens take a parameter list in which a
+    // parameter may start with an expression keyword. Such keywords lex as type names where no keyword is expected, so
+    // `int (*p)(nullptr);` and `long(n)(sizeof(b));` would otherwise read as functions taking parameters of those types;
+    // here the keyword is expected, and the parameter it starts weighs so little that the function reading loses, or
+    // dies at the tokens that follow it.
+    _competing_function_declarator_seq: ($) =>
+      functionDeclaratorSeq($, alias($.competing_parameter_list, $.parameter_list)),
+
+    competing_parameter_list: ($) => parameterList($, alias($.expression_keyword_parameter, $.parameter_declaration)),
+
+    expression_keyword_parameter: ($) =>
+      prec.dynamic(
+        -20,
+        seq(
+          optional('::'),
+          field(
+            'type',
+            alias(
+              choice(
+                'nullptr',
+                'NULL',
+                $.true,
+                $.false,
+                'sizeof',
+                'alignof',
+                '_Alignof',
+                '__alignof__',
+                '__alignof',
+                '_alignof',
+                'offsetof',
+                '_Generic',
+                '__builtin_available',
+                'asm',
+                '__asm__',
+                '__asm',
+                'new',
+                'delete',
+                'co_await',
+                'requires',
+                'static_cast',
+                'dynamic_cast',
+                'const_cast',
+                'reinterpret_cast',
+                'typeid',
+                'noexcept',
+                'not',
+                'compl'
+              ),
+              $.type_identifier
+            )
+          )
+        )
       ),
 
     _function_attributes_start: ($) =>
@@ -783,6 +912,90 @@ module.exports = grammar(C, {
     _function_postfix: ($) => prec.right(choice(repeat1($.virtual_specifier), $.requires_clause)),
 
     function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
+
+    // Parentheses around a pointer before a parameter list or an array bound, as in `int (*pf)()` and `int (*a)[3]`,
+    // are required, so unlike other parenthesized declarators this one carries no PREC.PAREN_DECLARATOR penalty. It is
+    // used only where the declaration reading is certain (see `parameter_declaration` and `declaration`).
+    parenthesized_pointer_declarator: ($) =>
+      seq(
+        '(',
+        optional($.ms_call_modifier),
+        choice(
+          $.pointer_declarator,
+          alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
+          $.reference_declarator,
+          alias($.required_parentheses_reference_declarator, $.reference_declarator),
+          alias($.qualified_pointer_declarator, $.qualified_identifier),
+          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+        ),
+        ')'
+      ),
+
+    // A declarator that needs parentheses, possibly behind pointers and references, as in `Foo *(*f)(Bar)`,
+    // `int (*(*fpa)[3])();`, and `int (&(*rg)())[3];`.
+    _required_parentheses_declarator: ($) =>
+      choice(
+        alias($.required_parentheses_function_declarator, $.function_declarator),
+        alias($.required_parentheses_array_declarator, $.array_declarator),
+        alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
+        alias($.required_parentheses_reference_declarator, $.reference_declarator)
+      ),
+
+    required_parentheses_pointer_declarator: ($) =>
+      withDeclarator(C.grammar.rules.pointer_declarator, $._required_parentheses_declarator),
+    required_parentheses_reference_declarator: ($) =>
+      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._required_parentheses_declarator))),
+
+    required_parentheses_function_declarator: ($) =>
+      prec.dynamic(
+        PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
+        seq(
+          field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+          $._competing_function_declarator_seq
+        )
+      ),
+
+    // Nested for further dimensions, as in `int (*a)[3][5]`.
+    required_parentheses_array_declarator: ($) =>
+      withDeclarator(
+        C.grammar.rules.array_declarator,
+        choice(
+          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+          alias($.required_parentheses_array_declarator, $.array_declarator)
+        )
+      ),
+
+    required_parentheses_init_declarator: ($) =>
+      choice(
+        seq(
+          field('declarator', $._built_in_parenthesized_declarator),
+          choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
+        ),
+        seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list))
+      ),
+
+    // Each shape here has a function form of the same tokens: a parenthesized name only bare
+    // (`built_in_parenthesized_function_declarator`), the others also behind pointers and references.
+    _direct_initialized_declarator: ($) =>
+      choice(
+        $._direct_initialized_parenthesized_declarator,
+        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
+      ),
+
+    // The direct initialization competing with a required-parentheses function declarator of the same tokens, behind
+    // the same pointers and references, so that `int *(*p)(nullptr);` stays a direct initialization like
+    // `int (*p)(nullptr);`.
+    _direct_initialized_parenthesized_declarator: ($) =>
+      choice(
+        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+        alias($.direct_initialized_pointer_declarator, $.pointer_declarator),
+        alias($.direct_initialized_reference_declarator, $.reference_declarator)
+      ),
+
+    direct_initialized_pointer_declarator: ($) =>
+      withDeclarator(C.grammar.rules.pointer_declarator, $._direct_initialized_parenthesized_declarator),
+    direct_initialized_reference_declarator: ($) =>
+      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._direct_initialized_parenthesized_declarator))),
 
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
@@ -948,10 +1161,21 @@ module.exports = grammar(C, {
       ),
 
     condition_declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        field('declarator', $._declarator),
-        choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+      choice(
+        seq(
+          $._declaration_specifiers,
+          field('declarator', $._declarator),
+          choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+        ),
+        // See the built-in alternative of `declaration`: `if (int (*p)() = f())` declares `p`.
+        prec.dynamic(
+          PREC.CERTAIN_DECLARATION,
+          seq(
+            $._built_in_declaration_specifiers,
+            field('declarator', $._built_in_parenthesized_declarator),
+            choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+          )
+        )
       ),
 
     return_statement: ($, /** @type {Rule} */ original) =>
@@ -1356,11 +1580,56 @@ module.exports = grammar(C, {
         original,
         $.qualified_identifier,
         $.user_defined_literal,
-        alias($.pointer_to_member_expression, $.binary_expression)
+        alias($.pointer_to_member_expression, $.binary_expression),
+        alias($.named_cast_expression, $.call_expression)
       ),
 
     expression: ($, /** @type {Rule} */ original) =>
-      choice(original, alias($.pointer_to_member_expression, $.binary_expression)),
+      choice(
+        original,
+        alias($.pointer_to_member_expression, $.binary_expression),
+        alias($.named_cast_expression, $.call_expression),
+        alias($.typeid_expression, $.call_expression)
+      ),
+
+    // The named casts and `typeid` are keywords where an expression may start, so such a call never reads as a
+    // declaration or a type-id there; where only a type name fits, they still lex as one (`static_cast<T> f;` in a
+    // class). They keep the shapes of the calls that other names make, which queries already match.
+    named_cast_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(
+          PREC.CALL,
+          seq(field('function', alias($.named_cast, $.template_function)), field('arguments', $.argument_list))
+        )
+      ),
+    named_cast: ($) =>
+      seq(
+        field(
+          'name',
+          choice(
+            alias('static_cast', $.identifier),
+            alias('dynamic_cast', $.identifier),
+            alias('const_cast', $.identifier),
+            alias('reinterpret_cast', $.identifier)
+          )
+        ),
+        field('arguments', $.template_argument_list)
+      ),
+    typeid_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(
+          PREC.CALL,
+          seq(
+            field('function', alias('typeid', $.identifier)),
+            field('arguments', choice($.argument_list, alias($.typeid_type_argument_list, $.argument_list)))
+          )
+        )
+      ),
+    // Loses to the expression reading of the same tokens, so that `typeid(std::runtime_error)` keeps its tree and only a
+    // type that cannot be an expression, such as `typeid(int)`, reads as one.
+    typeid_type_argument_list: ($) => prec.dynamic(-1, seq('(', $.type_descriptor, ')')),
 
     pointer_to_member_expression: ($) =>
       prec.left(
@@ -1390,7 +1659,27 @@ module.exports = grammar(C, {
     parenthesized_expression: ($, /** @type {Rule} */ original) =>
       choice(original, seq('(', alias($._assignment_expression_lhs, $.assignment_expression), ')')),
 
-    reflect_expression: ($) => prec.right(seq('^^', choice('::', $.expression, $.type_descriptor))),
+    reflect_expression: ($) =>
+      prec.right(
+        seq(
+          '^^',
+          choice(
+            '::',
+            $.expression,
+            $.type_descriptor,
+            prec.dynamic(PREC.CERTAIN_DECLARATION, alias($.built_in_function_type_descriptor, $.type_descriptor))
+          )
+        )
+      ),
+
+    // The operand of `^^` is a type-id, a name, or `::`, never a call, so `^^int()` reflects a function type although
+    // the call `int()` covers the same tokens.
+    built_in_function_type_descriptor: ($) =>
+      seq(
+        field('type', $.primitive_type),
+        field('declarator', alias($.built_in_function_type_declarator, $.abstract_function_declarator))
+      ),
+    built_in_function_type_declarator: ($) => $._function_declarator_seq,
 
     splice_specifier: ($) => seq('[:', $.expression, ':]'),
     _splice_specialization_specifier: ($) => seq($.splice_specifier, $.template_argument_list),
@@ -1532,6 +1821,55 @@ module.exports = grammar(C, {
     _namespace_identifier: ($) => alias($.identifier, $.namespace_identifier),
   },
 });
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {...RuleOrLiteral} extraParameters
+ * @returns {Rule}
+ */
+function parameterList($, ...extraParameters) {
+  return seq(
+    '(',
+    commaSep(
+      choice(
+        $.parameter_declaration,
+        $.explicit_object_parameter_declaration,
+        $.optional_parameter_declaration,
+        $.variadic_parameter_declaration,
+        '...',
+        ...extraParameters
+      )
+    ),
+    ')'
+  );
+}
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {RuleOrLiteral} parameters
+ * @returns {Rule}
+ */
+function functionDeclaratorSeq($, parameters) {
+  return seq(
+    field('parameters', parameters),
+    optional($._function_attributes_start),
+    optional($.ref_qualifier),
+    optional($._function_exception_specification),
+    optional($._function_attributes_end),
+    optional($.trailing_return_type),
+    optional($._function_postfix)
+  );
+}
+
+/**
+ * C's declaration uses _declaration_declarator, whose function declarators take macro attributes; that causes a world of
+ * pain for C++, so C++ uses the plain _declarator.
+ * @param {GrammarSymbols<string>} $
+ * @returns {Rule}
+ */
+function declarationItem($) {
+  return choice(seq(optional($.ms_call_modifier), $._declarator, optional($.gnu_asm_expression)), $.init_declarator);
+}
 
 /**
  * @param {GrammarSymbols<string>} $

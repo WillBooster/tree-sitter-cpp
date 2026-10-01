@@ -28,14 +28,12 @@ int main() {
         (parameter_list
           (parameter_declaration
             (primitive_type))))))
-  (expression_statement
-    (subscript_expression
-      (call_expression
-        (primitive_type)
-        (argument_list
-          (pointer_expression
-            (identifier))))
-      (subscript_argument_list)))
+  (declaration
+    (primitive_type)
+    (array_declarator
+      (parenthesized_declarator
+        (pointer_declarator
+          (identifier)))))
   (function_definition
     (primitive_type)
     (function_declarator

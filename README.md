@@ -104,6 +104,9 @@ cargo test --locked
 - a performance check (`test/unit/performance.test.ts`) that recovering from an error on each line takes linear
   time, since consumers parse files while they are being edited. It loads the Wasm build through
   @willbooster/web-tree-sitter, which `bun run build/ci` rebuilds after regenerating the parser;
+- a check (`test/unit/expressionKeywordParameter.test.ts`) that every keyword that can start an expression but not a
+  parameter is expected in the parameters of the function declarators that compete with a direct initialization, so
+  that `long(n)(sizeof(b));` stays an initialization;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and
   `willbooster-tree-sitter` in `Cargo.lock` are the same version, since the Wasm tests run on the former and the Rust
   tests and the fuzzer on the latter;

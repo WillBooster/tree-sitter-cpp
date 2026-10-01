@@ -1888,3 +1888,137 @@ template <typename... Args> void negateValues(Args... args) {
                     (identifier)))
                 (string_literal
                   (string_content))))))))))
+
+================================================================================
+Named casts, typeid, and noexcept
+================================================================================
+
+auto a = static_cast<int *>(p);
+auto &b = dynamic_cast<B &>(*p);
+auto c = const_cast<const T *>(p);
+auto d = reinterpret_cast<char *>(p);
+auto &e = typeid(int);
+auto &f = typeid(*p);
+auto &i = typeid(a, b);
+auto &j = typeid(std::runtime_error);
+auto g = noexcept(h());
+
+---
+
+(translation_unit
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (call_expression
+        (template_function
+          (identifier)
+          (template_argument_list
+            (type_descriptor
+              (primitive_type)
+              (abstract_pointer_declarator))))
+        (argument_list
+          (identifier)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (call_expression
+        (template_function
+          (identifier)
+          (template_argument_list
+            (type_descriptor
+              (type_identifier)
+              (abstract_reference_declarator))))
+        (argument_list
+          (pointer_expression
+            (identifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (call_expression
+        (template_function
+          (identifier)
+          (template_argument_list
+            (type_descriptor
+              (type_qualifier)
+              (type_identifier)
+              (abstract_pointer_declarator))))
+        (argument_list
+          (identifier)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (call_expression
+        (template_function
+          (identifier)
+          (template_argument_list
+            (type_descriptor
+              (primitive_type)
+              (abstract_pointer_declarator))))
+        (argument_list
+          (identifier)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (call_expression
+        (identifier)
+        (argument_list
+          (type_descriptor
+            (primitive_type))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (call_expression
+        (identifier)
+        (argument_list
+          (pointer_expression
+            (identifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (call_expression
+        (identifier)
+        (argument_list
+          (identifier)
+          (identifier)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (call_expression
+        (identifier)
+        (argument_list
+          (qualified_identifier
+            (namespace_identifier)
+            (identifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (call_expression
+        (identifier)
+        (argument_list
+          (call_expression
+            (identifier)
+            (argument_list)))))))
+
