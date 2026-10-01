@@ -132,6 +132,7 @@ module.exports = grammar(C, {
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
+    [$._declarator, $._function_definition_declarator],
   ],
 
   inline: ($, original) => [...original, $._namespace_identifier],
@@ -281,12 +282,37 @@ module.exports = grammar(C, {
         )
       ),
 
-    function_definition: ($, /** @type {SeqRule} */ original) => ({
-      ...original,
-      members: original.members.map((e) =>
-        e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
+    function_definition: ($, /** @type {SeqRule} */ original) =>
+      choice(
+        {
+          ...original,
+          members: original.members.map((e) =>
+            e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
+          ),
+        },
+        // Only declarators that end in a parameter list take `= default;` or `= delete;`; offering the clause after any
+        // declarator would make `default` a keyword in every initializer, e.g. in `int c = default + 1;` when `default`
+        // is a macro.
+        {
+          ...original,
+          members: original.members.map((e) => {
+            if (e.type !== 'FIELD') return e;
+            if (e.name === 'declarator') return field('declarator', $._function_definition_declarator);
+            return e.name === 'body' ? choice($.default_method_clause, $.delete_method_clause) : e;
+          }),
+        }
       ),
-    }),
+
+    _function_definition_declarator: ($) =>
+      choice(
+        $.function_declarator,
+        alias($.function_definition_pointer_declarator, $.pointer_declarator),
+        alias($.function_definition_reference_declarator, $.reference_declarator)
+      ),
+    function_definition_pointer_declarator: ($) =>
+      withDeclarator(C.grammar.rules.pointer_declarator, $._function_definition_declarator),
+    function_definition_reference_declarator: ($) =>
+      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._function_definition_declarator))),
 
     declaration: ($) =>
       seq(
@@ -609,7 +635,7 @@ module.exports = grammar(C, {
           'declarator',
           choice($.operator_cast, alias($.qualified_operator_cast_identifier, $.qualified_identifier))
         ),
-        field('body', choice($.compound_statement, $.try_statement))
+        choice(field('body', choice($.compound_statement, $.try_statement)), $.delete_method_clause)
       ),
 
     operator_cast_declaration: ($) =>
@@ -645,7 +671,8 @@ module.exports = grammar(C, {
     constructor_or_destructor_declaration: ($) =>
       seq(repeat($._constructor_specifiers), field('declarator', $.function_declarator), ';'),
 
-    default_method_clause: () => seq('=', 'default', ';'),
+    // Outranks the call expression in `X::~X() = default;`, whose assignment reading lexes `default` as an identifier.
+    default_method_clause: () => prec.dynamic(1, seq('=', 'default', ';')),
     delete_method_clause: () => seq('=', 'delete', ';'),
     pure_virtual_clause: () => seq('=', /0/, ';'),
 
@@ -666,6 +693,7 @@ module.exports = grammar(C, {
       choice(
         original,
         $.reference_declarator,
+        alias($.qualified_pointer_declarator, $.qualified_identifier),
         $.qualified_identifier,
         $.template_function,
         $.operator_name,
@@ -683,23 +711,28 @@ module.exports = grammar(C, {
       ),
 
     _type_declarator: ($, /** @type {Rule} */ original) =>
-      choice(original, alias($.reference_type_declarator, $.reference_declarator)),
+      choice(
+        original,
+        alias($.reference_type_declarator, $.reference_declarator),
+        alias($.qualified_pointer_type_declarator, $.qualified_identifier)
+      ),
 
-    _abstract_declarator: ($, /** @type {Rule} */ original) => choice(original, $.abstract_reference_declarator),
+    _abstract_declarator: ($, /** @type {Rule} */ original) =>
+      choice(
+        original,
+        $.abstract_reference_declarator,
+        alias($.abstract_qualified_pointer_declarator, $.qualified_identifier)
+      ),
 
     reference_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
-    // A pointer to member (`S::*pm`), shaped like the qualified_identifier that _declarator parses it as.
+    // Pointers to members (`S::*pm`) are qualified_identifier nodes whose name is the pointer declarator.
+    qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
     qualified_pointer_field_declarator: ($) =>
-      seq(
-        $._scope_resolution,
-        field(
-          'name',
-          choice(
-            alias($.qualified_pointer_field_declarator, $.qualified_identifier),
-            alias($.pointer_field_declarator, $.pointer_declarator)
-          )
-        )
-      ),
+      pointerToMember($, $.qualified_pointer_field_declarator, alias($.pointer_field_declarator, $.pointer_declarator)),
+    qualified_pointer_type_declarator: ($) =>
+      pointerToMember($, $.qualified_pointer_type_declarator, alias($.pointer_type_declarator, $.pointer_declarator)),
+    abstract_qualified_pointer_declarator: ($) =>
+      pointerToMember($, $.abstract_qualified_pointer_declarator, $.abstract_pointer_declarator),
     reference_field_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
     reference_type_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
     abstract_reference_declarator: ($) => prec.right(seq(choice('&', '&&'), optional($._abstract_declarator))),
@@ -747,6 +780,8 @@ module.exports = grammar(C, {
 
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
+
+    function_type_declarator: ($) => prec(1, seq(field('declarator', $._type_declarator), $._function_declarator_seq)),
 
     abstract_function_declarator: ($) =>
       seq(field('declarator', optional($._abstract_declarator)), $._function_declarator_seq),
@@ -1001,6 +1036,7 @@ module.exports = grammar(C, {
       prec.right(
         seq(
           '*',
+          repeat($.attribute_declaration),
           repeat($.ms_pointer_modifier),
           repeat($.type_qualifier),
           field('declarator', optional($._new_declarator))
@@ -1284,8 +1320,7 @@ module.exports = grammar(C, {
             $.template_function,
             prec.dynamic(1, seq(optional('template'), $.identifier)),
             $.operator_name,
-            $.destructor_name,
-            $.pointer_type_declarator
+            $.destructor_name
           )
         )
       ),
@@ -1477,6 +1512,53 @@ module.exports = grammar(C, {
     _namespace_identifier: ($) => alias($.identifier, $.namespace_identifier),
   },
 });
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {RuleOrLiteral} self
+ * @param {RuleOrLiteral} pointer
+ */
+function pointerToMember($, self, pointer) {
+  return seq($._scope_resolution, field('name', choice(alias(self, $.qualified_identifier), pointer)));
+}
+
+/**
+ * Replaces the `declarator` field of a declarator rule, failing when the rule has none.
+ * @param {Rule} rule
+ * @param {Rule} declarator
+ * @returns {Rule}
+ */
+function withDeclarator(rule, declarator) {
+  const result = replaceDeclarator(rule, declarator);
+  if (JSON.stringify(result) === JSON.stringify(rule)) throw new Error('The rule has no declarator field to replace.');
+  return result;
+}
+
+/**
+ * @param {Rule} rule
+ * @param {Rule} declarator
+ * @returns {Rule}
+ */
+function replaceDeclarator(rule, declarator) {
+  switch (rule.type) {
+    case 'FIELD': {
+      return rule.name === 'declarator' ? field('declarator', declarator) : rule;
+    }
+    case 'SEQ':
+    case 'CHOICE': {
+      return { ...rule, members: rule.members.map((member) => replaceDeclarator(member, declarator)) };
+    }
+    case 'PREC':
+    case 'PREC_DYNAMIC':
+    case 'PREC_LEFT':
+    case 'PREC_RIGHT': {
+      return { ...rule, content: replaceDeclarator(rule.content, declarator) };
+    }
+    default: {
+      return rule;
+    }
+  }
+}
 
 /**
  * @param {Rule} rule

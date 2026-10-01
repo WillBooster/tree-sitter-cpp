@@ -373,8 +373,8 @@ concept C = requires {
     (init_declarator
       (qualified_identifier
         (namespace_identifier)
-        (pointer_type_declarator
-          (type_identifier)))
+        (pointer_declarator
+          (identifier)))
       (pointer_expression
         (splice_expression
           (splice_specifier
