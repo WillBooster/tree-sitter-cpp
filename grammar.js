@@ -143,7 +143,7 @@ module.exports = grammar(C, {
     [$._declarator, $._function_definition_declarator],
   ],
 
-  inline: ($, original) => [...original, $._namespace_identifier, $._declaration_item],
+  inline: ($, original) => [...original, $._namespace_identifier],
 
   precedences: ($) => [
     [$.argument_list, $.type_qualifier],
@@ -324,7 +324,7 @@ module.exports = grammar(C, {
 
     declaration: ($) =>
       choice(
-        seq($._declaration_specifiers, commaSep1(field('declarator', $._declaration_item)), ';'),
+        seq($._declaration_specifiers, commaSep1(field('declarator', declarationItem($))), ';'),
         // With a built-in type, the expression reading `void(*fp)()` of `void (*fp)();` calls a function-style cast,
         // which is never valid; with any other type, `foo(*p)();` and `get(*p)[0] = 5;` are commonly calls, so the
         // declaration reading with parentheses (PREC.PAREN_DECLARATOR) keeps losing to them there.
@@ -334,19 +334,12 @@ module.exports = grammar(C, {
             $._built_in_declaration_specifiers,
             field('declarator', $._built_in_required_parentheses_declarator),
             repeat(
-              seq(',', field('declarator', choice($._declaration_item, $._built_in_required_parentheses_declarator)))
+              seq(',', field('declarator', choice(declarationItem($), $._built_in_required_parentheses_declarator)))
             ),
             ';'
           )
         )
       ),
-
-    // C's declaration uses _declaration_declarator, whose function declarators take macro attributes; that causes a
-    // world of pain for C++, so C++ uses the plain _declarator. The rule is inlined (see `inline`): as a separate node it
-    // changes how equal dynamic precedences of init_declarator and function_declarator resolve, so that
-    // `std::vector<char> buf(static_cast<size_t>(size));` became a function declaration.
-    _declaration_item: ($) =>
-      choice(seq(optional($.ms_call_modifier), $._declarator, optional($.gnu_asm_expression)), $.init_declarator),
 
     _built_in_required_parentheses_declarator: ($) =>
       choice($._required_parentheses_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
@@ -1644,6 +1637,16 @@ module.exports = grammar(C, {
     _namespace_identifier: ($) => alias($.identifier, $.namespace_identifier),
   },
 });
+
+/**
+ * C's declaration uses _declaration_declarator, whose function declarators take macro attributes; that causes a world of
+ * pain for C++, so C++ uses the plain _declarator.
+ * @param {GrammarSymbols<string>} $
+ * @returns {Rule}
+ */
+function declarationItem($) {
+  return choice(seq(optional($.ms_call_modifier), $._declarator, optional($.gnu_asm_expression)), $.init_declarator);
+}
 
 /**
  * @param {GrammarSymbols<string>} $
