@@ -63,7 +63,7 @@ parser.setLanguage(await Language.load(cpp));
 ```
 
 The package also ships the node types in `src/node-types.json`, and the queries that `tree-sitter.json` lists: this
-grammar's in `queries/` and, in `c/queries/`, the highlights of the C grammar it extends.
+grammar's in `queries/` and, in `queries/c/`, the highlights of the C grammar it extends.
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
@@ -117,7 +117,7 @@ that runs here. Run other CLI commands through it as well (e.g. `script/tree-sit
   parameter is expected in the parameters of the function declarators that compete with a direct initialization, so
   that `long(n)(sizeof(b));` stays an initialization;
 - a check (`test/unit/queries.test.ts`) that the queries `tree-sitter.json` lists compile against the grammar, are
-  published in the npm package and the crate, and that `c/queries/` matches the queries of the installed
+  published in the npm package and the crate, and that `queries/c/` matches the queries of the installed
   @willbooster/tree-sitter-c; after updating that dependency, `script/copy-c-queries` refreshes the copy;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and
   `willbooster-tree-sitter` in `Cargo.lock` are the same version, since the Wasm tests run on the former and the Rust

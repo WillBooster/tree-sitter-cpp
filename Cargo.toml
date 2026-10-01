@@ -12,7 +12,7 @@ repository = "https://github.com/WillBooster/tree-sitter-cpp"
 version = "0.0.0"
 
 build = "bindings/rust/build.rs"
-include = ["/bindings/rust/*", "/c/queries/*", "/queries/*", "/src/*", "/tree-sitter.json", "/LICENSE"]
+include = ["/bindings/rust/*", "/queries/**/*.scm", "/src/*", "/tree-sitter.json", "/LICENSE"]
 
 [lib]
 name = "tree_sitter_cpp"

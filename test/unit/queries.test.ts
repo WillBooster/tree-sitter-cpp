@@ -58,12 +58,12 @@ for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
   });
 }
 
-// c/queries/ copies the C grammar's queries, which this grammar extends.
-test('keeps c/queries/ identical to the queries of @willbooster/tree-sitter-c', () => {
-  for (const file of fs.readdirSync(path.join(Root, 'c/queries'))) {
+// queries/c/ copies the C grammar's queries, which this grammar extends.
+test('keeps queries/c/ identical to the queries of @willbooster/tree-sitter-c', () => {
+  for (const file of fs.readdirSync(path.join(Root, 'queries/c'))) {
     expect(
-      fs.readFileSync(path.join(Root, 'c/queries', file), 'utf8'),
-      `c/queries/${file} differs; run script/copy-c-queries`
+      fs.readFileSync(path.join(Root, 'queries/c', file), 'utf8'),
+      `queries/c/${file} differs; run script/copy-c-queries`
     ).toBe(fs.readFileSync(path.join(CQueries, file), 'utf8'));
   }
 });

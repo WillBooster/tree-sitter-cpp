@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
 # Copies the highlights query of @willbooster/tree-sitter-c, which this grammar extends and tree-sitter.json lists before
-# this grammar's own, into c/queries/: the published tree-sitter.json can reference only files inside this package. It
-# stays out of queries/, every file of which `tree-sitter test` compiles against this grammar on its own.
+# this grammar's own, into queries/c/: the published tree-sitter.json can reference only files inside this package.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-mkdir -p c/queries
-cp node_modules/@willbooster/tree-sitter-c/queries/highlights.scm c/queries/
+mkdir -p queries/c
+cp node_modules/@willbooster/tree-sitter-c/queries/highlights.scm queries/c/

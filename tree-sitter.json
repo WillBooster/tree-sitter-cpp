@@ -7,7 +7,7 @@
       "scope": "source.cpp",
       "path": ".",
       "file-types": ["cc", "cpp", "cxx", "hpp", "hxx", "h"],
-      "highlights": ["c/queries/highlights.scm", "queries/highlights.scm"],
+      "highlights": ["queries/c/highlights.scm", "queries/highlights.scm"],
       "injections": "queries/injections.scm",
       "tags": "queries/tags.scm",
       "injection-regex": "^(cc|cpp)$"

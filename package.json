@@ -15,8 +15,7 @@
   "license": "MIT",
   "author": "WillBooster Inc.",
   "files": [
-    "c/queries/*.scm",
-    "queries/*.scm",
+    "queries/**/*.scm",
     "tree-sitter.json",
     "src/node-types.json",
     "*.wasm"
