@@ -17,18 +17,27 @@ const Grammar = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../..
 // A keyword that can start an expression but not a parameter lexes as a type name in a parameter list, where it would
 // let the function reading of `long(n)(sizeof(b));` win; `expression_keyword_parameter` must expect every such keyword.
 test('expects every keyword that starts an expression but not a parameter', () => {
-  const parameterWords = new Set(
-    [
-      'parameter_declaration',
-      'optional_parameter_declaration',
-      'explicit_object_parameter_declaration',
-      'variadic_parameter_declaration',
-    ].flatMap((name) => [...firstWords(name)])
-  );
-  const expected = [...firstWords('expression')].filter((word) => !parameterWords.has(word)).toSorted();
+  const expected = [...firstWords('expression')].filter((word) => !ParameterWords.has(word)).toSorted();
   const offered = firstWords('expression_keyword_parameter');
   expect(expected.filter((word) => !offered.has(word))).toEqual([]);
 });
+
+// `Foo* p(nullptr);` reads as a variable because its argument starts with a keyword that no parameter starts with; a
+// keyword that can start a parameter, such as `__extension__`, would turn `Foo* p(__extension__ T);` into a variable.
+// `this` starts an explicit object parameter only when a declaration follows it, which no keyword-led argument has.
+test('starts the keyword-led arguments only with keywords that no parameter starts with', () => {
+  const words = [...firstWords('_keyword_led_expression')].filter((word) => word !== 'this');
+  expect(words.filter((word) => ParameterWords.has(word))).toEqual([]);
+});
+
+const ParameterWords = new Set(
+  [
+    'parameter_declaration',
+    'optional_parameter_declaration',
+    'explicit_object_parameter_declaration',
+    'variadic_parameter_declaration',
+  ].flatMap((name) => [...firstWords(name)])
+);
 
 function firstWords(name: string): Set<string> {
   const { words } = first({ type: 'SYMBOL', name }, new Map(), new Set());

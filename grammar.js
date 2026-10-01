@@ -677,13 +677,19 @@ module.exports = grammar(C, {
         '*',
         field(
           'declarator',
-          choice($.identifier, alias($.argument_initialized_pointer_declarator, $.pointer_declarator))
+          choice(
+            $.identifier,
+            $.parenthesized_declarator,
+            alias($.argument_initialized_pointer_declarator, $.pointer_declarator)
+          )
         )
       ),
-    argument_initialized_reference_declarator: ($) => seq(choice('&', '&&'), $.identifier),
+    argument_initialized_reference_declarator: ($) =>
+      seq(choice('&', '&&'), choice($.identifier, $.parenthesized_declarator)),
 
-    // A single argument that starts with a keyword, which no parameter list holds: an expression that starts with one,
-    // possibly followed by calls, subscripts, and member accesses, as in `this->next`.
+    // A single argument that starts with a keyword that no parameter starts with (see
+    // test/unit/expressionKeywordParameter.test.ts): an expression that starts with one, possibly followed by calls,
+    // subscripts, and member accesses, as in `this->next`.
     keyword_argument_list: ($) => seq('(', $._keyword_led_expression, ')'),
 
     _keyword_led_expression: ($) =>
@@ -700,7 +706,6 @@ module.exports = grammar(C, {
         $.delete_expression,
         $.co_await_expression,
         $.requires_expression,
-        $.extension_expression,
         $.builtin_available_expression,
         alias($.named_cast_expression, $.call_expression),
         alias($.typeid_expression, $.call_expression),

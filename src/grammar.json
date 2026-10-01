@@ -13971,6 +13971,10 @@
                 "name": "identifier"
               },
               {
+                "type": "SYMBOL",
+                "name": "parenthesized_declarator"
+              },
+              {
                 "type": "ALIAS",
                 "content": {
                   "type": "SYMBOL",
@@ -14001,8 +14005,17 @@
           ]
         },
         {
-          "type": "SYMBOL",
-          "name": "identifier"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "identifier"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "parenthesized_declarator"
+            }
+          ]
         }
       ]
     },
@@ -14073,10 +14086,6 @@
         {
           "type": "SYMBOL",
           "name": "requires_expression"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "extension_expression"
         },
         {
           "type": "SYMBOL",
