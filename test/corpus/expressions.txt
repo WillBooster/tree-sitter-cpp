@@ -1899,6 +1899,8 @@ auto c = const_cast<const T *>(p);
 auto d = reinterpret_cast<char *>(p);
 auto &e = typeid(int);
 auto &f = typeid(*p);
+auto &i = typeid(a, b);
+auto &j = typeid(std::runtime_error);
 auto g = noexcept(h());
 
 ---
@@ -1984,6 +1986,29 @@ auto g = noexcept(h());
         (identifier)
         (argument_list
           (pointer_expression
+            (identifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (call_expression
+        (identifier)
+        (argument_list
+          (identifier)
+          (identifier)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (call_expression
+        (identifier)
+        (argument_list
+          (qualified_identifier
+            (namespace_identifier)
             (identifier))))))
   (declaration
     (placeholder_type_specifier

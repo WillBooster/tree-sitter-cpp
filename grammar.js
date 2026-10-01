@@ -1655,11 +1655,13 @@ module.exports = grammar(C, {
           PREC.CALL,
           seq(
             field('function', alias('typeid', $.identifier)),
-            field('arguments', alias($.typeid_argument_list, $.argument_list))
+            field('arguments', choice($.argument_list, alias($.typeid_type_argument_list, $.argument_list)))
           )
         )
       ),
-    typeid_argument_list: ($) => seq('(', choice($.expression, $.type_descriptor), ')'),
+    // Loses to the expression reading of the same tokens, so that `typeid(std::runtime_error)` keeps its tree and only a
+    // type that cannot be an expression, such as `typeid(int)`, reads as one.
+    typeid_type_argument_list: ($) => prec.dynamic(-1, seq('(', $.type_descriptor, ')')),
 
     pointer_to_member_expression: ($) =>
       prec.left(
