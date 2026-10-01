@@ -24,10 +24,10 @@ const PREC = Object.assign(C.PREC, {
   // same tokens adds, however many appear in practice: one in `int(x);` and `^^int()`, two in `int(x)[f()];`.
   CERTAIN_DECLARATION: 10,
   // A function declarator with parentheses outranks a direct initialization of the same tokens, as in
-  // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, and a single keyword literal
-  // argument outranks it in turn.
+  // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, and an argument that starts with
+  // an expression keyword outranks it in turn.
   FUNCTION_OVER_DIRECT_INITIALIZATION: 10,
-  KEYWORD_LITERAL_INITIALIZATION: 11,
+  KEYWORD_ARGUMENT_INITIALIZATION: 11,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -940,13 +940,14 @@ module.exports = grammar(C, {
           choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
         ),
         seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list)),
-        // `nullptr`, `true`, and `false` lex as type names where no keyword is expected, so without this preference the
-        // function form of the same tokens would read `int (*p)(nullptr);` as taking a parameter of type `nullptr`.
+        // Expression keywords such as `nullptr` and `sizeof` lex as type names where no keyword is expected, so without
+        // this preference the function form of the same tokens would read `int (*p)(nullptr);` and
+        // `long(n)(sizeof(b));` as taking parameters of those types.
         prec.dynamic(
-          PREC.KEYWORD_LITERAL_INITIALIZATION,
+          PREC.KEYWORD_ARGUMENT_INITIALIZATION,
           seq(
             field('declarator', $._direct_initialized_declarator),
-            field('value', alias($.keyword_literal_argument_list, $.argument_list))
+            field('value', alias($.keyword_argument_list, $.argument_list))
           )
         )
       ),
@@ -959,7 +960,28 @@ module.exports = grammar(C, {
         alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
       ),
 
-    keyword_literal_argument_list: ($) => prec(1, seq('(', choice($.null, $.true, $.false), ')')),
+    // A single argument that starts with an expression keyword, which cannot start a parameter type.
+    keyword_argument_list: ($) =>
+      prec(
+        1,
+        seq(
+          '(',
+          choice(
+            $.null,
+            $.true,
+            $.false,
+            $.this,
+            $.sizeof_expression,
+            $.alignof_expression,
+            $.new_expression,
+            $.delete_expression,
+            $.co_await_expression,
+            alias($.named_cast_expression, $.call_expression),
+            alias($.typeid_expression, $.call_expression)
+          ),
+          ')'
+        )
+      ),
 
     // The direct initialization competing with a required-parentheses function declarator of the same tokens, behind
     // the same pointers and references, so that `int *(*p)(nullptr);` stays a direct initialization like
@@ -1559,11 +1581,53 @@ module.exports = grammar(C, {
         original,
         $.qualified_identifier,
         $.user_defined_literal,
-        alias($.pointer_to_member_expression, $.binary_expression)
+        alias($.pointer_to_member_expression, $.binary_expression),
+        alias($.named_cast_expression, $.call_expression)
       ),
 
     expression: ($, /** @type {Rule} */ original) =>
-      choice(original, alias($.pointer_to_member_expression, $.binary_expression)),
+      choice(
+        original,
+        alias($.pointer_to_member_expression, $.binary_expression),
+        alias($.named_cast_expression, $.call_expression),
+        alias($.typeid_expression, $.call_expression)
+      ),
+
+    // The named casts and `typeid` are keywords, so `static_cast` cannot be read as a type name elsewhere, but they keep
+    // the shapes of the calls that other names make, which queries already match.
+    named_cast_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(
+          PREC.CALL,
+          seq(field('function', alias($.named_cast, $.template_function)), field('arguments', $.argument_list))
+        )
+      ),
+    named_cast: ($) =>
+      seq(
+        field(
+          'name',
+          choice(
+            alias('static_cast', $.identifier),
+            alias('dynamic_cast', $.identifier),
+            alias('const_cast', $.identifier),
+            alias('reinterpret_cast', $.identifier)
+          )
+        ),
+        field('arguments', $.template_argument_list)
+      ),
+    typeid_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(
+          PREC.CALL,
+          seq(
+            field('function', alias('typeid', $.identifier)),
+            field('arguments', alias($.typeid_argument_list, $.argument_list))
+          )
+        )
+      ),
+    typeid_argument_list: ($) => seq('(', choice($.expression, $.type_descriptor), ')'),
 
     pointer_to_member_expression: ($) =>
       prec.left(

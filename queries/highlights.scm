@@ -77,3 +77,13 @@
 ; Strings
 
 (raw_string_literal) @string
+
+; Keywords with the shape of a call
+
+((template_function
+  name: (identifier) @keyword)
+ (#any-of? @keyword "static_cast" "dynamic_cast" "const_cast" "reinterpret_cast"))
+
+((call_expression
+  function: (identifier) @keyword)
+ (#eq? @keyword "typeid"))

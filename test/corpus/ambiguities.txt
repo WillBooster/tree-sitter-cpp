@@ -184,6 +184,9 @@ void f() {
   int (*md)[3][5], (mx)[2][2];
   int(fn)();
   bool(bf)(false);
+  long(ln)(sizeof(buf));
+  int (*pw)(new T);
+  int (*pk)(static_cast<int*>(q));
   long(lx)(f());
   int (*pc)(f()), *(*qc)(f());
   int (*pn)(f(y(z()))), *(*qn)(f(y()));
@@ -519,6 +522,40 @@ void f() {
             (identifier))
           (argument_list
             (false))))
+      (declaration
+        (sized_type_specifier)
+        (init_declarator
+          (parenthesized_declarator
+            (identifier))
+          (argument_list
+            (sizeof_expression
+              (parenthesized_expression
+                (identifier))))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (argument_list
+            (new_expression
+              (type_identifier)))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (argument_list
+            (call_expression
+              (template_function
+                (identifier)
+                (template_argument_list
+                  (type_descriptor
+                    (primitive_type)
+                    (abstract_pointer_declarator))))
+              (argument_list
+                (identifier))))))
       (declaration
         (sized_type_specifier)
         (function_declarator
