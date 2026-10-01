@@ -183,6 +183,7 @@ void f() {
   int(fn)();
   bool(bf)(false);
   long(lx)(f());
+  int (*pn)(f(y()));
   int *(pf)(), &(rf)();
   int (*bp), (&br) = v;
   int(v) + 1;
@@ -501,6 +502,19 @@ void f() {
               (type_identifier)
               (abstract_function_declarator
                 (parameter_list))))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (argument_list
+            (call_expression
+              (identifier)
+              (argument_list
+                (call_expression
+                  (identifier)
+                  (argument_list)))))))
       (declaration
         (primitive_type)
         (pointer_declarator
