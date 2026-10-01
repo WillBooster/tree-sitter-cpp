@@ -24,15 +24,26 @@ test('uses a Wasm build built from the current parser', () => {
   ).toBe(false);
 });
 
-// Consumers parse files being edited, so recovering from many errors must stay linear. Linear recovery
-// takes about 0.05 s here.
-test('recovers from an error on each of 10,000 lines in linear time', { timeout: 60_000 }, () => {
-  const start = performance.now();
-  const tree = parser.parse('$ a\n'.repeat(10_000));
-  const elapsed = performance.now() - start;
-  if (!tree) throw new Error('The parser returned no tree');
-  const { hasError } = tree.rootNode;
-  tree.delete();
-  expect(hasError).toBe(true);
-  expect(elapsed).toBeLessThan(3000);
+// Consumers parse files being edited, so recovering from many errors must stay linear: ten times the lines take
+// about ten times as long, against a hundred times for quadratic recovery. The ratio, unlike an absolute limit,
+// holds on slow CI runners. The parses are timed in the CPU time of this test file's process (see `pool` in
+// vitest.config.mts), not in wall-clock time, which the test files running alongside inflate unevenly. Each size
+// keeps its fastest run to filter out the remaining noise, such as garbage collection.
+test('recovers from an error on each line in linear time', { timeout: 60_000 }, () => {
+  expect(fastestParseCpuTime(10_000) / fastestParseCpuTime(1000)).toBeLessThan(30);
 });
+
+function fastestParseCpuTime(lines: number): number {
+  let fastest = Infinity;
+  for (let run = 0; run < 3; run++) {
+    const start = process.cpuUsage();
+    const tree = parser.parse('$ a\n'.repeat(lines));
+    const { system, user } = process.cpuUsage(start);
+    fastest = Math.min(fastest, system + user);
+    if (!tree) throw new Error('The parser returned no tree');
+    const { hasError } = tree.rootNode;
+    tree.delete();
+    expect(hasError).toBe(true);
+  }
+  return fastest;
+}

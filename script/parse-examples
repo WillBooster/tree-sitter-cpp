@@ -38,6 +38,9 @@ clone() {
 }
 
 cd "$(dirname "$0")/.."
+# The CLI caches compiled parsers by language name in a directory shared by every checkout and reuses one that is newer
+# than the sources, so another checkout's parser could be checked instead of this one.
+export TREE_SITTER_LIBDIR="$PWD/.tmp/tree-sitter-lib"
 
 clone fmt https://github.com/fmtlib/fmt 5da4e9a3fb15626ba92969199061e0169ebc8a00
 clone json https://github.com/nlohmann/json 373005f7accebb2eff11d2837c468094e3116b38
@@ -51,8 +54,9 @@ trap 'rm -f "$files" "$output" "$failures"' EXIT
 find examples -type f \( -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' -o -name '*.hh' -o -name '*.hpp' -o -name '*.h' \) -print | LC_ALL=C sort > "$files"
 
 # The CLI exits non-zero whenever a file fails, so the output decides success. `--time` makes it print
-# a line for each file, including files that exceed `--timeout` (2 s), which bounds a runaway parse.
-bun run tree-sitter parse --grammar-path . -q -s --time --timeout 2000000 \
+# a line for each file, including files that exceed `--timeout`, which bounds a runaway parse. The slowest example
+# parses in about 0.2 s on a developer machine and over ten times as long on slow CI runners, hence 30 s.
+bun run tree-sitter parse --grammar-path . -q -s --time --timeout 30000000 \
   --paths "$files" > "$output" || true
 if ! grep -q '^Total parses' "$output"; then
   cat "$output" >&2
