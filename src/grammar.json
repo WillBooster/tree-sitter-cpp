@@ -6551,7 +6551,7 @@
             "members": [
               {
                 "type": "SYMBOL",
-                "name": "_declaration_specifiers"
+                "name": "_built_in_declaration_specifiers"
               },
               {
                 "type": "FIELD",
@@ -13573,7 +13573,7 @@
             "members": [
               {
                 "type": "SYMBOL",
-                "name": "_declaration_specifiers"
+                "name": "_built_in_declaration_specifiers"
               },
               {
                 "type": "FIELD",

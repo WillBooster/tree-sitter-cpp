@@ -156,11 +156,11 @@ function pointer declarators vs calls of function-style casts
 ================================================
 
 void g(int (*pf)(), char (*a)[3], int ((*h))());
-void g(Callback (*cb)() = nullptr);
+void g(int (*cb)() = nullptr);
 void (*fp)() = nullptr;
 void (*fq)();
 void k(int (*(*e)())[3]);
-void w(Foo *(*f)(Bar), Foo &(*h)(Bar));
+void w(int *(*f)(Bar), char &(*h)(Bar));
 
 void f() {
   int (*a)[3];
@@ -178,6 +178,8 @@ void f() {
   foo(*this)();
   get(*p)[0] = 5;
   std::vector<char> buf(static_cast<size_t>(size));
+  std::string s(name(*obj)());
+  int n(get(*it)[0]);
   n = (int(x)) + y;
   n = sizeof(int(a));
 }
@@ -218,7 +220,7 @@ void f() {
       (identifier)
       (parameter_list
         (optional_parameter_declaration
-          (type_identifier)
+          (primitive_type)
           (function_declarator
             (parenthesized_declarator
               (pointer_declarator
@@ -263,7 +265,7 @@ void f() {
       (identifier)
       (parameter_list
         (parameter_declaration
-          (type_identifier)
+          (primitive_type)
           (pointer_declarator
             (function_declarator
               (parenthesized_declarator
@@ -273,7 +275,7 @@ void f() {
                 (parameter_declaration
                   (type_identifier))))))
         (parameter_declaration
-          (type_identifier)
+          (primitive_type)
           (reference_declarator
             (function_declarator
               (parenthesized_declarator
@@ -434,6 +436,33 @@ void f() {
                     (primitive_type))))
               (argument_list
                 (identifier))))))
+      (declaration
+        (qualified_identifier
+          (namespace_identifier)
+          (type_identifier))
+        (init_declarator
+          (identifier)
+          (argument_list
+            (call_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (pointer_expression
+                    (identifier))))
+              (argument_list)))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (subscript_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (pointer_expression
+                    (identifier))))
+              (subscript_argument_list
+                (number_literal))))))
       (expression_statement
         (assignment_expression
           (identifier)

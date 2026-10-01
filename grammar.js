@@ -559,15 +559,17 @@ module.exports = grammar(C, {
 
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
 
-    // A parameter list cannot hold the argument expressions of a direct initialization such as `void g(int(*pf)())`,
-    // so a parameter whose declarator needs its parentheses is a declaration whatever its type ([dcl.ambig.res]).
+    // A parameter list competes with the argument list of a direct initialization. With a built-in type, the argument
+    // reading of a parameter such as `int (*pf)()` calls a function-style cast, which is never valid; with any other
+    // type, `name(*obj)()` in `std::string s(name(*obj)());` is commonly a call, so the parameter reading with
+    // parentheses (PREC.PAREN_DECLARATOR) keeps losing to it there.
     parameter_declaration: ($, /** @type {Rule} */ original) =>
       choice(
         original,
         prec.dynamic(
           PREC.CERTAIN_DECLARATION,
           seq(
-            $._declaration_specifiers,
+            $._built_in_declaration_specifiers,
             field('declarator', $._required_parentheses_declarator),
             repeat($.attribute_specifier)
           )
@@ -585,7 +587,7 @@ module.exports = grammar(C, {
         prec.dynamic(
           PREC.CERTAIN_DECLARATION,
           seq(
-            $._declaration_specifiers,
+            $._built_in_declaration_specifiers,
             field('declarator', $._required_parentheses_declarator),
             '=',
             field('default_value', $.expression)
