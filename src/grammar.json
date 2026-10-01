@@ -7290,12 +7290,26 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "_expression_not_binary"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_expression_not_binary"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "binary_expression"
+            }
+          ]
         },
         {
-          "type": "SYMBOL",
-          "name": "binary_expression"
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "pointer_to_member_expression"
+          },
+          "named": true,
+          "value": "binary_expression"
         }
       ]
     },
@@ -7613,6 +7627,15 @@
         {
           "type": "SYMBOL",
           "name": "user_defined_literal"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "pointer_to_member_expression"
+          },
+          "named": true,
+          "value": "binary_expression"
         }
       ]
     },
@@ -8735,36 +8758,40 @@
       }
     },
     "cast_expression": {
-      "type": "PREC",
+      "type": "PREC_LEFT",
       "value": 12,
       "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "STRING",
-            "value": "("
-          },
-          {
-            "type": "FIELD",
-            "name": "type",
-            "content": {
-              "type": "SYMBOL",
-              "name": "type_descriptor"
+        "type": "PREC",
+        "value": 12,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "FIELD",
+              "name": "type",
+              "content": {
+                "type": "SYMBOL",
+                "name": "type_descriptor"
+              }
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            },
+            {
+              "type": "FIELD",
+              "name": "value",
+              "content": {
+                "type": "SYMBOL",
+                "name": "expression"
+              }
             }
-          },
-          {
-            "type": "STRING",
-            "value": ")"
-          },
-          {
-            "type": "FIELD",
-            "name": "value",
-            "content": {
-              "type": "SYMBOL",
-              "name": "expression"
-            }
-          }
-        ]
+          ]
+        }
       }
     },
     "type_descriptor": {
@@ -9847,10 +9874,6 @@
                     {
                       "type": "STRING",
                       "value": "."
-                    },
-                    {
-                      "type": "STRING",
-                      "value": ".*"
                     },
                     {
                       "type": "STRING",
@@ -18251,6 +18274,48 @@
           }
         }
       ]
+    },
+    "pointer_to_member_expression": {
+      "type": "PREC_LEFT",
+      "value": 12,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "left",
+            "content": {
+              "type": "SYMBOL",
+              "name": "expression"
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "operator",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ".*"
+                },
+                {
+                  "type": "STRING",
+                  "value": "->*"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "right",
+            "content": {
+              "type": "SYMBOL",
+              "name": "expression"
+            }
+          }
+        ]
+      }
     },
     "_assignment_expression_lhs": {
       "type": "SEQ",
