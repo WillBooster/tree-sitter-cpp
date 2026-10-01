@@ -407,31 +407,31 @@ A::~A() = delete("x");
 
 (translation_unit
   (struct_specifier
-    (type_identifier)
-    (field_declaration_list
+    name: (type_identifier)
+    body: (field_declaration_list
       (function_definition
-        (function_declarator
-          (identifier)
-          (parameter_list
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
             (parameter_declaration
-              (primitive_type))))
+              type: (primitive_type))))
         (delete_method_clause
           message: (string_literal
             (string_content))))
       (function_definition
-        (operator_cast
-          (primitive_type)
-          (abstract_function_declarator
-            (parameter_list)
+        declarator: (operator_cast
+          type: (primitive_type)
+          declarator: (abstract_function_declarator
+            parameters: (parameter_list)
             (type_qualifier)))
         (delete_method_clause
           message: (raw_string_literal
             (raw_string_content))))))
   (function_definition
-    (primitive_type)
-    (function_declarator
-      (identifier)
-      (parameter_list))
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
     (delete_method_clause
       message: (concatenated_string
         (string_literal
@@ -439,41 +439,40 @@ A::~A() = delete("x");
         (string_literal
           (string_content)))))
   (template_declaration
-    (template_parameter_list)
+    parameters: (template_parameter_list)
     (function_definition
-      (primitive_type)
-      (function_declarator
-        (template_function
-          (identifier)
-          (template_argument_list
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (template_function
+          name: (identifier)
+          arguments: (template_argument_list
             (type_descriptor
-              (primitive_type))))
-        (parameter_list))
+              type: (primitive_type))))
+        parameters: (parameter_list))
       (delete_method_clause
         message: (string_literal
           (string_content)))))
   (function_definition
-    (function_declarator
-      (qualified_identifier
-        (namespace_identifier)
-        (identifier))
-      (parameter_list
+    declarator: (function_declarator
+      declarator: (qualified_identifier
+        scope: (namespace_identifier)
+        name: (identifier))
+      parameters: (parameter_list
         (parameter_declaration
-          (sized_type_specifier))))
+          type: (sized_type_specifier))))
     (delete_method_clause
       message: (string_literal
         (string_content))))
   (function_definition
-    (function_declarator
-      (qualified_identifier
-        (namespace_identifier)
-        (destructor_name
+    declarator: (function_declarator
+      declarator: (qualified_identifier
+        scope: (namespace_identifier)
+        name: (destructor_name
           (identifier)))
-      (parameter_list))
+      parameters: (parameter_list))
     (delete_method_clause
       message: (string_literal
         (string_content)))))
-
 
 ================================================================================
 Keywords as preprocessor identifiers and macro arguments
