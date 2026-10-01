@@ -51,8 +51,9 @@ trap 'rm -f "$files" "$output" "$failures"' EXIT
 find examples -type f \( -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' -o -name '*.hh' -o -name '*.hpp' -o -name '*.h' \) -print | LC_ALL=C sort > "$files"
 
 # The CLI exits non-zero whenever a file fails, so the output decides success. `--time` makes it print
-# a line for each file, including files that exceed `--timeout` (2 s), which bounds a runaway parse.
-bun run tree-sitter parse --grammar-path . -q -s --time --timeout 2000000 \
+# a line for each file, including files that exceed `--timeout`, which bounds a runaway parse. The slowest example
+# parses in about 0.2 s on a developer machine and over ten times as long on slow CI runners, hence 30 s.
+bun run tree-sitter parse --grammar-path . -q -s --time --timeout 30000000 \
   --paths "$files" > "$output" || true
 if ! grep -q '^Total parses' "$output"; then
   cat "$output" >&2

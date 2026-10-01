@@ -532,3 +532,6 @@ node_modules/
 
 # Rust artifacts
 /target/
+
+# Vitest failure screenshots
+.vitest/
