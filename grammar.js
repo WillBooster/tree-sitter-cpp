@@ -1002,10 +1002,11 @@ module.exports = grammar(C, {
     call_expression: ($, /** @type {Rule} */ original) =>
       choice(
         prec.dynamic(1, original),
-        // A function-style cast to a certain type is a declaration wherever the tokens can be one ([dcl.ambig.res]), so
-        // it must lose even to a declaration with a parenthesized declarator, e.g. the parameter in `void f(int (*g)());`.
+        // C++ reads a function-style cast that could be a declaration as the declaration ([dcl.ambig.res]). Just above
+        // PREC.PAREN_DECLARATOR, the cast loses to declarations whose parentheses are required, such as the parameter in
+        // `void f(int (*g)());`, but `f(int(x));` stays a call instead of declaring a function named by the keyword `int`.
         prec.dynamic(
-          PREC.PAREN_DECLARATOR - 1,
+          PREC.PAREN_DECLARATOR + 1,
           seq(
             field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
             field('arguments', $.argument_list)

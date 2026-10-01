@@ -160,7 +160,7 @@ void f(int (*g)(), char (*a)[3]);
 T t(int(x));
 
 void h() {
-  int(x);
+  f(int(x));
   char (*p)[];
   y = int(x) + 1;
 }
@@ -216,10 +216,14 @@ void h() {
       (identifier)
       (parameter_list))
     (compound_statement
-      (declaration
-        (primitive_type)
-        (parenthesized_declarator
-          (identifier)))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (call_expression
+              (primitive_type)
+              (argument_list
+                (identifier))))))
       (declaration
         (primitive_type)
         (array_declarator
