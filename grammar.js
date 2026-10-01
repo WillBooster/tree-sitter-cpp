@@ -24,10 +24,9 @@ const PREC = Object.assign(C.PREC, {
   // same tokens adds, however many appear in practice: one in `int(x);` and `^^int()`, two in `int(x)[f()];`.
   CERTAIN_DECLARATION: 10,
   // A function declarator with parentheses outranks a direct initialization of the same tokens, as in
-  // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, and an argument that starts with
-  // an expression keyword outranks it in turn.
+  // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, unless a parameter starts with an
+  // expression keyword (see `expression_keyword_parameter`).
   FUNCTION_OVER_DIRECT_INITIALIZATION: 10,
-  KEYWORD_ARGUMENT_INITIALIZATION: 11,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -133,6 +132,7 @@ module.exports = grammar(C, {
     [$.type_specifier, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
+    [$._competing_function_declarator_seq],
     [$.type_specifier, $.sized_type_specifier],
     [$.initializer_pair, $.comma_expression],
     [$.expression_statement, $._for_statement_body],
@@ -388,7 +388,7 @@ module.exports = grammar(C, {
         PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
         seq(
           field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
-          $._function_declarator_seq
+          $._competing_function_declarator_seq
         )
       ),
 
@@ -855,6 +855,71 @@ module.exports = grammar(C, {
         optional($._function_postfix)
       ),
 
+    // The function forms that compete with a direct initialization of the same tokens take a parameter list in which a
+    // parameter may start with an expression keyword. Such keywords lex as type names where no keyword is expected, so
+    // `int (*p)(nullptr);` and `long(n)(sizeof(b));` would otherwise read as functions taking parameters of those types;
+    // here the keyword is expected, and the parameter it starts weighs so little that the function reading loses, or
+    // dies at the tokens that follow it.
+    _competing_function_declarator_seq: ($) =>
+      seq(
+        field('parameters', alias($.competing_parameter_list, $.parameter_list)),
+        optional($._function_attributes_start),
+        optional($.ref_qualifier),
+        optional($._function_exception_specification),
+        optional($._function_attributes_end),
+        optional($.trailing_return_type),
+        optional($._function_postfix)
+      ),
+
+    competing_parameter_list: ($) =>
+      seq(
+        '(',
+        commaSep(
+          choice(
+            $.parameter_declaration,
+            $.explicit_object_parameter_declaration,
+            $.optional_parameter_declaration,
+            $.variadic_parameter_declaration,
+            '...',
+            alias($.expression_keyword_parameter, $.parameter_declaration)
+          )
+        ),
+        ')'
+      ),
+
+    expression_keyword_parameter: ($) =>
+      prec.dynamic(
+        -20,
+        field(
+          'type',
+          alias(
+            seq(
+              optional('::'),
+              choice(
+                $.null,
+                $.true,
+                $.false,
+                'sizeof',
+                'alignof',
+                'offsetof',
+                'new',
+                'delete',
+                'co_await',
+                'static_cast',
+                'dynamic_cast',
+                'const_cast',
+                'reinterpret_cast',
+                'typeid',
+                'noexcept',
+                'not',
+                'compl'
+              )
+            ),
+            $.type_identifier
+          )
+        )
+      ),
+
     _function_attributes_start: ($) =>
       prec(
         1,
@@ -919,7 +984,7 @@ module.exports = grammar(C, {
         PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
         seq(
           field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-          $._function_declarator_seq
+          $._competing_function_declarator_seq
         )
       ),
 
@@ -939,17 +1004,7 @@ module.exports = grammar(C, {
           field('declarator', $._built_in_parenthesized_declarator),
           choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
         ),
-        seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list)),
-        // Expression keywords such as `nullptr` and `sizeof` lex as type names where no keyword is expected, so without
-        // this preference the function form of the same tokens would read `int (*p)(nullptr);` and
-        // `long(n)(sizeof(b));` as taking parameters of those types.
-        prec.dynamic(
-          PREC.KEYWORD_ARGUMENT_INITIALIZATION,
-          seq(
-            field('declarator', $._direct_initialized_declarator),
-            field('value', alias($.keyword_argument_list, $.argument_list))
-          )
-        )
+        seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list))
       ),
 
     // Each shape here has a function form of the same tokens: a parenthesized name only bare
@@ -958,37 +1013,6 @@ module.exports = grammar(C, {
       choice(
         $._direct_initialized_parenthesized_declarator,
         alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
-      ),
-
-    // A single argument that starts with a keyword or a prefix operator, which cannot start a parameter: every such
-    // expression of the grammar.
-    keyword_argument_list: ($) =>
-      prec(
-        1,
-        seq(
-          '(',
-          choice(
-            $.null,
-            $.true,
-            $.false,
-            $.this,
-            $.sizeof_expression,
-            $.alignof_expression,
-            $.offsetof_expression,
-            $.generic_expression,
-            $.new_expression,
-            $.delete_expression,
-            $.co_await_expression,
-            $.requires_expression,
-            $.extension_expression,
-            $.builtin_available_expression,
-            $.unary_expression,
-            alias($.named_cast_expression, $.call_expression),
-            alias($.typeid_expression, $.call_expression),
-            alias($.noexcept_expression, $.call_expression)
-          ),
-          ')'
-        )
       ),
 
     // The direct initialization competing with a required-parentheses function declarator of the same tokens, behind
@@ -1636,13 +1660,6 @@ module.exports = grammar(C, {
         )
       ),
     typeid_argument_list: ($) => seq('(', choice($.expression, $.type_descriptor), ')'),
-    // Only an argument of `keyword_argument_list`: elsewhere `noexcept(e)` stays an ordinary call, since a keyword at the
-    // start of every expression changes the error recovery around the `noexcept` specifier.
-    noexcept_expression: ($) =>
-      prec.dynamic(
-        1,
-        prec(PREC.CALL, seq(field('function', alias('noexcept', $.identifier)), field('arguments', $.argument_list)))
-      ),
 
     pointer_to_member_expression: ($) =>
       prec.left(

@@ -5002,7 +5002,7 @@
         ]
       },
       "type": {
-        "multiple": false,
+        "multiple": true,
         "required": true,
         "types": [
           {
@@ -7640,6 +7640,11 @@
     }
   },
   {
+    "type": "type_identifier",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "type_parameter_declaration",
     "named": true,
     "fields": {},
@@ -8839,10 +8844,6 @@
   {
     "type": "try",
     "named": false
-  },
-  {
-    "type": "type_identifier",
-    "named": true
   },
   {
     "type": "typedef",

@@ -186,7 +186,8 @@ void f() {
   bool(bf)(false);
   long(ln)(sizeof(buf));
   int (*pw)(new T);
-  int (*pk)(static_cast<int*>(q));
+  int (*pk)(static_cast<int*>(q)), (*pg)(::new int);
+  int (nc)(static_cast<F>(g)(x));
   long(lo)(offsetof(S, m));
   bool(bn)(noexcept(g()));
   long(lx)(f());
@@ -556,6 +557,30 @@ void f() {
                   (type_descriptor
                     (primitive_type)
                     (abstract_pointer_declarator))))
+              (argument_list
+                (identifier)))))
+        (init_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (argument_list
+            (new_expression
+              (primitive_type)))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (parenthesized_declarator
+            (identifier))
+          (argument_list
+            (call_expression
+              (call_expression
+                (template_function
+                  (identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (type_identifier))))
+                (argument_list
+                  (identifier)))
               (argument_list
                 (identifier))))))
       (declaration
