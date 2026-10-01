@@ -170,6 +170,9 @@ void f() {
   int (&(*g)())[3];
   int (*p)(nullptr);
   int *(*q)(T), *(*z)(nullptr);
+  int(v);
+  int((w)) = 5, u;
+  int(v) + 1;
   f(int(x));
   free(*p);
   foo(*this)();
@@ -360,6 +363,25 @@ void f() {
                 (identifier))))
           (argument_list
             (null))))
+      (declaration
+        (primitive_type)
+        (parenthesized_declarator
+          (identifier)))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (parenthesized_declarator
+            (parenthesized_declarator
+              (identifier)))
+          (number_literal))
+        (identifier))
+      (expression_statement
+        (binary_expression
+          (call_expression
+            (primitive_type)
+            (argument_list
+              (identifier)))
+          (number_literal)))
       (expression_statement
         (call_expression
           (identifier)

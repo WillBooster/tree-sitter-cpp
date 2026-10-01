@@ -45,9 +45,10 @@ add_member(^^char const *);
           (identifier)))
       (argument_list
         (reflect_expression
-          (call_expression
+          (type_descriptor
             (primitive_type)
-            (argument_list))))))
+            (abstract_function_declarator
+              (parameter_list)))))))
   (static_assert_declaration
     (call_expression
       (qualified_identifier
