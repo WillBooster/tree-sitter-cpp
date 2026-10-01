@@ -1026,6 +1026,7 @@ module.exports = grammar(C, {
       prec.right(
         seq(
           '*',
+          repeat($.attribute_declaration),
           repeat($.ms_pointer_modifier),
           repeat($.type_qualifier),
           field('declarator', optional($._new_declarator))
