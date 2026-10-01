@@ -86,4 +86,4 @@
 
 ((call_expression
   function: (identifier) @keyword)
- (#eq? @keyword "typeid"))
+ (#any-of? @keyword "typeid" "noexcept"))

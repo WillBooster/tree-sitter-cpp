@@ -1890,7 +1890,7 @@ template <typename... Args> void negateValues(Args... args) {
                   (string_content))))))))))
 
 ================================================================================
-Named casts and typeid
+Named casts, typeid, and noexcept
 ================================================================================
 
 auto a = static_cast<int *>(p);
@@ -1899,6 +1899,7 @@ auto c = const_cast<const T *>(p);
 auto d = reinterpret_cast<char *>(p);
 auto &e = typeid(int);
 auto &f = typeid(*p);
+auto g = noexcept(h());
 
 ---
 
@@ -1983,5 +1984,16 @@ auto &f = typeid(*p);
         (identifier)
         (argument_list
           (pointer_expression
-            (identifier)))))))
+            (identifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (call_expression
+        (identifier)
+        (argument_list
+          (call_expression
+            (identifier)
+            (argument_list)))))))
 

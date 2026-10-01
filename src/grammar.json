@@ -15514,6 +15514,14 @@
               },
               {
                 "type": "SYMBOL",
+                "name": "offsetof_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "generic_expression"
+              },
+              {
+                "type": "SYMBOL",
                 "name": "new_expression"
               },
               {
@@ -15523,6 +15531,22 @@
               {
                 "type": "SYMBOL",
                 "name": "co_await_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "requires_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "extension_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "builtin_available_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "unary_expression"
               },
               {
                 "type": "ALIAS",
@@ -15538,6 +15562,15 @@
                 "content": {
                   "type": "SYMBOL",
                   "name": "typeid_expression"
+                },
+                "named": true,
+                "value": "call_expression"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "noexcept_expression"
                 },
                 "named": true,
                 "value": "call_expression"
@@ -19640,6 +19673,40 @@
           "value": ")"
         }
       ]
+    },
+    "noexcept_expression": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC",
+        "value": 15,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "function",
+              "content": {
+                "type": "ALIAS",
+                "content": {
+                  "type": "STRING",
+                  "value": "noexcept"
+                },
+                "named": true,
+                "value": "identifier"
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "arguments",
+              "content": {
+                "type": "SYMBOL",
+                "name": "argument_list"
+              }
+            }
+          ]
+        }
+      }
     },
     "pointer_to_member_expression": {
       "type": "PREC_LEFT",

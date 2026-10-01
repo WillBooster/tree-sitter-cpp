@@ -960,7 +960,8 @@ module.exports = grammar(C, {
         alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
       ),
 
-    // A single argument that starts with an expression keyword, which cannot start a parameter type.
+    // A single argument that starts with a keyword or a prefix operator, which cannot start a parameter: every such
+    // expression of the grammar.
     keyword_argument_list: ($) =>
       prec(
         1,
@@ -973,11 +974,18 @@ module.exports = grammar(C, {
             $.this,
             $.sizeof_expression,
             $.alignof_expression,
+            $.offsetof_expression,
+            $.generic_expression,
             $.new_expression,
             $.delete_expression,
             $.co_await_expression,
+            $.requires_expression,
+            $.extension_expression,
+            $.builtin_available_expression,
+            $.unary_expression,
             alias($.named_cast_expression, $.call_expression),
-            alias($.typeid_expression, $.call_expression)
+            alias($.typeid_expression, $.call_expression),
+            alias($.noexcept_expression, $.call_expression)
           ),
           ')'
         )
@@ -1628,6 +1636,13 @@ module.exports = grammar(C, {
         )
       ),
     typeid_argument_list: ($) => seq('(', choice($.expression, $.type_descriptor), ')'),
+    // Only an argument of `keyword_argument_list`: elsewhere `noexcept(e)` stays an ordinary call, since a keyword at the
+    // start of every expression changes the error recovery around the `noexcept` specifier.
+    noexcept_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(PREC.CALL, seq(field('function', alias('noexcept', $.identifier)), field('arguments', $.argument_list)))
+      ),
 
     pointer_to_member_expression: ($) =>
       prec.left(
