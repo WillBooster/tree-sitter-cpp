@@ -27,6 +27,10 @@ const PREC = Object.assign(C.PREC, {
   // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, unless a parameter starts with an
   // expression keyword (see `expression_keyword_parameter`).
   FUNCTION_OVER_DIRECT_INITIALIZATION: 10,
+  // Outranks the function reading of `Foo* p(nullptr);` and its expression reading `Foo * p(nullptr)`.
+  KEYWORD_ARGUMENT_INITIALIZATION: 10,
+  // Loses to the function reading of `Foo* p(x);` and the expression reading of `Foo* p(1);`.
+  POINTER_ARGUMENT_INITIALIZATION: -5,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -133,6 +137,9 @@ module.exports = grammar(C, {
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
     [$._competing_function_declarator_seq],
+    [$.expression, $._keyword_led_expression],
+    [$._declarator, $.argument_initialized_reference_declarator],
+    [$._declarator, $.argument_initialized_pointer_declarator],
     [$.type_specifier, $.sized_type_specifier],
     [$.initializer_pair, $.comma_expression],
     [$.expression_statement, $._for_statement_body],
@@ -641,7 +648,81 @@ module.exports = grammar(C, {
     init_declarator: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list)))
+        seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
+        // A pointer or reference declarator takes the parameter list that follows its name, so `Foo* p(nullptr);`
+        // would otherwise read only as a function taking a parameter of type `nullptr`. These alternatives reduce the
+        // declarator before the argument list instead: outranking the function and expression readings when no
+        // parameter list holds the argument, and as a last resort otherwise, as in `const T& r(*p);`.
+        prec.dynamic(
+          PREC.KEYWORD_ARGUMENT_INITIALIZATION,
+          seq(
+            field('declarator', $._argument_initialized_declarator),
+            field('value', alias($.keyword_argument_list, $.argument_list))
+          )
+        ),
+        prec.dynamic(
+          PREC.POINTER_ARGUMENT_INITIALIZATION,
+          seq(field('declarator', $._argument_initialized_declarator), field('value', $.argument_list))
+        )
+      ),
+
+    _argument_initialized_declarator: ($) =>
+      choice(
+        alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
+        alias($.argument_initialized_reference_declarator, $.reference_declarator)
+      ),
+
+    argument_initialized_pointer_declarator: ($) =>
+      seq(
+        '*',
+        field(
+          'declarator',
+          choice($.identifier, alias($.argument_initialized_pointer_declarator, $.pointer_declarator))
+        )
+      ),
+    argument_initialized_reference_declarator: ($) => seq(choice('&', '&&'), $.identifier),
+
+    // A single argument that starts with a keyword, which no parameter list holds: an expression that starts with one,
+    // possibly followed by calls, subscripts, and member accesses, as in `this->next`.
+    keyword_argument_list: ($) => seq('(', $._keyword_led_expression, ')'),
+
+    _keyword_led_expression: ($) =>
+      choice(
+        $.null,
+        $.true,
+        $.false,
+        $.this,
+        $.sizeof_expression,
+        $.alignof_expression,
+        $.offsetof_expression,
+        $.generic_expression,
+        $.new_expression,
+        $.delete_expression,
+        $.co_await_expression,
+        $.requires_expression,
+        $.extension_expression,
+        $.builtin_available_expression,
+        alias($.named_cast_expression, $.call_expression),
+        alias($.typeid_expression, $.call_expression),
+        alias($.keyword_led_call_expression, $.call_expression),
+        alias($.keyword_led_subscript_expression, $.subscript_expression),
+        alias($.keyword_led_field_expression, $.field_expression)
+      ),
+
+    keyword_led_call_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(PREC.CALL, seq(field('function', $._keyword_led_expression), field('arguments', $.argument_list)))
+      ),
+    keyword_led_subscript_expression: ($) =>
+      prec(
+        PREC.SUBSCRIPT,
+        seq(field('argument', $._keyword_led_expression), field('indices', $.subscript_argument_list))
+      ),
+    keyword_led_field_expression: ($) =>
+      seq(
+        prec(PREC.FIELD, seq(field('argument', $._keyword_led_expression), field('operator', choice('.', '->')))),
+        field('field', prec.dynamic(1, $._field_identifier))
       ),
 
     operator_cast: ($) =>

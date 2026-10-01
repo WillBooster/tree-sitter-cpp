@@ -454,12 +454,11 @@ void f() {
             (true))))
       (declaration
         (type_identifier)
-        (pointer_declarator
-          (function_declarator
-            (identifier)
-            (parameter_list
-              (parameter_declaration
-                (type_identifier))))))
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (null))))
       (declaration
         (primitive_type)
         (parenthesized_declarator
@@ -862,3 +861,151 @@ int main() {
       (template_type (type_identifier)
         (template_argument_list (type_descriptor (type_identifier))))
       (init_declarator (identifier) (identifier))))))
+
+================================================================================
+pointer and reference declarators vs function declarators
+================================================================================
+
+Foo* g(1);
+const Foo& h(*q);
+
+void f() {
+  Foo* a(nullptr);
+  Foo& b(nullptr);
+  Foo** c(nullptr), *d(new Foo);
+  Foo* e(static_cast<Foo*>(q));
+  const Foo& r(*this);
+  Foo* n(this->next), *m(static_cast<Foo*>(q)[0]);
+  Foo* o(this->a + 1);
+  Foo* p(x);
+  Foo* t(1);
+}
+
+---
+
+(translation_unit
+  (declaration
+    (type_identifier)
+    (init_declarator
+      (pointer_declarator
+        (identifier))
+      (argument_list
+        (number_literal))))
+  (declaration
+    (type_qualifier)
+    (type_identifier)
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (argument_list
+        (pointer_expression
+          (identifier)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (null))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (reference_declarator
+            (identifier))
+          (argument_list
+            (null))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (pointer_declarator
+              (identifier)))
+          (argument_list
+            (null)))
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (new_expression
+              (type_identifier)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (call_expression
+              (template_function
+                (identifier)
+                (template_argument_list
+                  (type_descriptor
+                    (type_identifier)
+                    (abstract_pointer_declarator))))
+              (argument_list
+                (identifier))))))
+      (declaration
+        (type_qualifier)
+        (type_identifier)
+        (init_declarator
+          (reference_declarator
+            (identifier))
+          (argument_list
+            (pointer_expression
+              (this)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (field_expression
+              (this)
+              (field_identifier))))
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (subscript_expression
+              (call_expression
+                (template_function
+                  (identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (type_identifier)
+                      (abstract_pointer_declarator))))
+                (argument_list
+                  (identifier)))
+              (subscript_argument_list
+                (number_literal))))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (binary_expression
+                (field_expression
+                  (this)
+                  (field_identifier))
+                (number_literal))))))
+      (declaration
+        (type_identifier)
+        (pointer_declarator
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (number_literal))))))))
