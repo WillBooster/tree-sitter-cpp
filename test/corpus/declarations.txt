@@ -2407,6 +2407,7 @@ int S::*const cp = nullptr;
 int S::*S2::*pp;
 typedef int S::*PM;
 typedef void (S::*PMF)();
+typedef void (S::*PMFC)() const noexcept;
 using PMF2 = void (S::*)();
 auto x = static_cast<int S::*>(p);
 
@@ -2492,6 +2493,17 @@ auto x = static_cast<int S::*>(p);
           (pointer_declarator
             (type_identifier))))
       (parameter_list)))
+  (type_definition
+    (primitive_type)
+    (function_declarator
+      (parenthesized_declarator
+        (qualified_identifier
+          (namespace_identifier)
+          (pointer_declarator
+            (type_identifier))))
+      (parameter_list)
+      (type_qualifier)
+      (noexcept)))
   (alias_declaration
     (type_identifier)
     (type_descriptor

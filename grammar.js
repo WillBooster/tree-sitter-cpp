@@ -781,6 +781,8 @@ module.exports = grammar(C, {
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
 
+    function_type_declarator: ($) => prec(1, seq(field('declarator', $._type_declarator), $._function_declarator_seq)),
+
     abstract_function_declarator: ($) =>
       seq(field('declarator', optional($._abstract_declarator)), $._function_declarator_seq),
 
