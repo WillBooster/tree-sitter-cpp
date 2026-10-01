@@ -152,6 +152,49 @@ array<decltype(foo)::type, 5> arr;
     (identifier)))
 
 ====================================================
+Decltype of comma expressions
+====================================================
+
+template <class T> auto f(T t) -> decltype(t.x(), void()) {}
+decltype(a, b) v;
+
+---
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (placeholder_type_specifier
+        (auto))
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (type_identifier)
+            (identifier)))
+        (trailing_return_type
+          (type_descriptor
+            (decltype
+              (comma_expression
+                (call_expression
+                  (field_expression
+                    (identifier)
+                    (field_identifier))
+                  (argument_list))
+                (call_expression
+                  (primitive_type)
+                  (argument_list)))))))
+      (compound_statement)))
+  (declaration
+    (decltype
+      (comma_expression
+        (identifier)
+        (identifier)))
+    (identifier)))
+
+====================================================
 Trailing return type
 ====================================================
 

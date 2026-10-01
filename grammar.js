@@ -213,7 +213,7 @@ module.exports = grammar(C, {
 
     auto: () => 'auto',
     decltype_auto: ($) => seq('decltype', '(', $.auto, ')'),
-    decltype: ($) => seq('decltype', '(', $.expression, ')'),
+    decltype: ($) => seq('decltype', '(', choice($.expression, $.comma_expression), ')'),
 
     type_specifier: ($) =>
       choice(
