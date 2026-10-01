@@ -8996,12 +8996,12 @@
       }
     },
     "call_expression": {
-      "type": "PREC_DYNAMIC",
-      "value": 1,
-      "content": {
-        "type": "CHOICE",
-        "members": [
-          {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "PREC_DYNAMIC",
+          "value": 1,
+          "content": {
             "type": "PREC",
             "value": 15,
             "content": {
@@ -9025,8 +9025,12 @@
                 }
               ]
             }
-          },
-          {
+          }
+        },
+        {
+          "type": "PREC_DYNAMIC",
+          "value": -11,
+          "content": {
             "type": "SEQ",
             "members": [
               {
@@ -9073,8 +9077,8 @@
               }
             ]
           }
-        ]
-      }
+        }
+      ]
     },
     "builtin_available_expression": {
       "type": "SEQ",

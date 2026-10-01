@@ -965,10 +965,12 @@ module.exports = grammar(C, {
     subscript_argument_list: ($) => seq('[', commaSep(choice($.expression, $.initializer_list)), ']'),
 
     call_expression: ($, /** @type {Rule} */ original) =>
-      prec.dynamic(
-        1,
-        choice(
-          original,
+      choice(
+        prec.dynamic(1, original),
+        // A function-style cast to a certain type is a declaration wherever the tokens can be one ([dcl.ambig.res]), so
+        // it must lose even to a declaration with a parenthesized declarator, e.g. the parameter in `void f(int (*g)());`.
+        prec.dynamic(
+          PREC.PAREN_DECLARATOR - 1,
           seq(
             field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
             field('arguments', $.argument_list)
