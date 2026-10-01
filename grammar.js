@@ -23,10 +23,11 @@ const PREC = Object.assign(C.PREC, {
   // Where a declaration or type-id reading is certain, outranks the calls (+1 each) of the expression reading of the
   // same tokens: two in `void (*fp)();`, one in `int(x);` and `^^int()`.
   CERTAIN_DECLARATION: 2,
-  // A function declarator with parentheses outranks a direct initialization of the same tokens whose argument holds
-  // at most one call (+1 each), as in `int (*p)(f());`, and a single keyword literal argument outranks it in turn.
-  FUNCTION_OVER_DIRECT_INITIALIZATION: 2,
-  KEYWORD_LITERAL_INITIALIZATION: 3,
+  // A function declarator with parentheses outranks a direct initialization of the same tokens, as in
+  // `int (*p)(f(y()));`, however many calls (+1 each) its argument holds in practice, and a single keyword literal
+  // argument outranks it in turn.
+  FUNCTION_OVER_DIRECT_INITIALIZATION: 10,
+  KEYWORD_LITERAL_INITIALIZATION: 11,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
