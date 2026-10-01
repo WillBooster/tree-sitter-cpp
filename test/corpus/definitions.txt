@@ -416,7 +416,7 @@ A::~A() = delete("x");
             (parameter_declaration
               (primitive_type))))
         (delete_method_clause
-          (string_literal
+          message: (string_literal
             (string_content))))
       (function_definition
         (operator_cast
@@ -425,7 +425,7 @@ A::~A() = delete("x");
             (parameter_list)
             (type_qualifier)))
         (delete_method_clause
-          (raw_string_literal
+          message: (raw_string_literal
             (raw_string_content))))))
   (function_definition
     (primitive_type)
@@ -433,7 +433,7 @@ A::~A() = delete("x");
       (identifier)
       (parameter_list))
     (delete_method_clause
-      (concatenated_string
+      message: (concatenated_string
         (string_literal
           (string_content))
         (string_literal
@@ -450,7 +450,7 @@ A::~A() = delete("x");
               (primitive_type))))
         (parameter_list))
       (delete_method_clause
-        (string_literal
+        message: (string_literal
           (string_content)))))
   (function_definition
     (function_declarator
@@ -461,7 +461,7 @@ A::~A() = delete("x");
         (parameter_declaration
           (sized_type_specifier))))
     (delete_method_clause
-      (string_literal
+      message: (string_literal
         (string_content))))
   (function_definition
     (function_declarator
@@ -471,7 +471,7 @@ A::~A() = delete("x");
           (identifier)))
       (parameter_list))
     (delete_method_clause
-      (string_literal
+      message: (string_literal
         (string_content)))))
 
 
