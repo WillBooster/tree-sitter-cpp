@@ -23,6 +23,10 @@ const PREC = Object.assign(C.PREC, {
   // Where a declaration or type-id reading is certain, outranks the calls (+1 each) of the expression reading of the
   // same tokens: two in `void (*fp)();`, one in `int(x);` and `^^int()`.
   CERTAIN_DECLARATION: 2,
+  // A function declarator with parentheses outranks a direct initialization of the same tokens whose argument holds
+  // at most one call (+1 each), as in `int (*p)(f());`, and a single keyword literal argument outranks it in turn.
+  FUNCTION_OVER_DIRECT_INITIALIZATION: 2,
+  KEYWORD_LITERAL_INITIALIZATION: 3,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -378,10 +382,9 @@ module.exports = grammar(C, {
           alias($.built_in_parenthesized_array_declarator, $.array_declarator)
         )
       ),
-    // Outweighs the second call of the expression reading `int(f)()`.
     built_in_parenthesized_function_declarator: ($) =>
       prec.dynamic(
-        1,
+        PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
         seq(
           field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
           $._function_declarator_seq
@@ -910,11 +913,9 @@ module.exports = grammar(C, {
     required_parentheses_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._required_parentheses_declarator))),
 
-    // Like function_declarator's, the precedence prefers `int (*fp)(T);` as a function pointer over a pointer
-    // direct-initialized with `(T)`.
     required_parentheses_function_declarator: ($) =>
       prec.dynamic(
-        1,
+        PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
         seq(
           field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
           $._function_declarator_seq
@@ -941,7 +942,7 @@ module.exports = grammar(C, {
         // `nullptr`, `true`, and `false` lex as type names where no keyword is expected, so without this preference the
         // function form of the same tokens would read `int (*p)(nullptr);` as taking a parameter of type `nullptr`.
         prec.dynamic(
-          PREC.CERTAIN_DECLARATION,
+          PREC.KEYWORD_LITERAL_INITIALIZATION,
           seq(
             field('declarator', $._direct_initialized_declarator),
             field('value', alias($.keyword_literal_argument_list, $.argument_list))
