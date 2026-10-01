@@ -391,6 +391,90 @@ Env::~Env() = default;
         (default_method_clause)))))
 
 ================================================================================
+Deleted functions with messages
+================================================================================
+
+struct A {
+  A(int) = delete("use A(long)");
+  operator bool() const = delete(R"(not testable)");
+};
+void h() = delete("a" "b");
+template <> void t<int>() = delete("no ints");
+A::A(long) = delete("y");
+A::~A() = delete("x");
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (function_definition
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type))))
+        (delete_method_clause
+          message: (string_literal
+            (string_content))))
+      (function_definition
+        declarator: (operator_cast
+          type: (primitive_type)
+          declarator: (abstract_function_declarator
+            parameters: (parameter_list)
+            (type_qualifier)))
+        (delete_method_clause
+          message: (raw_string_literal
+            (raw_string_content))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    (delete_method_clause
+      message: (concatenated_string
+        (string_literal
+          (string_content))
+        (string_literal
+          (string_content)))))
+  (template_declaration
+    parameters: (template_parameter_list)
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (template_function
+          name: (identifier)
+          arguments: (template_argument_list
+            (type_descriptor
+              type: (primitive_type))))
+        parameters: (parameter_list))
+      (delete_method_clause
+        message: (string_literal
+          (string_content)))))
+  (function_definition
+    declarator: (function_declarator
+      declarator: (qualified_identifier
+        scope: (namespace_identifier)
+        name: (identifier))
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (sized_type_specifier))))
+    (delete_method_clause
+      message: (string_literal
+        (string_content))))
+  (function_definition
+    declarator: (function_declarator
+      declarator: (qualified_identifier
+        scope: (namespace_identifier)
+        name: (destructor_name
+          (identifier)))
+      parameters: (parameter_list))
+    (delete_method_clause
+      message: (string_literal
+        (string_content)))))
+
+================================================================================
 Keywords as preprocessor identifiers and macro arguments
 ================================================================================
 
