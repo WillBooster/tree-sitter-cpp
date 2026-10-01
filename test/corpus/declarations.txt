@@ -2140,22 +2140,21 @@ struct A {
               (abstract_reference_declarator))))
         (default_method_clause))
       (friend_declaration
-        (declaration
+        (function_definition
           (placeholder_type_specifier
             (auto))
-          (init_declarator
-            (function_declarator
-              (operator_name)
-              (parameter_list
-                (parameter_declaration
-                  (type_identifier)
-                  (type_qualifier)
-                  (abstract_reference_declarator))
-                (parameter_declaration
-                  (type_identifier)
-                  (type_qualifier)
-                  (abstract_reference_declarator))))
-            (identifier)))))))
+          (function_declarator
+            (operator_name)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)
+                (type_qualifier)
+                (abstract_reference_declarator))
+              (parameter_declaration
+                (type_identifier)
+                (type_qualifier)
+                (abstract_reference_declarator))))
+          (default_method_clause))))))
 
 ================================================================================
 Pointers in qualified identifiers and field expressions
@@ -2247,6 +2246,91 @@ int main() {
           (argument_list)))
       (return_statement
         (number_literal)))))
+
+================================================================================
+Attributes after pointer operators
+================================================================================
+
+int * [[gnu::unused]] p;
+typedef int * [[a]] const P;
+int S::* [[a]] const pm;
+struct S { int * [[a]] const x; };
+void f() {
+  auto q = new int * [[gnu::unused]] [3];
+  g(sizeof(int * [[a]]));
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (pointer_declarator
+      (attribute_declaration
+        (attribute
+          (identifier)
+          (identifier)))
+      (identifier)))
+  (type_definition
+    (primitive_type)
+    (pointer_declarator
+      (attribute_declaration
+        (attribute
+          (identifier)))
+      (type_qualifier)
+      (type_identifier)))
+  (declaration
+    (primitive_type)
+    (qualified_identifier
+      (namespace_identifier)
+      (pointer_declarator
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (type_qualifier)
+        (identifier))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (pointer_declarator
+          (attribute_declaration
+            (attribute
+              (identifier)))
+          (type_qualifier)
+          (field_identifier)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (new_expression
+            (primitive_type)
+            (abstract_pointer_declarator
+              (attribute_declaration
+                (attribute
+                  (identifier)
+                  (identifier)))
+              (new_declarator
+                (number_literal))))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (sizeof_expression
+              (type_descriptor
+                (primitive_type)
+                (abstract_pointer_declarator
+                  (attribute_declaration
+                    (attribute
+                      (identifier))))))))))))
 
 ================================================================================
 Pointers to members in class members
