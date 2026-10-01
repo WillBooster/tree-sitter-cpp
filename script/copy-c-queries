@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# Copies the highlights query of @willbooster/tree-sitter-c, which this grammar extends and tree-sitter.json lists before
+# this grammar's own, into queries/c/: the published tree-sitter.json can reference only files inside this package.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+mkdir -p queries/c
+cp node_modules/@willbooster/tree-sitter-c/queries/highlights.scm queries/c/
