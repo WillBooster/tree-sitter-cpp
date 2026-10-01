@@ -137,6 +137,7 @@ module.exports = grammar(C, {
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
     [$._declarator, $.parenthesized_pointer_declarator],
+    [$.required_parentheses_function_declarator, $._direct_initialized_parenthesized_declarator],
     [$._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
     [$.type_specifier, $._built_in_declaration_specifiers],
     [$.type_specifier, $.call_expression, $._built_in_declaration_specifiers],
@@ -843,18 +844,20 @@ module.exports = grammar(C, {
         ')'
       ),
 
-    // A pointer or reference to a declarator that needs parentheses itself, as in `int (*(*fpa)[3])();` and
-    // `int (&(*rg)())[3];`.
+    // A declarator that needs parentheses, possibly behind pointers and references, as in `Foo *(*f)(Bar)`,
+    // `int (*(*fpa)[3])();`, and `int (&(*rg)())[3];`.
+    _required_parentheses_declarator: ($) =>
+      choice(
+        alias($.required_parentheses_function_declarator, $.function_declarator),
+        alias($.required_parentheses_array_declarator, $.array_declarator),
+        alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
+        alias($.required_parentheses_reference_declarator, $.reference_declarator)
+      ),
+
     required_parentheses_pointer_declarator: ($) =>
       withDeclarator(C.grammar.rules.pointer_declarator, $._required_parentheses_declarator),
     required_parentheses_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._required_parentheses_declarator))),
-
-    _required_parentheses_declarator: ($) =>
-      choice(
-        alias($.required_parentheses_function_declarator, $.function_declarator),
-        alias($.required_parentheses_array_declarator, $.array_declarator)
-      ),
 
     // Like function_declarator's, the precedence prefers `int (*fp)(T);` as a function pointer over a pointer
     // direct-initialized with `(T)`.
@@ -879,11 +882,22 @@ module.exports = grammar(C, {
           field('declarator', $._required_parentheses_declarator),
           choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
         ),
-        seq(
-          field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-          field('value', $.argument_list)
-        )
+        seq(field('declarator', $._direct_initialized_parenthesized_declarator), field('value', $.argument_list))
       ),
+
+    // The direct initialization competing with a function declarator of the same tokens, behind the same pointers and
+    // references, so that `int *(*p)(nullptr);` stays a direct initialization like `int (*p)(nullptr);`.
+    _direct_initialized_parenthesized_declarator: ($) =>
+      choice(
+        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+        alias($.direct_initialized_pointer_declarator, $.pointer_declarator),
+        alias($.direct_initialized_reference_declarator, $.reference_declarator)
+      ),
+
+    direct_initialized_pointer_declarator: ($) =>
+      withDeclarator(C.grammar.rules.pointer_declarator, $._direct_initialized_parenthesized_declarator),
+    direct_initialized_reference_declarator: ($) =>
+      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._direct_initialized_parenthesized_declarator))),
 
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),

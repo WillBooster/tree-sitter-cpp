@@ -160,6 +160,7 @@ void g(Callback (*cb)() = nullptr);
 void (*fp)() = nullptr;
 void (*fq)();
 void k(int (*(*e)())[3]);
+void w(Foo *(*f)(Bar), Foo &(*h)(Bar));
 
 void f() {
   int (*a)[3];
@@ -168,6 +169,7 @@ void f() {
   int (*(*d)[3])();
   int (&(*g)())[3];
   int (*p)(nullptr);
+  int *(*q)(T), *(*z)(nullptr);
   f(int(x));
   free(*p);
   foo(*this)();
@@ -252,6 +254,31 @@ void f() {
                       (identifier)))
                   (parameter_list))))
             (number_literal))))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (pointer_declarator
+            (function_declarator
+              (parenthesized_declarator
+                (pointer_declarator
+                  (identifier)))
+              (parameter_list
+                (parameter_declaration
+                  (type_identifier))))))
+        (parameter_declaration
+          (type_identifier)
+          (reference_declarator
+            (function_declarator
+              (parenthesized_declarator
+                (pointer_declarator
+                  (identifier)))
+              (parameter_list
+                (parameter_declaration
+                  (type_identifier)))))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -314,6 +341,23 @@ void f() {
           (parenthesized_declarator
             (pointer_declarator
               (identifier)))
+          (argument_list
+            (null))))
+      (declaration
+        (primitive_type)
+        (pointer_declarator
+          (function_declarator
+            (parenthesized_declarator
+              (pointer_declarator
+                (identifier)))
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)))))
+        (init_declarator
+          (pointer_declarator
+            (parenthesized_declarator
+              (pointer_declarator
+                (identifier))))
           (argument_list
             (null))))
       (expression_statement
