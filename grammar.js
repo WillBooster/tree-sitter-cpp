@@ -20,6 +20,8 @@ const PREC = Object.assign(C.PREC, {
   // Binds looser than casts and tighter than the multiplicative operators; casts are left-associative so that
   // `(T)a.*b` groups as `((T)a).*b`.
   POINTER_TO_MEMBER: C.PREC.CAST,
+  // Outranks the two calls (+1 each) of the expression reading `f(*p)()` of a function or array declarator.
+  REQUIRED_PARENTHESES: 2,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -135,6 +137,7 @@ module.exports = grammar(C, {
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
+    [$._declarator, $.parenthesized_pointer_declarator],
     [$._declarator, $._function_definition_declarator],
   ],
 
@@ -782,7 +785,43 @@ module.exports = grammar(C, {
 
     _function_postfix: ($) => prec.right(choice(repeat1($.virtual_specifier), $.requires_clause)),
 
-    function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
+    function_declarator: ($) =>
+      choice(
+        prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
+        prec.dynamic(
+          PREC.REQUIRED_PARENTHESES,
+          seq(
+            field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+            $._function_declarator_seq
+          )
+        )
+      ),
+
+    array_declarator: ($, /** @type {Rule} */ original) =>
+      choice(
+        original,
+        prec.dynamic(
+          PREC.REQUIRED_PARENTHESES,
+          withDeclarator(original, alias($.parenthesized_pointer_declarator, $.parenthesized_declarator))
+        )
+      ),
+
+    // Parentheses around a pointer before a parameter list or an array bound, as in `void (*fp)() = nullptr;`,
+    // `int (*a)[3];`, or the parameter in `void g(int (*pf)());`, are required, so unlike other parenthesized declarators
+    // (PREC.PAREN_DECLARATOR) they do not make the declaration lose to the expression reading `void(*fp)()`, a call of a
+    // function-style cast. C++ reads such constructs as declarations ([stmt.ambig], [dcl.ambig.res]).
+    parenthesized_pointer_declarator: ($) =>
+      seq(
+        '(',
+        optional($.ms_call_modifier),
+        choice(
+          $.pointer_declarator,
+          $.reference_declarator,
+          alias($.qualified_pointer_declarator, $.qualified_identifier),
+          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+        ),
+        ')'
+      ),
 
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
