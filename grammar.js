@@ -143,7 +143,7 @@ module.exports = grammar(C, {
     [$._declarator, $._function_definition_declarator],
   ],
 
-  inline: ($, original) => [...original, $._namespace_identifier, $._declaration_declarator],
+  inline: ($, original) => [...original, $._namespace_identifier, $._declaration_item],
 
   precedences: ($) => [
     [$.argument_list, $.type_qualifier],
@@ -324,7 +324,7 @@ module.exports = grammar(C, {
 
     declaration: ($) =>
       choice(
-        seq($._declaration_specifiers, commaSep1(field('declarator', $._declaration_declarator)), ';'),
+        seq($._declaration_specifiers, commaSep1(field('declarator', $._declaration_item)), ';'),
         // With a built-in type, the expression reading `void(*fp)()` of `void (*fp)();` calls a function-style cast,
         // which is never valid; with any other type, `foo(*p)();` and `get(*p)[0] = 5;` are commonly calls, so the
         // declaration reading with parentheses (PREC.PAREN_DECLARATOR) keeps losing to them there.
@@ -334,27 +334,19 @@ module.exports = grammar(C, {
             $._built_in_declaration_specifiers,
             field('declarator', $._built_in_required_parentheses_declarator),
             repeat(
-              seq(
-                ',',
-                field('declarator', choice($._declaration_declarator, $._built_in_required_parentheses_declarator))
-              )
+              seq(',', field('declarator', choice($._declaration_item, $._built_in_required_parentheses_declarator)))
             ),
             ';'
           )
         )
       ),
 
-    _declaration_declarator: ($) =>
-      choice(
-        seq(
-          // C uses _declaration_declarator here for some nice macro parsing in function declarators,
-          // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
-          optional($.ms_call_modifier),
-          $._declarator,
-          optional($.gnu_asm_expression)
-        ),
-        $.init_declarator
-      ),
+    // C's declaration uses _declaration_declarator, whose function declarators take macro attributes; that causes a
+    // world of pain for C++, so C++ uses the plain _declarator. The rule is inlined (see `inline`): as a separate node it
+    // changes how equal dynamic precedences of init_declarator and function_declarator resolve, so that
+    // `std::vector<char> buf(static_cast<size_t>(size));` became a function declaration.
+    _declaration_item: ($) =>
+      choice(seq(optional($.ms_call_modifier), $._declarator, optional($.gnu_asm_expression)), $.init_declarator),
 
     _built_in_required_parentheses_declarator: ($) =>
       choice($._required_parentheses_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
@@ -841,8 +833,8 @@ module.exports = grammar(C, {
     function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
 
     // Parentheses around a pointer before a parameter list or an array bound, as in `int (*pf)()` and `int (*a)[3]`,
-    // are required, so unlike other parenthesized declarators (PREC.PAREN_DECLARATOR) they do not make the declaration
-    // less likely than an expression.
+    // are required, so unlike other parenthesized declarators this one carries no PREC.PAREN_DECLARATOR penalty. It is
+    // used only where the declaration reading is certain (see `parameter_declaration` and `declaration`).
     parenthesized_pointer_declarator: ($) =>
       seq(
         '(',
