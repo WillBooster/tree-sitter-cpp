@@ -338,7 +338,9 @@ module.exports = grammar(C, {
           seq(
             $._built_in_declaration_specifiers,
             field('declarator', $._built_in_declarator),
-            repeat(seq(',', field('declarator', choice(declarationItem($), $._built_in_declarator)))),
+            // Each further declarator outweighs the call, as `y(3)` in `int(x), y(3);`, that its expression reading may
+            // contain.
+            repeat(seq(',', prec.dynamic(1, field('declarator', choice(declarationItem($), $._built_in_declarator))))),
             ';'
           )
         )
@@ -347,13 +349,35 @@ module.exports = grammar(C, {
     _built_in_declarator: ($) =>
       choice(
         $._required_parentheses_declarator,
-        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+        $._built_in_parenthesized_name_declarator,
         alias($.required_parentheses_init_declarator, $.init_declarator)
       ),
 
-    // Parentheses around the name, as in `int(x);` and `int((x)) = 5;`, without C's PREC.PAREN_DECLARATOR penalty.
+    // Parentheses around the name, as in `int(x);`, `int((x)) = 5;`, `int(x)[3];`, and `int(f)();`, without C's
+    // PREC.PAREN_DECLARATOR penalty.
+    _built_in_parenthesized_name_declarator: ($) =>
+      choice(
+        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+        alias($.built_in_parenthesized_array_declarator, $.array_declarator),
+        alias($.built_in_parenthesized_function_declarator, $.function_declarator)
+      ),
+
     built_in_parenthesized_declarator: ($) =>
       seq('(', choice($.identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)), ')'),
+    built_in_parenthesized_array_declarator: ($) =>
+      withDeclarator(
+        C.grammar.rules.array_declarator,
+        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
+      ),
+    // Outweighs the second call of the expression reading `int(f)()`.
+    built_in_parenthesized_function_declarator: ($) =>
+      prec.dynamic(
+        1,
+        seq(
+          field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+          $._function_declarator_seq
+        )
+      ),
 
     _built_in_declaration_specifiers: ($) =>
       prec.right(
@@ -891,17 +915,22 @@ module.exports = grammar(C, {
     required_parentheses_init_declarator: ($) =>
       choice(
         seq(
-          field(
-            'declarator',
-            choice(
-              $._required_parentheses_declarator,
-              alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
-            )
-          ),
+          field('declarator', choice($._required_parentheses_declarator, $._built_in_parenthesized_name_declarator)),
           choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
         ),
-        seq(field('declarator', $._direct_initialized_parenthesized_declarator), field('value', $.argument_list))
+        seq(field('declarator', $._direct_initialized_parenthesized_declarator), field('value', $.argument_list)),
+        // `nullptr`, `true`, and `false` lex as type names where no keyword is expected, so without this preference the
+        // function form of the same tokens would read `int (*p)(nullptr);` as taking a parameter of type `nullptr`.
+        prec.dynamic(
+          PREC.CERTAIN_DECLARATION,
+          seq(
+            field('declarator', $._direct_initialized_parenthesized_declarator),
+            field('value', alias($.keyword_literal_argument_list, $.argument_list))
+          )
+        )
       ),
+
+    keyword_literal_argument_list: ($) => prec(1, seq('(', choice($.null, $.true, $.false), ')')),
 
     // The direct initialization competing with a function declarator of the same tokens, behind the same pointers and
     // references, so that `int *(*p)(nullptr);` stays a direct initialization like `int (*p)(nullptr);`.
@@ -1619,10 +1648,6 @@ module.exports = grammar(C, {
       ),
 
     this: () => 'this',
-
-    // `nullptr` is a keyword, but where no keyword is expected it is lexed as an identifier, e.g. as the parameter type
-    // in the function-pointer reading of `int (*p)(nullptr);`, which would otherwise tie with the direct initialization.
-    null: (_, /** @type {Rule} */ original) => prec.dynamic(PREC.CERTAIN_DECLARATION, original),
 
     concatenated_string: ($) =>
       prec.right(
