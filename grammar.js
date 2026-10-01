@@ -843,15 +843,19 @@ module.exports = grammar(C, {
           $.pointer_declarator,
           alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
           $.reference_declarator,
+          alias($.required_parentheses_reference_declarator, $.reference_declarator),
           alias($.qualified_pointer_declarator, $.qualified_identifier),
           alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
         ),
         ')'
       ),
 
-    // A pointer to a declarator that needs parentheses itself, as in `int (*(*fpa)[3])();`.
+    // A pointer or reference to a declarator that needs parentheses itself, as in `int (*(*fpa)[3])();` and
+    // `int (&(*rg)())[3];`.
     required_parentheses_pointer_declarator: ($) =>
       withDeclarator(C.grammar.rules.pointer_declarator, $._required_parentheses_declarator),
+    required_parentheses_reference_declarator: ($) =>
+      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._required_parentheses_declarator))),
 
     _required_parentheses_declarator: ($) =>
       choice(

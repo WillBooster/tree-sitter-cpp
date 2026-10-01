@@ -14765,6 +14765,15 @@
               "type": "ALIAS",
               "content": {
                 "type": "SYMBOL",
+                "name": "required_parentheses_reference_declarator"
+              },
+              "named": true,
+              "value": "reference_declarator"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
                 "name": "qualified_pointer_declarator"
               },
               "named": true,
@@ -14840,6 +14849,36 @@
                 "type": "SYMBOL",
                 "name": "_required_parentheses_declarator"
               }
+            }
+          ]
+        }
+      }
+    },
+    "required_parentheses_reference_declarator": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "&"
+                },
+                {
+                  "type": "STRING",
+                  "value": "&&"
+                }
+              ]
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_required_parentheses_declarator"
             }
           ]
         }
