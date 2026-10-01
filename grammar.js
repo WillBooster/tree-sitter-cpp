@@ -367,7 +367,10 @@ module.exports = grammar(C, {
     built_in_parenthesized_array_declarator: ($) =>
       withDeclarator(
         C.grammar.rules.array_declarator,
-        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
+        choice(
+          alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+          alias($.built_in_parenthesized_array_declarator, $.array_declarator)
+        )
       ),
     // Outweighs the second call of the expression reading `int(f)()`.
     built_in_parenthesized_function_declarator: ($) =>
@@ -906,10 +909,14 @@ module.exports = grammar(C, {
         )
       ),
 
+    // Nested for further dimensions, as in `int (*a)[3][5]`.
     required_parentheses_array_declarator: ($) =>
       withDeclarator(
         C.grammar.rules.array_declarator,
-        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+        choice(
+          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+          alias($.required_parentheses_array_declarator, $.array_declarator)
+        )
       ),
 
     required_parentheses_init_declarator: ($) =>
@@ -1110,10 +1117,21 @@ module.exports = grammar(C, {
       ),
 
     condition_declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        field('declarator', $._declarator),
-        choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+      choice(
+        seq(
+          $._declaration_specifiers,
+          field('declarator', $._declarator),
+          choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+        ),
+        // See the built-in alternative of `declaration`: `if (int (*p)() = f())` declares `p`.
+        prec.dynamic(
+          PREC.CERTAIN_DECLARATION,
+          seq(
+            $._built_in_declaration_specifiers,
+            field('declarator', choice($._required_parentheses_declarator, $._built_in_parenthesized_name_declarator)),
+            choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+          )
+        )
       ),
 
     return_statement: ($, /** @type {Rule} */ original) =>

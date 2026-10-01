@@ -161,6 +161,7 @@ void (*fp)() = nullptr;
 void (*fq)();
 void k(int (*(*e)())[3]);
 void w(int *(*f)(Bar), char &(*h)(Bar));
+void m(int (*md)[3][5]);
 
 void f() {
   int (*a)[3];
@@ -176,6 +177,7 @@ void f() {
   int((w)) = 5, u;
   int(i), j(3), k(4);
   int(arr)[3];
+  int (*md)[3][5], (mx)[2][2];
   int(fn)();
   int(v) + 1;
   f(int(x));
@@ -187,6 +189,8 @@ void f() {
   int n(get(*it)[0]);
   n = (int(x)) + y;
   n = sizeof(int(a));
+  if (int (*fc)() = get()) {}
+  if (x = get()) {}
 }
 
 ---
@@ -289,6 +293,20 @@ void f() {
               (parameter_list
                 (parameter_declaration
                   (type_identifier)))))))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (array_declarator
+            (array_declarator
+              (parenthesized_declarator
+                (pointer_declarator
+                  (identifier)))
+              (number_literal))
+            (number_literal))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -419,6 +437,21 @@ void f() {
           (number_literal)))
       (declaration
         (primitive_type)
+        (array_declarator
+          (array_declarator
+            (parenthesized_declarator
+              (pointer_declarator
+                (identifier)))
+            (number_literal))
+          (number_literal))
+        (array_declarator
+          (array_declarator
+            (parenthesized_declarator
+              (identifier))
+            (number_literal))
+          (number_literal)))
+      (declaration
+        (primitive_type)
         (function_declarator
           (parenthesized_declarator
             (identifier))
@@ -527,7 +560,28 @@ void f() {
               (call_expression
                 (primitive_type)
                 (argument_list
-                  (identifier))))))))))
+                  (identifier)))))))
+      (if_statement
+        (condition_clause
+          (declaration
+            (primitive_type)
+            (function_declarator
+              (parenthesized_declarator
+                (pointer_declarator
+                  (identifier)))
+              (parameter_list))
+            (call_expression
+              (identifier)
+              (argument_list))))
+        (compound_statement))
+      (if_statement
+        (condition_clause
+          (assignment_expression
+            (identifier)
+            (call_expression
+              (identifier)
+              (argument_list))))
+        (compound_statement)))))
 
 ================================================
 template classes vs relational expressions
