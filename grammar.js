@@ -673,7 +673,8 @@ module.exports = grammar(C, {
 
     // Outranks the call expression in `X::~X() = default;`, whose assignment reading lexes `default` as an identifier.
     default_method_clause: () => prec.dynamic(1, seq('=', 'default', ';')),
-    delete_method_clause: () => seq('=', 'delete', ';'),
+    // The precedence reads `= delete("reason")` as the clause rather than as a delete-expression of a string.
+    delete_method_clause: ($) => prec(1, seq('=', 'delete', optional(seq('(', field('message', $._string), ')')), ';')),
     pure_virtual_clause: () => seq('=', /0/, ';'),
 
     friend_declaration: ($) =>

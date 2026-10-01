@@ -391,6 +391,68 @@ Env::~Env() = default;
         (default_method_clause)))))
 
 ================================================================================
+Deleted functions with messages
+================================================================================
+
+struct A {
+  A(int) = delete("use A(long)");
+  operator bool() const = delete(R"(not testable)");
+};
+void h() = delete("a" "b");
+template <> void t<int>() = delete("no ints");
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type))))
+        (delete_method_clause
+          (string_literal
+            (string_content))))
+      (function_definition
+        (operator_cast
+          (primitive_type)
+          (abstract_function_declarator
+            (parameter_list)
+            (type_qualifier)))
+        (delete_method_clause
+          (raw_string_literal
+            (raw_string_content))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (delete_method_clause
+      (concatenated_string
+        (string_literal
+          (string_content))
+        (string_literal
+          (string_content)))))
+  (template_declaration
+    (template_parameter_list)
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (template_function
+          (identifier)
+          (template_argument_list
+            (type_descriptor
+              (primitive_type))))
+        (parameter_list))
+      (delete_method_clause
+        (string_literal
+          (string_content))))))
+
+
+================================================================================
 Keywords as preprocessor identifiers and macro arguments
 ================================================================================
 
