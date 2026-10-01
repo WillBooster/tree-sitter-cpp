@@ -162,6 +162,7 @@ void (*fq)();
 void k(int (*(*e)())[3]);
 void w(int *(*f)(Bar), char &(*h)(Bar));
 void m(int (*md)[3][5]);
+char *(dup)(const char *);
 
 void f() {
   int (*a)[3];
@@ -181,6 +182,7 @@ void f() {
   int(fn)();
   bool(bf)(false);
   long(lx)(f());
+  int *(pf)(), &(rf)();
   int(v) + 1;
   f(int(x));
   free(*p);
@@ -309,6 +311,17 @@ void f() {
                   (identifier)))
               (number_literal))
             (number_literal))))))
+  (declaration
+    (primitive_type)
+    (pointer_declarator
+      (function_declarator
+        (parenthesized_declarator
+          (identifier))
+        (parameter_list
+          (parameter_declaration
+            (type_qualifier)
+            (primitive_type)
+            (abstract_pointer_declarator))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -475,6 +488,18 @@ void f() {
               (type_identifier)
               (abstract_function_declarator
                 (parameter_list))))))
+      (declaration
+        (primitive_type)
+        (pointer_declarator
+          (function_declarator
+            (parenthesized_declarator
+              (identifier))
+            (parameter_list)))
+        (reference_declarator
+          (function_declarator
+            (parenthesized_declarator
+              (identifier))
+            (parameter_list))))
       (expression_statement
         (binary_expression
           (call_expression

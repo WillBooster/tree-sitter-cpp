@@ -140,7 +140,7 @@ module.exports = grammar(C, {
     [$._declarator, $.parenthesized_pointer_declarator],
     [$._declarator, $.built_in_parenthesized_declarator],
     [$.required_parentheses_function_declarator, $._direct_initialized_parenthesized_declarator],
-    [$.built_in_parenthesized_function_declarator, $._direct_initialized_parenthesized_declarator],
+    [$.built_in_parenthesized_function_declarator, $._direct_initialized_declarator],
     [$._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
     [$.type_specifier, $._built_in_declaration_specifiers],
     [$.type_specifier, $.call_expression, $._built_in_declaration_specifiers],
@@ -926,27 +926,34 @@ module.exports = grammar(C, {
           field('declarator', choice($._required_parentheses_declarator, $._built_in_parenthesized_name_declarator)),
           choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
         ),
-        seq(field('declarator', $._direct_initialized_parenthesized_declarator), field('value', $.argument_list)),
+        seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list)),
         // `nullptr`, `true`, and `false` lex as type names where no keyword is expected, so without this preference the
         // function form of the same tokens would read `int (*p)(nullptr);` as taking a parameter of type `nullptr`.
         prec.dynamic(
           PREC.CERTAIN_DECLARATION,
           seq(
-            field('declarator', $._direct_initialized_parenthesized_declarator),
+            field('declarator', $._direct_initialized_declarator),
             field('value', alias($.keyword_literal_argument_list, $.argument_list))
           )
         )
       ),
 
+    // Each shape here has a function form of the same tokens: a parenthesized name only bare
+    // (`built_in_parenthesized_function_declarator`), the others also behind pointers and references.
+    _direct_initialized_declarator: ($) =>
+      choice(
+        $._direct_initialized_parenthesized_declarator,
+        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
+      ),
+
     keyword_literal_argument_list: ($) => prec(1, seq('(', choice($.null, $.true, $.false), ')')),
 
-    // The direct initialization competing with a function declarator of the same tokens, around a parenthesized name
-    // or behind the same pointers and references, so that `bool(b)(false);` and `int *(*p)(nullptr);` stay direct
-    // initializations like `int (*p)(nullptr);`.
+    // The direct initialization competing with a required-parentheses function declarator of the same tokens, behind
+    // the same pointers and references, so that `int *(*p)(nullptr);` stays a direct initialization like
+    // `int (*p)(nullptr);`.
     _direct_initialized_parenthesized_declarator: ($) =>
       choice(
         alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
-        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
         alias($.direct_initialized_pointer_declarator, $.pointer_declarator),
         alias($.direct_initialized_reference_declarator, $.reference_declarator)
       ),

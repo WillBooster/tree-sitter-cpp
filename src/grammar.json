@@ -15358,7 +15358,7 @@
               "name": "declarator",
               "content": {
                 "type": "SYMBOL",
-                "name": "_direct_initialized_parenthesized_declarator"
+                "name": "_direct_initialized_declarator"
               }
             },
             {
@@ -15382,7 +15382,7 @@
                 "name": "declarator",
                 "content": {
                   "type": "SYMBOL",
-                  "name": "_direct_initialized_parenthesized_declarator"
+                  "name": "_direct_initialized_declarator"
                 }
               },
               {
@@ -15400,6 +15400,24 @@
               }
             ]
           }
+        }
+      ]
+    },
+    "_direct_initialized_declarator": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_direct_initialized_parenthesized_declarator"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "built_in_parenthesized_declarator"
+          },
+          "named": true,
+          "value": "parenthesized_declarator"
         }
       ]
     },
@@ -15445,15 +15463,6 @@
           "content": {
             "type": "SYMBOL",
             "name": "parenthesized_pointer_declarator"
-          },
-          "named": true,
-          "value": "parenthesized_declarator"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "built_in_parenthesized_declarator"
           },
           "named": true,
           "value": "parenthesized_declarator"
@@ -20201,7 +20210,7 @@
     ],
     [
       "built_in_parenthesized_function_declarator",
-      "_direct_initialized_parenthesized_declarator"
+      "_direct_initialized_declarator"
     ],
     [
       "_declaration_specifiers",
