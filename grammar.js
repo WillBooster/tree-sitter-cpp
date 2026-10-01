@@ -1239,8 +1239,6 @@ module.exports = grammar(C, {
         ['xor', PREC.EXCLUSIVE_OR],
         ['bitand', PREC.BITWISE_AND],
         ['not_eq', PREC.EQUAL],
-        ['.*', PREC.POINTER_TO_MEMBER],
-        ['->*', PREC.POINTER_TO_MEMBER],
       ];
 
       return choice(
@@ -1351,7 +1349,21 @@ module.exports = grammar(C, {
       ),
 
     _assignment_left_expression: ($, /** @type {Rule} */ original) =>
-      choice(original, $.qualified_identifier, $.user_defined_literal),
+      choice(
+        original,
+        $.qualified_identifier,
+        $.user_defined_literal,
+        alias($.pointer_to_member_expression, $.binary_expression)
+      ),
+
+    expression: ($, /** @type {Rule} */ original) =>
+      choice(original, alias($.pointer_to_member_expression, $.binary_expression)),
+
+    pointer_to_member_expression: ($) =>
+      prec.left(
+        PREC.POINTER_TO_MEMBER,
+        seq(field('left', $.expression), field('operator', choice('.*', '->*')), field('right', $.expression))
+      ),
 
     assignment_expression: ($) =>
       prec.right(
