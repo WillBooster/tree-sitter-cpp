@@ -15453,6 +15453,15 @@
           "type": "ALIAS",
           "content": {
             "type": "SYMBOL",
+            "name": "built_in_parenthesized_declarator"
+          },
+          "named": true,
+          "value": "parenthesized_declarator"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
             "name": "direct_initialized_pointer_declarator"
           },
           "named": true,
@@ -20188,6 +20197,10 @@
     ],
     [
       "required_parentheses_function_declarator",
+      "_direct_initialized_parenthesized_declarator"
+    ],
+    [
+      "built_in_parenthesized_function_declarator",
       "_direct_initialized_parenthesized_declarator"
     ],
     [
