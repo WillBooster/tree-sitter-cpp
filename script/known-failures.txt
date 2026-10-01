@@ -195,11 +195,9 @@ examples/json/tests/src/unit-windows_h.cpp
 examples/json/tests/src/unit-wstring.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerInterface.h
 examples/json/tests/thirdparty/Fuzzer/FuzzerLoop.cpp
-examples/json/tests/thirdparty/Fuzzer/FuzzerMutate.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerTracePC.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerUtilWindows.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerValueBitMap.h
-examples/json/tests/thirdparty/Fuzzer/test/FuzzerUnittest.cpp
 examples/json/tests/thirdparty/doctest/doctest.h
 examples/leveldb/benchmarks/db_bench.cc
 examples/leveldb/benchmarks/db_bench_log.cc
