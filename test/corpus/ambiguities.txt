@@ -161,6 +161,7 @@ void (*fp)() = nullptr;
 
 void f() {
   int (*a)[3];
+  int (*p)(nullptr);
   f(int(x));
   free(*p);
   n = (int(x)) + y;
@@ -232,6 +233,14 @@ void f() {
             (pointer_declarator
               (identifier)))
           (number_literal)))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (argument_list
+            (null))))
       (expression_statement
         (call_expression
           (identifier)

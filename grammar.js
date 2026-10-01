@@ -560,7 +560,15 @@ module.exports = grammar(C, {
     init_declarator: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list)))
+        seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
+        // `int (*p)(nullptr);`: see parenthesized_pointer_declarator.
+        prec.dynamic(
+          PREC.REQUIRED_PARENTHESES,
+          seq(
+            field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+            field('value', $.argument_list)
+          )
+        )
       ),
 
     operator_cast: ($) =>
@@ -862,6 +870,11 @@ module.exports = grammar(C, {
     // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
     // an earlier error recovery, tree-sitter's version limit dropped the type interpretation, and incremental
     // parsing then reused that subtree after the error was gone.
+    // `nullptr` is a keyword, but where no keyword is expected it is lexed as an identifier, e.g. as the parameter type
+    // in the function-pointer reading of `int (*p)(nullptr);`, which PREC.REQUIRED_PARENTHESES would otherwise prefer
+    // over the direct initialization.
+    null: (_, /** @type {Rule} */ original) => prec.dynamic(PREC.REQUIRED_PARENTHESES, original),
+
     _template_argument_type_identifier: ($) => prec(1, field('type', $._type_identifier)),
 
     namespace_definition: ($) =>

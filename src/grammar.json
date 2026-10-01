@@ -5129,6 +5129,36 @@
               }
             }
           ]
+        },
+        {
+          "type": "PREC_DYNAMIC",
+          "value": 2,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "declarator",
+                "content": {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "parenthesized_pointer_declarator"
+                  },
+                  "named": true,
+                  "value": "parenthesized_declarator"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "value",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "argument_list"
+                }
+              }
+            ]
+          }
         }
       ]
     },
@@ -11501,17 +11531,21 @@
       }
     },
     "null": {
-      "type": "CHOICE",
-      "members": [
-        {
-          "type": "STRING",
-          "value": "NULL"
-        },
-        {
-          "type": "STRING",
-          "value": "nullptr"
-        }
-      ]
+      "type": "PREC_DYNAMIC",
+      "value": 2,
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "NULL"
+          },
+          {
+            "type": "STRING",
+            "value": "nullptr"
+          }
+        ]
+      }
     },
     "identifier": {
       "type": "PATTERN",
