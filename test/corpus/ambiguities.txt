@@ -164,6 +164,8 @@ void f() {
   int (*p)(nullptr);
   f(int(x));
   free(*p);
+  foo(*this)();
+  get(*p)[0] = 5;
   n = (int(x)) + y;
   n = sizeof(int(a));
 }
@@ -255,6 +257,25 @@ void f() {
           (argument_list
             (pointer_expression
               (identifier)))))
+      (expression_statement
+        (call_expression
+          (call_expression
+            (identifier)
+            (argument_list
+              (pointer_expression
+                (this))))
+          (argument_list)))
+      (expression_statement
+        (assignment_expression
+          (subscript_expression
+            (call_expression
+              (identifier)
+              (argument_list
+                (pointer_expression
+                  (identifier))))
+            (subscript_argument_list
+              (number_literal)))
+          (number_literal)))
       (expression_statement
         (assignment_expression
           (identifier)

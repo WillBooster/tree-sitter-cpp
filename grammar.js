@@ -20,7 +20,7 @@ const PREC = Object.assign(C.PREC, {
   // Binds looser than casts and tighter than the multiplicative operators; casts are left-associative so that
   // `(T)a.*b` groups as `((T)a).*b`.
   POINTER_TO_MEMBER: C.PREC.CAST,
-  // Outranks the two calls (+1 each) of the expression reading `f(*p)()` of a function or array declarator.
+  // Outranks the two calls (+1 each) of the expression reading `f(*p)()` of a declarator with required parentheses.
   REQUIRED_PARENTHESES: 2,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
@@ -125,7 +125,6 @@ module.exports = grammar(C, {
     [$.structured_binding_declarator, $._lambda_capture_identifier],
     [$.parameter_list, $.argument_list],
     [$.type_specifier, $.call_expression],
-    [$._declaration_specifiers, $._constructor_specifiers],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
     [$.type_specifier, $.sized_type_specifier],
@@ -138,10 +137,13 @@ module.exports = grammar(C, {
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
     [$._declarator, $.parenthesized_pointer_declarator],
+    [$._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
+    [$.type_specifier, $._built_in_declaration_specifiers],
+    [$.type_specifier, $.call_expression, $._built_in_declaration_specifiers],
     [$._declarator, $._function_definition_declarator],
   ],
 
-  inline: ($, original) => [...original, $._namespace_identifier],
+  inline: ($, original) => [...original, $._namespace_identifier, $._declaration_declarator],
 
   precedences: ($) => [
     [$.argument_list, $.type_qualifier],
@@ -321,24 +323,47 @@ module.exports = grammar(C, {
       prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._function_definition_declarator))),
 
     declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        commaSep1(
-          field(
-            'declarator',
-            choice(
-              seq(
-                // C uses _declaration_declarator here for some nice macro parsing in function declarators,
-                // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
-                optional($.ms_call_modifier),
-                $._declarator,
-                optional($.gnu_asm_expression)
-              ),
-              $.init_declarator
-            )
+      choice(
+        seq($._declaration_specifiers, commaSep1(field('declarator', $._declaration_declarator)), ';'),
+        // With a built-in type, the expression reading `void(*fp)()` of `void (*fp)();` calls a function-style cast,
+        // which is never valid; with any other type, `foo(*p)();` and `get(*p)[0] = 5;` are commonly calls, so the
+        // declaration reading with parentheses (PREC.PAREN_DECLARATOR) keeps losing to them there.
+        prec.dynamic(
+          PREC.REQUIRED_PARENTHESES,
+          seq(
+            $._built_in_declaration_specifiers,
+            field(
+              'declarator',
+              choice(
+                $._required_parentheses_declarator,
+                alias($.required_parentheses_init_declarator, $.init_declarator)
+              )
+            ),
+            repeat(seq(',', field('declarator', $._declaration_declarator))),
+            ';'
           )
+        )
+      ),
+
+    _declaration_declarator: ($) =>
+      choice(
+        seq(
+          // C uses _declaration_declarator here for some nice macro parsing in function declarators,
+          // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
+          optional($.ms_call_modifier),
+          $._declarator,
+          optional($.gnu_asm_expression)
         ),
-        ';'
+        $.init_declarator
+      ),
+
+    _built_in_declaration_specifiers: ($) =>
+      prec.right(
+        seq(
+          repeat($._declaration_modifiers),
+          field('type', choice($.primitive_type, $.sized_type_specifier)),
+          repeat($._declaration_modifiers)
+        )
       ),
 
     virtual_specifier: () =>
@@ -536,12 +561,38 @@ module.exports = grammar(C, {
 
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
 
+    // A parameter list cannot hold the argument expressions of a direct initialization such as `void g(int(*pf)())`,
+    // so a parameter whose declarator needs its parentheses is a declaration whatever its type ([dcl.ambig.res]).
+    parameter_declaration: ($, /** @type {Rule} */ original) =>
+      choice(
+        original,
+        prec.dynamic(
+          PREC.REQUIRED_PARENTHESES,
+          seq(
+            $._declaration_specifiers,
+            field('declarator', $._required_parentheses_declarator),
+            repeat($.attribute_specifier)
+          )
+        )
+      ),
+
     optional_parameter_declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
-        '=',
-        field('default_value', $.expression)
+      choice(
+        seq(
+          $._declaration_specifiers,
+          field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
+          '=',
+          field('default_value', $.expression)
+        ),
+        prec.dynamic(
+          PREC.REQUIRED_PARENTHESES,
+          seq(
+            $._declaration_specifiers,
+            field('declarator', $._required_parentheses_declarator),
+            '=',
+            field('default_value', $.expression)
+          )
+        )
       ),
 
     variadic_parameter_declaration: ($) =>
@@ -560,15 +611,7 @@ module.exports = grammar(C, {
     init_declarator: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
-        // `int (*p)(nullptr);`: see parenthesized_pointer_declarator.
-        prec.dynamic(
-          PREC.REQUIRED_PARENTHESES,
-          seq(
-            field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-            field('value', $.argument_list)
-          )
-        )
+        seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list)))
       ),
 
     operator_cast: ($) =>
@@ -793,31 +836,11 @@ module.exports = grammar(C, {
 
     _function_postfix: ($) => prec.right(choice(repeat1($.virtual_specifier), $.requires_clause)),
 
-    function_declarator: ($) =>
-      choice(
-        prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
-        prec.dynamic(
-          PREC.REQUIRED_PARENTHESES,
-          seq(
-            field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-            $._function_declarator_seq
-          )
-        )
-      ),
+    function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
 
-    array_declarator: ($, /** @type {Rule} */ original) =>
-      choice(
-        original,
-        prec.dynamic(
-          PREC.REQUIRED_PARENTHESES,
-          withDeclarator(original, alias($.parenthesized_pointer_declarator, $.parenthesized_declarator))
-        )
-      ),
-
-    // Parentheses around a pointer before a parameter list or an array bound, as in `void (*fp)() = nullptr;`,
-    // `int (*a)[3];`, or the parameter in `void g(int (*pf)());`, are required, so unlike other parenthesized declarators
-    // (PREC.PAREN_DECLARATOR) they do not make the declaration lose to the expression reading `void(*fp)()`, a call of a
-    // function-style cast. C++ reads such constructs as declarations ([stmt.ambig], [dcl.ambig.res]).
+    // Parentheses around a pointer before a parameter list or an array bound, as in `int (*pf)()` and `int (*a)[3]`,
+    // are required, so unlike other parenthesized declarators (PREC.PAREN_DECLARATOR) they do not make the declaration
+    // less likely than an expression.
     parenthesized_pointer_declarator: ($) =>
       seq(
         '(',
@@ -829,6 +852,36 @@ module.exports = grammar(C, {
           alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
         ),
         ')'
+      ),
+
+    _required_parentheses_declarator: ($) =>
+      choice(
+        alias($.required_parentheses_function_declarator, $.function_declarator),
+        alias($.required_parentheses_array_declarator, $.array_declarator)
+      ),
+
+    required_parentheses_function_declarator: ($) =>
+      seq(
+        field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+        $._function_declarator_seq
+      ),
+
+    required_parentheses_array_declarator: ($) =>
+      withDeclarator(
+        C.grammar.rules.array_declarator,
+        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+      ),
+
+    required_parentheses_init_declarator: ($) =>
+      choice(
+        seq(
+          field('declarator', $._required_parentheses_declarator),
+          choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
+        ),
+        seq(
+          field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+          field('value', $.argument_list)
+        )
       ),
 
     function_field_declarator: ($) =>
@@ -870,11 +923,6 @@ module.exports = grammar(C, {
     // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
     // an earlier error recovery, tree-sitter's version limit dropped the type interpretation, and incremental
     // parsing then reused that subtree after the error was gone.
-    // `nullptr` is a keyword, but where no keyword is expected it is lexed as an identifier, e.g. as the parameter type
-    // in the function-pointer reading of `int (*p)(nullptr);`, which PREC.REQUIRED_PARENTHESES would otherwise prefer
-    // over the direct initialization.
-    null: (_, /** @type {Rule} */ original) => prec.dynamic(PREC.REQUIRED_PARENTHESES, original),
-
     _template_argument_type_identifier: ($) => prec(1, field('type', $._type_identifier)),
 
     namespace_definition: ($) =>
@@ -1518,6 +1566,10 @@ module.exports = grammar(C, {
       ),
 
     this: () => 'this',
+
+    // `nullptr` is a keyword, but where no keyword is expected it is lexed as an identifier, e.g. as the parameter type
+    // in the function-pointer reading of `int (*p)(nullptr);`, which would otherwise tie with the direct initialization.
+    null: (_, /** @type {Rule} */ original) => prec.dynamic(PREC.REQUIRED_PARENTHESES, original),
 
     concatenated_string: ($) =>
       prec.right(
