@@ -849,12 +849,17 @@ module.exports = grammar(C, {
         optional($.ms_call_modifier),
         choice(
           $.pointer_declarator,
+          alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
           $.reference_declarator,
           alias($.qualified_pointer_declarator, $.qualified_identifier),
           alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
         ),
         ')'
       ),
+
+    // A pointer to a declarator that needs parentheses itself, as in `int (*(*fpa)[3])();`.
+    required_parentheses_pointer_declarator: ($) =>
+      withDeclarator(C.grammar.rules.pointer_declarator, $._required_parentheses_declarator),
 
     _required_parentheses_declarator: ($) =>
       choice(

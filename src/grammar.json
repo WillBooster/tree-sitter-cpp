@@ -14715,6 +14715,15 @@
               "name": "pointer_declarator"
             },
             {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "required_parentheses_pointer_declarator"
+              },
+              "named": true,
+              "value": "pointer_declarator"
+            },
+            {
               "type": "SYMBOL",
               "name": "reference_declarator"
             },
@@ -14743,6 +14752,64 @@
           "value": ")"
         }
       ]
+    },
+    "required_parentheses_pointer_declarator": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "ms_based_modifier"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "STRING",
+              "value": "*"
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "ms_pointer_modifier"
+              }
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "type_qualifier"
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "declarator",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_required_parentheses_declarator"
+              }
+            }
+          ]
+        }
+      }
     },
     "_required_parentheses_declarator": {
       "type": "CHOICE",

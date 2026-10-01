@@ -159,11 +159,13 @@ void g(int (*pf)(), char (*a)[3], int ((*h))());
 void g(Callback (*cb)() = nullptr);
 void (*fp)() = nullptr;
 void (*fq)();
+void k(int (*(*e)())[3]);
 
 void f() {
   int (*a)[3];
   int (*r)(T);
   int (*b)(), (*c)[2];
+  int (*(*d)[3])();
   int (*p)(nullptr);
   f(int(x));
   free(*p);
@@ -232,6 +234,22 @@ void f() {
         (pointer_declarator
           (identifier)))
       (parameter_list)))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (array_declarator
+            (parenthesized_declarator
+              (pointer_declarator
+                (function_declarator
+                  (parenthesized_declarator
+                    (pointer_declarator
+                      (identifier)))
+                  (parameter_list))))
+            (number_literal))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -266,6 +284,17 @@ void f() {
             (pointer_declarator
               (identifier)))
           (number_literal)))
+      (declaration
+        (primitive_type)
+        (function_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (array_declarator
+                (parenthesized_declarator
+                  (pointer_declarator
+                    (identifier)))
+                (number_literal))))
+          (parameter_list)))
       (declaration
         (primitive_type)
         (init_declarator
