@@ -3748,6 +3748,15 @@
           "name": "reference_declarator"
         },
         {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "qualified_pointer_declarator"
+          },
+          "named": true,
+          "value": "qualified_identifier"
+        },
+        {
           "type": "SYMBOL",
           "name": "qualified_identifier"
         },
@@ -3983,6 +3992,15 @@
           },
           "named": true,
           "value": "reference_declarator"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "qualified_pointer_type_declarator"
+          },
+          "named": true,
+          "value": "qualified_identifier"
         }
       ]
     },
@@ -4013,6 +4031,15 @@
         {
           "type": "SYMBOL",
           "name": "abstract_reference_declarator"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "abstract_qualified_pointer_declarator"
+          },
+          "named": true,
+          "value": "qualified_identifier"
         }
       ]
     },
@@ -13745,6 +13772,37 @@
         }
       }
     },
+    "qualified_pointer_declarator": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_scope_resolution"
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "qualified_pointer_declarator"
+                },
+                "named": true,
+                "value": "qualified_identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "pointer_declarator"
+              }
+            ]
+          }
+        }
+      ]
+    },
     "qualified_pointer_field_declarator": {
       "type": "SEQ",
       "members": [
@@ -13775,6 +13833,73 @@
                 },
                 "named": true,
                 "value": "pointer_declarator"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "qualified_pointer_type_declarator": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_scope_resolution"
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "qualified_pointer_type_declarator"
+                },
+                "named": true,
+                "value": "qualified_identifier"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "pointer_type_declarator"
+                },
+                "named": true,
+                "value": "pointer_declarator"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "abstract_qualified_pointer_declarator": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_scope_resolution"
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "abstract_qualified_pointer_declarator"
+                },
+                "named": true,
+                "value": "qualified_identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "abstract_pointer_declarator"
               }
             ]
           }
@@ -17824,10 +17949,6 @@
               {
                 "type": "SYMBOL",
                 "name": "destructor_name"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "pointer_type_declarator"
               }
             ]
           }
