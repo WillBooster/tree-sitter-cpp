@@ -17,6 +17,9 @@ const C = require('@willbooster/tree-sitter-c/grammar');
 const PREC = Object.assign(C.PREC, {
   LAMBDA: 18,
   NEW: C.PREC.CALL + 1,
+  // Binds looser than casts and tighter than the multiplicative operators; casts are left-associative so that
+  // `(T)a.*b` groups as `((T)a).*b`.
+  POINTER_TO_MEMBER: C.PREC.CAST,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -1010,7 +1013,7 @@ module.exports = grammar(C, {
 
     field_expression: ($) =>
       seq(
-        prec(PREC.FIELD, seq(field('argument', $.expression), field('operator', choice('.', '.*', '->')))),
+        prec(PREC.FIELD, seq(field('argument', $.expression), field('operator', choice('.', '->')))),
         field(
           'field',
           choice(
@@ -1200,6 +1203,8 @@ module.exports = grammar(C, {
         ['xor', PREC.EXCLUSIVE_OR],
         ['bitand', PREC.BITWISE_AND],
         ['not_eq', PREC.EQUAL],
+        ['.*', PREC.POINTER_TO_MEMBER],
+        ['->*', PREC.POINTER_TO_MEMBER],
       ];
 
       return choice(
@@ -1217,6 +1222,8 @@ module.exports = grammar(C, {
         })
       );
     },
+
+    cast_expression: (_, /** @type {Rule} */ original) => prec.left(PREC.CAST, original),
 
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
     argument_list: ($) => seq('(', commaSep(choice($.expression, $.initializer_list, $.compound_statement)), ')'),
