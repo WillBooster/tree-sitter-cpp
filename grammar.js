@@ -348,10 +348,15 @@ module.exports = grammar(C, {
       ),
 
     _built_in_declarator: ($) =>
+      choice($._built_in_parenthesized_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
+
+    // The parenthesized declarators that, with a built-in type, carry no PREC.PAREN_DECLARATOR penalty in declarations
+    // and conditions; parameters take them except the parenthesized name (see `parameter_declaration`).
+    _built_in_parenthesized_declarator: ($) =>
       choice(
         $._required_parentheses_declarator,
-        $._built_in_parenthesized_name_declarator,
-        alias($.required_parentheses_init_declarator, $.init_declarator)
+        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+        $._built_in_parenthesized_name_declarator
       ),
 
     // Parentheses around the name, as in `int(x);`, `int((x)) = 5;`, `int(x)[3];`, and `int(f)();`, without C's
@@ -588,9 +593,10 @@ module.exports = grammar(C, {
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
 
     // A parameter list competes with the argument list of a direct initialization. With a built-in type, the argument
-    // reading of a parameter such as `int (*pf)()` calls a function-style cast, which is never valid; with any other
-    // type, `name(*obj)()` in `std::string s(name(*obj)());` is commonly a call, so the parameter reading with
-    // parentheses (PREC.PAREN_DECLARATOR) keeps losing to it there.
+    // reading of a parameter such as `int (*pf)()` calls a function-style cast, which is never valid, and that of
+    // `int (*p)` is a cast that [dcl.ambig.res] reads as a parameter; with any other type, `name(*obj)()` in
+    // `std::string s(name(*obj)());` is commonly a call, so the parameter reading with parentheses
+    // (PREC.PAREN_DECLARATOR) keeps losing to it there.
     parameter_declaration: ($, /** @type {Rule} */ original) =>
       choice(
         original,
@@ -598,11 +604,16 @@ module.exports = grammar(C, {
           PREC.CERTAIN_DECLARATION,
           seq(
             $._built_in_declaration_specifiers,
-            field('declarator', $._required_parentheses_declarator),
+            field('declarator', $._parameter_parenthesized_declarator),
             repeat($.attribute_specifier)
           )
         )
       ),
+
+    // Unlike in declarations, a parenthesized name such as `int (x)` competes here with the function type `int(x)`,
+    // which [dcl.ambig.res] prefers when `x` names a type.
+    _parameter_parenthesized_declarator: ($) =>
+      choice($._required_parentheses_declarator, alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
 
     optional_parameter_declaration: ($) =>
       choice(
@@ -616,7 +627,7 @@ module.exports = grammar(C, {
           PREC.CERTAIN_DECLARATION,
           seq(
             $._built_in_declaration_specifiers,
-            field('declarator', $._required_parentheses_declarator),
+            field('declarator', $._parameter_parenthesized_declarator),
             '=',
             field('default_value', $.expression)
           )
@@ -923,7 +934,7 @@ module.exports = grammar(C, {
     required_parentheses_init_declarator: ($) =>
       choice(
         seq(
-          field('declarator', choice($._required_parentheses_declarator, $._built_in_parenthesized_name_declarator)),
+          field('declarator', $._built_in_parenthesized_declarator),
           choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
         ),
         seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list)),
@@ -1138,7 +1149,7 @@ module.exports = grammar(C, {
           PREC.CERTAIN_DECLARATION,
           seq(
             $._built_in_declaration_specifiers,
-            field('declarator', choice($._required_parentheses_declarator, $._built_in_parenthesized_name_declarator)),
+            field('declarator', $._built_in_parenthesized_declarator),
             choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
           )
         )

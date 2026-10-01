@@ -163,6 +163,7 @@ void k(int (*(*e)())[3]);
 void w(int *(*f)(Bar), char &(*h)(Bar));
 void m(int (*md)[3][5]);
 char *(dup)(const char *);
+void q(int (*bp));
 
 void f() {
   int (*a)[3];
@@ -183,6 +184,7 @@ void f() {
   bool(bf)(false);
   long(lx)(f());
   int *(pf)(), &(rf)();
+  int (*bp), (&br) = v;
   int(v) + 1;
   f(int(x));
   free(*p);
@@ -194,6 +196,7 @@ void f() {
   n = (int(x)) + y;
   n = sizeof(int(a));
   if (int (*fc)() = get()) {}
+  if (int (*cp) = get()) {}
   if (x = get()) {}
 }
 
@@ -322,6 +325,16 @@ void f() {
             (type_qualifier)
             (primitive_type)
             (abstract_pointer_declarator))))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -500,6 +513,16 @@ void f() {
             (parenthesized_declarator
               (identifier))
             (parameter_list))))
+      (declaration
+        (primitive_type)
+        (parenthesized_declarator
+          (pointer_declarator
+            (identifier)))
+        (init_declarator
+          (parenthesized_declarator
+            (reference_declarator
+              (identifier)))
+          (identifier)))
       (expression_statement
         (binary_expression
           (call_expression
@@ -614,6 +637,17 @@ void f() {
                 (pointer_declarator
                   (identifier)))
               (parameter_list))
+            (call_expression
+              (identifier)
+              (argument_list))))
+        (compound_statement))
+      (if_statement
+        (condition_clause
+          (declaration
+            (primitive_type)
+            (parenthesized_declarator
+              (pointer_declarator
+                (identifier)))
             (call_expression
               (identifier)
               (argument_list))))
