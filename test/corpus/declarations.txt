@@ -2252,6 +2252,8 @@ Attributes after pointer operators
 ================================================================================
 
 int * [[gnu::unused]] p;
+typedef int * [[a]] const P;
+int S::* [[a]] const pm;
 struct S { int * [[a]] const x; };
 void f() {
   auto q = new int * [[gnu::unused]] [3];
@@ -2269,6 +2271,24 @@ void f() {
           (identifier)
           (identifier)))
       (identifier)))
+  (type_definition
+    (primitive_type)
+    (pointer_declarator
+      (attribute_declaration
+        (attribute
+          (identifier)))
+      (type_qualifier)
+      (type_identifier)))
+  (declaration
+    (primitive_type)
+    (qualified_identifier
+      (namespace_identifier)
+      (pointer_type_declarator
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (type_qualifier)
+        (type_identifier))))
   (struct_specifier
     (type_identifier)
     (field_declaration_list
