@@ -579,20 +579,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    parameter_list: ($) =>
-      seq(
-        '(',
-        commaSep(
-          choice(
-            $.parameter_declaration,
-            $.explicit_object_parameter_declaration,
-            $.optional_parameter_declaration,
-            $.variadic_parameter_declaration,
-            '...'
-          )
-        ),
-        ')'
-      ),
+    parameter_list: ($) => parameterList($),
 
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
 
@@ -844,16 +831,7 @@ module.exports = grammar(C, {
 
     ref_qualifier: () => choice('&', '&&'),
 
-    _function_declarator_seq: ($) =>
-      seq(
-        field('parameters', $.parameter_list),
-        optional($._function_attributes_start),
-        optional($.ref_qualifier),
-        optional($._function_exception_specification),
-        optional($._function_attributes_end),
-        optional($.trailing_return_type),
-        optional($._function_postfix)
-      ),
+    _function_declarator_seq: ($) => functionDeclaratorSeq($, $.parameter_list),
 
     // The function forms that compete with a direct initialization of the same tokens take a parameter list in which a
     // parameter may start with an expression keyword. Such keywords lex as type names where no keyword is expected, so
@@ -861,31 +839,9 @@ module.exports = grammar(C, {
     // here the keyword is expected, and the parameter it starts weighs so little that the function reading loses, or
     // dies at the tokens that follow it.
     _competing_function_declarator_seq: ($) =>
-      seq(
-        field('parameters', alias($.competing_parameter_list, $.parameter_list)),
-        optional($._function_attributes_start),
-        optional($.ref_qualifier),
-        optional($._function_exception_specification),
-        optional($._function_attributes_end),
-        optional($.trailing_return_type),
-        optional($._function_postfix)
-      ),
+      functionDeclaratorSeq($, alias($.competing_parameter_list, $.parameter_list)),
 
-    competing_parameter_list: ($) =>
-      seq(
-        '(',
-        commaSep(
-          choice(
-            $.parameter_declaration,
-            $.explicit_object_parameter_declaration,
-            $.optional_parameter_declaration,
-            $.variadic_parameter_declaration,
-            '...',
-            alias($.expression_keyword_parameter, $.parameter_declaration)
-          )
-        ),
-        ')'
-      ),
+    competing_parameter_list: ($) => parameterList($, alias($.expression_keyword_parameter, $.parameter_declaration)),
 
     expression_keyword_parameter: ($) =>
       prec.dynamic(
@@ -1853,6 +1809,45 @@ module.exports = grammar(C, {
     _namespace_identifier: ($) => alias($.identifier, $.namespace_identifier),
   },
 });
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {...RuleOrLiteral} extraParameters
+ * @returns {Rule}
+ */
+function parameterList($, ...extraParameters) {
+  return seq(
+    '(',
+    commaSep(
+      choice(
+        $.parameter_declaration,
+        $.explicit_object_parameter_declaration,
+        $.optional_parameter_declaration,
+        $.variadic_parameter_declaration,
+        '...',
+        ...extraParameters
+      )
+    ),
+    ')'
+  );
+}
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {RuleOrLiteral} parameters
+ * @returns {Rule}
+ */
+function functionDeclaratorSeq($, parameters) {
+  return seq(
+    field('parameters', parameters),
+    optional($._function_attributes_start),
+    optional($.ref_qualifier),
+    optional($._function_exception_specification),
+    optional($._function_attributes_end),
+    optional($.trailing_return_type),
+    optional($._function_postfix)
+  );
+}
 
 /**
  * C's declaration uses _declaration_declarator, whose function declarators take macro attributes; that causes a world of
