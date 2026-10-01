@@ -189,6 +189,7 @@ void f() {
   int (*pk)(static_cast<int*>(q)), (*pg)(::new int);
   int (nc)(static_cast<F>(g)(x));
   long(lo)(offsetof(S, m));
+  long(la)(__alignof__(T));
   bool(bn)(noexcept(g()));
   long(lx)(f());
   int (*pc)(f()), *(*qc)(f());
@@ -593,6 +594,15 @@ void f() {
               (type_descriptor
                 (type_identifier))
               (field_identifier)))))
+      (declaration
+        (sized_type_specifier)
+        (init_declarator
+          (parenthesized_declarator
+            (identifier))
+          (argument_list
+            (alignof_expression
+              (type_descriptor
+                (type_identifier))))))
       (declaration
         (primitive_type)
         (init_declarator

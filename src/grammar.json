@@ -15139,7 +15139,43 @@
                   },
                   {
                     "type": "STRING",
+                    "value": "_Alignof"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "__alignof__"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "__alignof"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "_alignof"
+                  },
+                  {
+                    "type": "STRING",
                     "value": "offsetof"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "_Generic"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "__builtin_available"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "asm"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "__asm__"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "__asm"
                   },
                   {
                     "type": "STRING",
@@ -15152,6 +15188,10 @@
                   {
                     "type": "STRING",
                     "value": "co_await"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "requires"
                   },
                   {
                     "type": "STRING",
