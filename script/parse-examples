@@ -38,6 +38,9 @@ clone() {
 }
 
 cd "$(dirname "$0")/.."
+# The CLI caches compiled parsers by language name in a directory shared by every checkout and reuses one that is newer
+# than the sources, so another checkout's parser could be checked instead of this one.
+export TREE_SITTER_LIBDIR="$PWD/.tmp/tree-sitter-lib"
 
 clone fmt https://github.com/fmtlib/fmt 5da4e9a3fb15626ba92969199061e0169ebc8a00
 clone json https://github.com/nlohmann/json 373005f7accebb2eff11d2837c468094e3116b38

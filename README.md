@@ -12,7 +12,8 @@ C++ grammar for [tree-sitter](https://github.com/tree-sitter/tree-sitter), forke
 [tree-sitter/tree-sitter-cpp](https://github.com/tree-sitter/tree-sitter-cpp). We are grateful
 to its authors and contributors. This is not an official release of that project.
 
-This fork fixes parsing bugs and raises conformance with the ISO C++ standard ([working draft](https://eel.is/c++draft/)).
+This fork fixes parsing bugs and raises conformance with the ISO C++ standard
+([working draft](https://eel.is/c++draft/)).
 
 ## Usage
 
@@ -97,17 +98,20 @@ cargo test --locked
   reparses it, undoes the edits, and reparses again. `TREE_SITTER_SEED`, `TREE_SITTER_ITERATIONS`, and
   `TREE_SITTER_EDITS` run other or more edits;
 - a check that the real-world C++ files in `examples/`, the checked-in ones and those of the cloned repositories,
-  fail to parse exactly as listed in `script/known-failures.txt`. The first run clones the repositories. The example repositories are pinned to commits in
-  `script/parse-examples`. After a grammar change or a moved pin alters that list, `script/parse-examples` rewrites
-  it; review its diff before committing;
-- a performance check (`test/unit/performance.test.ts`) that recovering from an error on each of 10,000 lines takes
-  linear time, since consumers parse files while they are being edited. It loads the Wasm build through
+  fail to parse exactly as listed in `script/known-failures.txt`. The first run clones the repositories. The example
+  repositories are pinned to commits in `script/parse-examples`. After a grammar change or a moved pin alters that
+  list, `script/parse-examples` rewrites it; review its diff before committing;
+- a performance check (`test/unit/performance.test.ts`) that recovering from an error on each line takes linear
+  time, since consumers parse files while they are being edited. It loads the Wasm build through
   @willbooster/web-tree-sitter, which `bun run build/ci` rebuilds after regenerating the parser;
+- a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and
+  `willbooster-tree-sitter` in `Cargo.lock` are the same version, since the Wasm tests run on the former and the Rust
+  tests and the fuzzer on the latter;
 - checks that the Wasm build parses in Chromium (`test/unit/browser/`) and in Cloudflare Workers with and without
   Node.js compatibility (`test/unit/workers.test.ts`). Run `bun run test/ci-setup` once to install Chromium.
 
-CI also runs these tests on Linux arm64 and macOS, where the parser and scanner are compiled natively against each platform's C library, and fuzzes the parser with libFuzzer and sanitizers
-(`.github/workflows/robustness.yml`).
+CI also runs these tests on Linux arm64 and macOS, where the parser and scanner are compiled natively against each
+platform's C library, and fuzzes the parser with libFuzzer and sanitizers (`.github/workflows/robustness.yml`).
 
 ### References
 
