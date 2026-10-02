@@ -869,6 +869,7 @@ pointer and reference declarators vs function declarators
 Foo* g(1);
 const Foo& h(*q);
 Foo* S::m(nullptr);
+template <class T, size_t N> T* begin(T (&a)[N]);
 
 void f() {
   Foo* a(nullptr);
@@ -878,6 +879,7 @@ void f() {
   const Foo& r(*this);
   Foo* n(this->next), *m(static_cast<Foo*>(q)[0]);
   Foo* const v(this->get<Foo>()), *w(not x);
+  Foo* nx(not x + 1);
   Bar y(a, sizeof(b)), z(a, true);
   ok && check(this->x);
   ok && check(static_cast<int>(x));
@@ -916,6 +918,26 @@ void f() {
           (identifier)))
       (argument_list
         (null))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier))
+      (parameter_declaration
+        (primitive_type)
+        (identifier)))
+    (declaration
+      (type_identifier)
+      (pointer_declarator
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (type_identifier)
+              (array_declarator
+                (parenthesized_declarator
+                  (reference_declarator
+                    (identifier)))
+                (identifier))))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -1021,6 +1043,16 @@ void f() {
           (argument_list
             (unary_expression
               (identifier)))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (binary_expression
+                (unary_expression
+                  (identifier))
+                (number_literal))))))
       (declaration
         (type_identifier)
         (init_declarator

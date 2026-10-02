@@ -29,8 +29,11 @@ const PREC = Object.assign(C.PREC, {
   FUNCTION_OVER_DIRECT_INITIALIZATION: 10,
   // Outranks the function reading of `Foo* p(nullptr);` and its expression reading `Foo * p(nullptr)`.
   KEYWORD_ARGUMENT_INITIALIZATION: 10,
-  // Loses to the function reading of `Foo* p(x);` and the expression reading of `Foo* p(1);`.
-  POINTER_ARGUMENT_INITIALIZATION: -5,
+  // Loses to every function reading, even of `T* begin(T (&a)[N]);` whose parameter is parenthesized, and to the
+  // expression reading of `Foo* p(1);`.
+  POINTER_ARGUMENT_INITIALIZATION: -100,
+  // Loses to any reading without such a parameter, the last-resort pointer initialization included.
+  EXPRESSION_KEYWORD_PARAMETER: -1000,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -136,6 +139,8 @@ module.exports = grammar(C, {
     [$.type_specifier, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
+    [$._string, $._keyword_operand],
+    [$.expression, $._keyword_operand],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
@@ -737,13 +742,13 @@ module.exports = grammar(C, {
         $.true,
         $.false,
         $.this,
-        $.sizeof_expression,
+        alias($.keyword_sizeof_expression, $.sizeof_expression),
         $.alignof_expression,
         $.offsetof_expression,
         $.generic_expression,
         $.new_expression,
-        $.delete_expression,
-        $.co_await_expression,
+        alias($.keyword_delete_expression, $.delete_expression),
+        alias($.keyword_co_await_expression, $.co_await_expression),
         $.requires_expression,
         $.builtin_available_expression,
         alias($.keyword_unary_expression, $.unary_expression),
@@ -769,8 +774,42 @@ module.exports = grammar(C, {
         prec(PREC.FIELD, seq(field('argument', $._keyword_led_expression), field('operator', choice('.', '->')))),
         field('field', fieldExpressionMember($))
       ),
+    // A prefix keyword takes only a postfix or primary operand here, so that `not x + 1` ends the keyword reading and
+    // keeps the precedence it has elsewhere instead of reading as `not (x + 1)`.
     keyword_unary_expression: ($) =>
-      prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $.expression))),
+      prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $._keyword_operand))),
+    keyword_sizeof_expression: ($) =>
+      prec(
+        PREC.SIZEOF,
+        seq(
+          'sizeof',
+          choice(
+            field('value', $._keyword_operand),
+            seq('(', field('type', $.type_descriptor), ')'),
+            seq('...', '(', field('value', $.identifier), ')')
+          )
+        )
+      ),
+    keyword_co_await_expression: ($) =>
+      prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $._keyword_operand))),
+    keyword_delete_expression: ($) => seq(optional('::'), 'delete', optional(seq('[', ']')), $._keyword_operand),
+    _keyword_operand: ($) =>
+      choice(
+        $.identifier,
+        $.qualified_identifier,
+        $.template_function,
+        $.number_literal,
+        $.string_literal,
+        $.char_literal,
+        $.this,
+        $.null,
+        $.true,
+        $.false,
+        $.parenthesized_expression,
+        $.call_expression,
+        $.field_expression,
+        $.subscript_expression
+      ),
 
     operator_cast: ($) =>
       prec.right(1, seq('operator', $._declaration_specifiers, field('declarator', $._abstract_declarator))),
@@ -976,7 +1015,7 @@ module.exports = grammar(C, {
     // loses, or dies at the tokens that follow it.
     expression_keyword_parameter: ($) =>
       prec.dynamic(
-        -20,
+        PREC.EXPRESSION_KEYWORD_PARAMETER,
         seq(
           optional('::'),
           field(

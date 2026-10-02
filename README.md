@@ -115,7 +115,8 @@ that runs here. Run other CLI commands through it as well (e.g. `script/tree-sit
   @willbooster/web-tree-sitter, which `bun run build/ci` rebuilds after regenerating the parser;
 - a check (`test/unit/expressionKeywordParameter.test.ts`) that every keyword that can start an expression but not a
   parameter is expected in parameter lists, so that `long(n)(sizeof(b));` stays an initialization, and that the
-  keyword-led arguments that make `Foo* p(nullptr);` a variable start only with such keywords;
+  keyword-led arguments that make `Foo* p(nullptr);` a variable start only with such keywords or `this`, which starts
+  a parameter only when a declaration follows it;
 - a check (`test/unit/queries.test.ts`) that the queries `tree-sitter.json` lists compile against the grammar, are
   published in the npm package and the crate, and that `queries/c/` matches the queries of the installed
   @willbooster/tree-sitter-c; after updating that dependency, `script/copy-c-queries` refreshes the copy;
