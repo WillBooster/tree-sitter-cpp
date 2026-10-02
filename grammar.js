@@ -146,6 +146,8 @@ module.exports = grammar(C, {
     [$.expression, $.expression_keyword_parameter],
     [$._declarator, $._argument_initialized_name],
     [$.init_declarator, $._argument_initialized_declarator],
+    [$.expression, $.type_specifier, $.parenthesized_identifier],
+    [$._argument_initialized_declarator, $.later_keyword_argument_init_declarator],
     [$.type_specifier, $.sized_type_specifier],
     [$.initializer_pair, $.comma_expression],
     [$.expression_statement, $._for_statement_body],
@@ -347,7 +349,20 @@ module.exports = grammar(C, {
 
     declaration: ($) =>
       choice(
-        seq($._declaration_specifiers, commaSep1(field('declarator', declarationItem($))), ';'),
+        seq(
+          $._declaration_specifiers,
+          field('declarator', declarationItem($)),
+          repeat(
+            seq(
+              ',',
+              field(
+                'declarator',
+                choice(declarationItem($), alias($.later_keyword_argument_init_declarator, $.init_declarator))
+              )
+            )
+          ),
+          ';'
+        ),
         // A statement that can be a declaration is one ([stmt.ambig]), but only with a built-in type is the declaration
         // reading certain: the expression reading of `void (*fp)();` calls a function-style cast, which is never
         // valid, and that of `int(x);` discards one. With any other type, `foo(*p)();` and `get(*p)[0] = 5;` are
@@ -693,6 +708,24 @@ module.exports = grammar(C, {
         )
       ),
 
+    // After a comma, a declaration cannot be the call through a function pointer `x * (*fp)(this);`, so the forms that
+    // only take the fallback above take the keyword reading too, as in `Foo* k, *(*l)(nullptr);`.
+    later_keyword_argument_init_declarator: ($) =>
+      prec.dynamic(
+        PREC.KEYWORD_ARGUMENT_INITIALIZATION,
+        seq(
+          field(
+            'declarator',
+            choice(
+              alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator),
+              alias($.parenthesized_argument_initialized_reference_declarator, $.reference_declarator),
+              alias($.argument_initialized_rvalue_reference_declarator, $.reference_declarator)
+            )
+          ),
+          field('value', alias($.keyword_argument_list, $.argument_list))
+        )
+      ),
+
     // The fallback also takes `&&` and declarators around a parenthesized one, which the keyword reading leaves out
     // because `ok && check(this->x);` and `x * (*fp)(this);` are common expression statements.
     _argument_initialized_declarator: ($) =>
@@ -739,7 +772,8 @@ module.exports = grammar(C, {
         $._keyword_led_postfix_expression,
         alias($.keyword_delete_expression, $.delete_expression),
         alias($.keyword_co_await_expression, $.co_await_expression),
-        alias($.keyword_unary_expression, $.unary_expression)
+        alias($.keyword_unary_expression, $.unary_expression),
+        alias($.keyword_sizeof_expression, $.sizeof_expression)
       ),
 
     // Calls, subscripts, and member accesses attach only to these, not to a prefix keyword's expression, so that
@@ -787,12 +821,16 @@ module.exports = grammar(C, {
         field('field', fieldExpressionMember($))
       ),
     // A prefix keyword takes only a postfix or primary operand here, so that `not x + 1` ends the keyword reading and
-    // keeps the precedence it has elsewhere instead of reading as `not (x + 1)`. `sizeof` is left out: its `(x)`, a
-    // type or an expression, would tie and flip the reading of `sizeof(x)` in `a * b(sizeof(x) + 1);`.
+    // keeps the precedence it has elsewhere instead of reading as `not (x + 1)`.
     keyword_unary_expression: ($) =>
       prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $._keyword_operand))),
     keyword_co_await_expression: ($) =>
       prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $._keyword_operand))),
+    keyword_sizeof_expression: ($) =>
+      prec.left(
+        PREC.SIZEOF,
+        seq('sizeof', choice(field('value', $._keyword_operand), seq('(', field('type', $.type_descriptor), ')')))
+      ),
     keyword_delete_expression: ($) => seq(optional('::'), 'delete', optional(seq('[', ']')), $._keyword_operand),
     // Every primary and postfix expression form, plus `++`/`--` and `new`, so that which operand follows the keyword
     // does not decide between the variable and expression readings.
@@ -1616,7 +1654,19 @@ module.exports = grammar(C, {
     identifier_parameter_pack_expansion: ($) => seq(field('pattern', $.identifier), '...'),
 
     sizeof_expression: ($, /** @type {Rule} */ original) =>
-      prec.right(PREC.SIZEOF, choice(original, seq('sizeof', '...', '(', field('value', $.identifier), ')'))),
+      prec.right(
+        PREC.SIZEOF,
+        choice(
+          original,
+          seq('sizeof', '...', '(', field('value', $.identifier), ')'),
+          // The type and expression readings of `sizeof(x)` otherwise tie, and which one the parser keeps depends on
+          // the other readings of the statement still alive: offering `sizeof` in keyword-led arguments made `x` in
+          // `a * b(sizeof(x) + 1);` a type. This keeps the expression reading, which the parser chose before.
+          prec.dynamic(1, seq('sizeof', field('value', alias($.parenthesized_identifier, $.parenthesized_expression))))
+        )
+      ),
+
+    parenthesized_identifier: ($) => seq('(', $.identifier, ')'),
 
     unary_expression: ($, /** @type {Rule} */ original) =>
       choice(
