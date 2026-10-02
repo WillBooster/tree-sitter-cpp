@@ -892,7 +892,7 @@ void f() {
   ok && check(static_cast<int>(x));
   Foo* o(this->a + 1);
   int i, *(*j)(nullptr);
-  Foo* k, *(*l)(nullptr), &(m)(this->x);
+  Foo* k, *(*l)(nullptr), &(m)(this->x), &&o(this->y);
   for (Foo* fa, *(*fb)(nullptr);;) {}
   x * (*fp)(this);
   a, *(*fp)(this);
@@ -1233,6 +1233,13 @@ void f() {
           (reference_declarator
             (parenthesized_declarator
               (identifier)))
+          (argument_list
+            (field_expression
+              (this)
+              (field_identifier))))
+        (init_declarator
+          (reference_declarator
+            (identifier))
           (argument_list
             (field_expression
               (this)
