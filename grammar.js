@@ -742,7 +742,6 @@ module.exports = grammar(C, {
         $.true,
         $.false,
         $.this,
-        alias($.keyword_sizeof_expression, $.sizeof_expression),
         $.alignof_expression,
         $.offsetof_expression,
         $.generic_expression,
@@ -775,21 +774,10 @@ module.exports = grammar(C, {
         field('field', fieldExpressionMember($))
       ),
     // A prefix keyword takes only a postfix or primary operand here, so that `not x + 1` ends the keyword reading and
-    // keeps the precedence it has elsewhere instead of reading as `not (x + 1)`.
+    // keeps the precedence it has elsewhere instead of reading as `not (x + 1)`. `sizeof` is left out: its `(x)`, a
+    // type or an expression, would tie and flip the reading of `sizeof(x)` in `a * b(sizeof(x) + 1);`.
     keyword_unary_expression: ($) =>
       prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $._keyword_operand))),
-    keyword_sizeof_expression: ($) =>
-      prec(
-        PREC.SIZEOF,
-        seq(
-          'sizeof',
-          choice(
-            field('value', $._keyword_operand),
-            seq('(', field('type', $.type_descriptor), ')'),
-            seq('...', '(', field('value', $.identifier), ')')
-          )
-        )
-      ),
     keyword_co_await_expression: ($) =>
       prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $._keyword_operand))),
     keyword_delete_expression: ($) => seq(optional('::'), 'delete', optional(seq('[', ']')), $._keyword_operand),

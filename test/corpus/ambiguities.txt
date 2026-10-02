@@ -880,6 +880,9 @@ void f() {
   Foo* n(this->next), *m(static_cast<Foo*>(q)[0]);
   Foo* const v(this->get<Foo>()), *w(not x);
   Foo* nx(not x + 1);
+  Foo* pn(NULL);
+  const size_t& sz(sizeof(T) * 2);
+  a * b(sizeof(x) + 1);
   Bar y(a, sizeof(b)), z(a, true);
   ok && check(this->x);
   ok && check(static_cast<int>(x));
@@ -1052,6 +1055,36 @@ void f() {
               (binary_expression
                 (unary_expression
                   (identifier))
+                (number_literal))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (null))))
+      (declaration
+        (type_qualifier)
+        (primitive_type)
+        (init_declarator
+          (reference_declarator
+            (identifier))
+          (argument_list
+            (binary_expression
+              (sizeof_expression
+                (parenthesized_expression
+                  (identifier)))
+              (number_literal)))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (binary_expression
+                (sizeof_expression
+                  (parenthesized_expression
+                    (identifier)))
                 (number_literal))))))
       (declaration
         (type_identifier)
