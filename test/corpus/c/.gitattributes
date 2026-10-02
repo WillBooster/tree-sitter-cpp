@@ -1,5 +1,5 @@
 # The corpus case tests input with CRLF line endings, so git must keep them. Kept here because
-# wbfy regenerates the root .gitattributes.
+# the root .gitattributes is generated.
 crlf.txt -text
 
 # The NUL characters that null-characters.txt tests make git treat it as binary, which would hide its diffs.
