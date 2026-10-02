@@ -882,6 +882,7 @@ void f() {
   Foo* nx(not x + 1);
   const bool& nc(not check());
   Task* tk(co_await 100ms);
+  Foo* nb(not static_cast<bool>(x)), *na(not alignof(T)), *ni(not i++);
   Foo* pn(NULL);
   const size_t& sz(sizeof(T) * 2);
   a * b(sizeof(x) + 1);
@@ -1079,6 +1080,36 @@ void f() {
               (user_defined_literal
                 (number_literal)
                 (literal_suffix))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (unary_expression
+              (call_expression
+                (template_function
+                  (identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (primitive_type))))
+                (argument_list
+                  (identifier))))))
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (unary_expression
+              (alignof_expression
+                (type_descriptor
+                  (type_identifier))))))
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (unary_expression
+              (update_expression
+                (identifier))))))
       (declaration
         (type_identifier)
         (init_declarator

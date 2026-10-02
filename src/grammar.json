@@ -14313,6 +14313,42 @@
       "members": [
         {
           "type": "SYMBOL",
+          "name": "_keyword_primary_expression"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "keyword_led_call_expression"
+          },
+          "named": true,
+          "value": "call_expression"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "keyword_led_subscript_expression"
+          },
+          "named": true,
+          "value": "subscript_expression"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "keyword_led_field_expression"
+          },
+          "named": true,
+          "value": "field_expression"
+        }
+      ]
+    },
+    "_keyword_primary_expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
           "name": "null"
         },
         {
@@ -14368,33 +14404,6 @@
           },
           "named": true,
           "value": "call_expression"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "keyword_led_call_expression"
-          },
-          "named": true,
-          "value": "call_expression"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "keyword_led_subscript_expression"
-          },
-          "named": true,
-          "value": "subscript_expression"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "keyword_led_field_expression"
-          },
-          "named": true,
-          "value": "field_expression"
         }
       ]
     },
@@ -14688,23 +14697,27 @@
         },
         {
           "type": "SYMBOL",
-          "name": "this"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "null"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "true"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "false"
+          "name": "_keyword_primary_expression"
         },
         {
           "type": "SYMBOL",
           "name": "parenthesized_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "fold_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "compound_literal_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "lambda_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "splice_expression"
         },
         {
           "type": "SYMBOL",
@@ -14717,6 +14730,10 @@
         {
           "type": "SYMBOL",
           "name": "subscript_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "update_expression"
         }
       ]
     },

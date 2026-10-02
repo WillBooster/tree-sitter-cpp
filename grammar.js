@@ -746,6 +746,14 @@ module.exports = grammar(C, {
     // `not check()` reads as `not (check())`.
     _keyword_led_postfix_expression: ($) =>
       choice(
+        $._keyword_primary_expression,
+        alias($.keyword_led_call_expression, $.call_expression),
+        alias($.keyword_led_subscript_expression, $.subscript_expression),
+        alias($.keyword_led_field_expression, $.field_expression)
+      ),
+
+    _keyword_primary_expression: ($) =>
+      choice(
         $.null,
         $.true,
         $.false,
@@ -757,10 +765,7 @@ module.exports = grammar(C, {
         $.requires_expression,
         $.builtin_available_expression,
         alias($.named_cast_expression, $.call_expression),
-        alias($.typeid_expression, $.call_expression),
-        alias($.keyword_led_call_expression, $.call_expression),
-        alias($.keyword_led_subscript_expression, $.subscript_expression),
-        alias($.keyword_led_field_expression, $.field_expression)
+        alias($.typeid_expression, $.call_expression)
       ),
 
     keyword_led_call_expression: ($) =>
@@ -789,6 +794,8 @@ module.exports = grammar(C, {
     keyword_co_await_expression: ($) =>
       prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $._keyword_operand))),
     keyword_delete_expression: ($) => seq(optional('::'), 'delete', optional(seq('[', ']')), $._keyword_operand),
+    // Every primary and postfix expression form, plus `++`/`--` and `new`, so that which operand follows the keyword
+    // does not decide between the variable and expression readings.
     _keyword_operand: ($) =>
       choice(
         $.identifier,
@@ -800,14 +807,16 @@ module.exports = grammar(C, {
         $.raw_string_literal,
         $.concatenated_string,
         $.char_literal,
-        $.this,
-        $.null,
-        $.true,
-        $.false,
+        $._keyword_primary_expression,
         $.parenthesized_expression,
+        $.fold_expression,
+        $.compound_literal_expression,
+        $.lambda_expression,
+        $.splice_expression,
         $.call_expression,
         $.field_expression,
-        $.subscript_expression
+        $.subscript_expression,
+        $.update_expression
       ),
 
     operator_cast: ($) =>
