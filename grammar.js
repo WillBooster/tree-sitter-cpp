@@ -136,6 +136,9 @@ module.exports = grammar(C, {
     [$.type_specifier, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
+    [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
+    [$._declarator, $.argument_initialized_rvalue_reference_declarator],
+    [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
     [$.null, $.expression_keyword_parameter],
     [$.expression, $.expression_keyword_parameter],
     [$._declarator, $._argument_initialized_name],
@@ -687,10 +690,14 @@ module.exports = grammar(C, {
         )
       ),
 
+    // The fallback also takes `&&` and declarators around a parenthesized one, which the keyword reading leaves out
+    // because `ok && check(this->x);` and `x * (*fp)(this);` are common expression statements.
     _argument_initialized_declarator: ($) =>
       choice(
         alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
         alias($.argument_initialized_reference_declarator, $.reference_declarator),
+        alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator),
+        alias($.parenthesized_argument_initialized_reference_declarator, $.reference_declarator),
         alias($.argument_initialized_rvalue_reference_declarator, $.reference_declarator)
       ),
 
@@ -705,9 +712,19 @@ module.exports = grammar(C, {
       ),
     argument_initialized_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(seq('&', $._argument_initialized_name))),
+    _argument_initialized_name: ($) => choice($.identifier, $.qualified_identifier),
+    parenthesized_argument_initialized_pointer_declarator: ($) =>
+      withDeclarator(
+        C.grammar.rules.pointer_declarator,
+        choice(
+          $.parenthesized_declarator,
+          alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator)
+        )
+      ),
+    parenthesized_argument_initialized_reference_declarator: ($) =>
+      prec.dynamic(1, prec.right(seq('&', $.parenthesized_declarator))),
     argument_initialized_rvalue_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq('&&', $._argument_initialized_name))),
-    _argument_initialized_name: ($) => choice($.identifier, $.qualified_identifier, $.parenthesized_declarator),
+      prec.dynamic(1, prec.right(seq('&&', choice($._argument_initialized_name, $.parenthesized_declarator)))),
 
     // A single argument that starts with a keyword that no parameter starts with (see
     // test/unit/expressionKeywordParameter.test.ts): an expression that starts with one, possibly followed by calls,

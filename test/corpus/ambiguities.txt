@@ -883,7 +883,7 @@ void f() {
   ok && check(static_cast<int>(x));
   Foo* o(this->a + 1);
   int i, *(*j)(nullptr);
-  Foo* k, *(*l)(nullptr);
+  x * (*fp)(this);
   Foo* p(x), *u(__extension__ T);
   Foo* t(1);
 }
@@ -1079,17 +1079,15 @@ void f() {
                 (identifier))))
           (argument_list
             (null))))
-      (declaration
-        (type_identifier)
-        (pointer_declarator
-          (identifier))
-        (init_declarator
-          (pointer_declarator
-            (parenthesized_declarator
-              (pointer_declarator
-                (identifier))))
-          (argument_list
-            (null))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (parenthesized_expression
+              (pointer_expression
+                (identifier)))
+            (argument_list
+              (this)))))
       (declaration
         (type_identifier)
         (pointer_declarator
