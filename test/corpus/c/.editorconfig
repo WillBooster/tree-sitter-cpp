@@ -1,4 +1,4 @@
-# Kept here because wbfy regenerates the root .editorconfig.
+# Kept here because the root .editorconfig is generated.
 [crlf.txt]
 end_of_line = crlf
 trim_trailing_whitespace = unset
