@@ -1326,6 +1326,8 @@ void f() {
   n = sizeof(int);
   n = sizeof(x);
   n = sizeof(ns::T);
+  n = sizeof(ns::x)[0];
+  n = sizeof(ns::x).m;
   n = sizeof(x[0]) + sizeof(f());
   n = sizeof(x) + 1;
   n = sizeof(x).a < b;
@@ -1394,6 +1396,27 @@ void f() {
               (qualified_identifier
                 (namespace_identifier)
                 (type_identifier))))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (subscript_expression
+              (parenthesized_expression
+                (qualified_identifier
+                  (namespace_identifier)
+                  (identifier)))
+              (subscript_argument_list
+                (number_literal))))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (field_expression
+              (parenthesized_expression
+                (qualified_identifier
+                  (namespace_identifier)
+                  (identifier)))
+              (field_identifier)))))
       (expression_statement
         (assignment_expression
           (identifier)

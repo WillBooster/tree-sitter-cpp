@@ -147,12 +147,15 @@ module.exports = grammar(C, {
     [$._declarator, $._argument_initialized_name],
     [$.init_declarator, $._argument_initialized_declarator],
     [$._argument_initialized_declarator, $.later_keyword_argument_init_declarator],
+    [$.expression, $.parenthesized_qualified_identifier],
     [$.type_specifier, $.sized_type_specifier],
     [$.initializer_pair, $.comma_expression],
     [$.expression_statement, $._for_statement_body],
     [$.init_statement, $._for_statement_body],
     [$.field_expression, $.template_method, $.template_type],
     [$.field_expression, $.template_method],
+    [$.sizeof_operand_field_expression, $.template_method, $.template_type],
+    [$.sizeof_operand_field_expression, $.template_method],
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
@@ -1654,7 +1657,62 @@ module.exports = grammar(C, {
         PREC.SIZEOF,
         choice(
           seq('sizeof', choice(field('value', $.expression), sizeofTypeOperand($))),
-          seq('sizeof', '...', '(', field('value', $.identifier), ')')
+          seq('sizeof', '...', '(', field('value', $.identifier), ')'),
+          // A size cannot take a postfix operator, so one after `sizeof(ns::x)` makes `ns::x` an expression. This
+          // outweighs the type reading of the qualified name together with the postfix expression applied to it.
+          prec.dynamic(2, seq('sizeof', field('value', $._sizeof_qualified_postfix_expression)))
+        )
+      ),
+
+    _sizeof_qualified_postfix_expression: ($) =>
+      choice(
+        alias($.sizeof_operand_call_expression, $.call_expression),
+        alias($.sizeof_operand_subscript_expression, $.subscript_expression),
+        alias($.sizeof_operand_field_expression, $.field_expression),
+        alias($.sizeof_operand_update_expression, $.update_expression)
+      ),
+    // Outranking `sizeof` itself continues the operand through a following postfix operator instead of ending it there.
+    _sizeof_qualified_postfix_base: ($) =>
+      prec(
+        PREC.CALL,
+        choice(
+          alias($.parenthesized_qualified_identifier, $.parenthesized_expression),
+          $._sizeof_qualified_postfix_expression
+        )
+      ),
+    parenthesized_qualified_identifier: ($) => seq('(', $.qualified_identifier, ')'),
+    // Each postfix operator weighs 1 more here than in the generic rule, so that a reading that ends the operand early
+    // and applies the remaining operators to the size loses.
+    sizeof_operand_call_expression: ($) =>
+      prec.dynamic(
+        2,
+        prec(PREC.CALL, seq(field('function', $._sizeof_qualified_postfix_base), field('arguments', $.argument_list)))
+      ),
+    sizeof_operand_subscript_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(
+          PREC.SUBSCRIPT,
+          seq(field('argument', $._sizeof_qualified_postfix_base), field('indices', $.subscript_argument_list))
+        )
+      ),
+    sizeof_operand_field_expression: ($) =>
+      prec.dynamic(
+        1,
+        seq(
+          prec(
+            PREC.FIELD,
+            seq(field('argument', $._sizeof_qualified_postfix_base), field('operator', choice('.', '->')))
+          ),
+          field('field', fieldExpressionMember($))
+        )
+      ),
+    sizeof_operand_update_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec.left(
+          PREC.UNARY,
+          seq(field('argument', $._sizeof_qualified_postfix_base), field('operator', choice('++', '--')))
         )
       ),
 
@@ -2061,8 +2119,7 @@ function declarationItem($) {
 /**
  * `sizeof(x)`, `sizeof(x[0])`, and `sizeof(f())` read as either a type or an expression, and an even tie let the other
  * readings of the statement decide, so `sizeof(x)[0]` could apply `[0]` to the size of a type `x`. The type reading
- * loses unless the parenthesized operand is a qualified name, which keeps `sizeof(ns::T)` a type, also before a postfix
- * operator.
+ * loses unless the parenthesized operand is a qualified name, which keeps `sizeof(ns::T)` a type.
  * @param {GrammarSymbols<string>} $
  */
 function sizeofTypeOperand($) {
