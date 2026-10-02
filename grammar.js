@@ -147,6 +147,7 @@ module.exports = grammar(C, {
     [$._declarator, $._argument_initialized_name],
     [$.init_declarator, $._argument_initialized_declarator],
     [$.expression, $.type_specifier, $.parenthesized_identifier],
+    [$.expression, $.parenthesized_qualified_identifier],
     [$._argument_initialized_declarator, $.later_keyword_argument_init_declarator],
     [$.type_specifier, $.sized_type_specifier],
     [$.initializer_pair, $.comma_expression],
@@ -154,6 +155,8 @@ module.exports = grammar(C, {
     [$.init_statement, $._for_statement_body],
     [$.field_expression, $.template_method, $.template_type],
     [$.field_expression, $.template_method],
+    [$.sizeof_operand_field_expression, $.template_method, $.template_type],
+    [$.sizeof_operand_field_expression, $.template_method],
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
@@ -1659,14 +1662,51 @@ module.exports = grammar(C, {
         choice(
           original,
           seq('sizeof', '...', '(', field('value', $.identifier), ')'),
-          // The type and expression readings of `sizeof(x)` otherwise tie, and which one the parser keeps depends on
-          // the other readings of the statement still alive: offering `sizeof` in keyword-led arguments made `x` in
-          // `a * b(sizeof(x) + 1);` a type. This keeps the expression reading, which the parser chose before.
-          prec.dynamic(1, seq('sizeof', field('value', alias($.parenthesized_identifier, $.parenthesized_expression))))
+          // The type and expression readings of `sizeof(x)` otherwise tie, and the parser kept whichever the other
+          // readings of the statement favored: a type in `sizeof(x)[0]`, which applied `[0]` to the size, and in
+          // `a * b(sizeof(x) + 1);` once `sizeof` started keyword-led arguments. This prefers the expression reading,
+          // which takes the postfix operators that follow into the operand.
+          prec.dynamic(1, seq('sizeof', field('value', $._sizeof_parenthesized_operand)))
         )
       ),
 
+    _sizeof_parenthesized_operand: ($) =>
+      choice(alias($.parenthesized_identifier, $.parenthesized_expression), $._sizeof_postfix_expression),
+    // The precedence continues the operand through a following postfix operator instead of ending it there.
+    _sizeof_postfix_base: ($) =>
+      prec(
+        1,
+        choice(
+          alias($.parenthesized_identifier, $.parenthesized_expression),
+          // Only before a postfix operator, so that `sizeof(ns::T)` keeps its type reading.
+          alias($.parenthesized_qualified_identifier, $.parenthesized_expression),
+          $._sizeof_postfix_expression
+        )
+      ),
+    _sizeof_postfix_expression: ($) =>
+      choice(
+        alias($.sizeof_operand_call_expression, $.call_expression),
+        alias($.sizeof_operand_subscript_expression, $.subscript_expression),
+        alias($.sizeof_operand_field_expression, $.field_expression),
+        alias($.sizeof_operand_update_expression, $.update_expression)
+      ),
     parenthesized_identifier: ($) => seq('(', $.identifier, ')'),
+    parenthesized_qualified_identifier: ($) => seq('(', $.qualified_identifier, ')'),
+    // Weighs as much as `call_expression` does, so that the operand keeps its edge over applying the call to the size.
+    sizeof_operand_call_expression: ($) =>
+      prec.dynamic(
+        1,
+        prec(PREC.CALL, seq(field('function', $._sizeof_postfix_base), field('arguments', $.argument_list)))
+      ),
+    sizeof_operand_subscript_expression: ($) =>
+      prec(PREC.SUBSCRIPT, seq(field('argument', $._sizeof_postfix_base), field('indices', $.subscript_argument_list))),
+    sizeof_operand_field_expression: ($) =>
+      seq(
+        prec(PREC.FIELD, seq(field('argument', $._sizeof_postfix_base), field('operator', choice('.', '->')))),
+        field('field', fieldExpressionMember($))
+      ),
+    sizeof_operand_update_expression: ($) =>
+      prec.left(PREC.UNARY, seq(field('argument', $._sizeof_postfix_base), field('operator', choice('++', '--')))),
 
     unary_expression: ($, /** @type {Rule} */ original) =>
       choice(
