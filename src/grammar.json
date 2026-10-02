@@ -14668,6 +14668,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "user_defined_literal"
+        },
+        {
+          "type": "SYMBOL",
           "name": "string_literal"
         },
         {

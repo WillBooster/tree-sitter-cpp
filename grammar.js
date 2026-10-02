@@ -795,6 +795,7 @@ module.exports = grammar(C, {
         $.qualified_identifier,
         $.template_function,
         $.number_literal,
+        $.user_defined_literal,
         $.string_literal,
         $.raw_string_literal,
         $.concatenated_string,

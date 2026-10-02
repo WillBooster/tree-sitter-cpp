@@ -881,6 +881,7 @@ void f() {
   Foo* const v(this->get<Foo>()), *w(not x);
   Foo* nx(not x + 1);
   const bool& nc(not check());
+  Task* tk(co_await 100ms);
   Foo* pn(NULL);
   const size_t& sz(sizeof(T) * 2);
   a * b(sizeof(x) + 1);
@@ -1068,6 +1069,16 @@ void f() {
               (call_expression
                 (identifier)
                 (argument_list))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (co_await_expression
+              (user_defined_literal
+                (number_literal)
+                (literal_suffix))))))
       (declaration
         (type_identifier)
         (init_declarator
