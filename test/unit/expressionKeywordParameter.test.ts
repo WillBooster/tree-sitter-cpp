@@ -40,6 +40,9 @@ const ParameterWords = new Set(
 );
 
 function firstWords(name: string): Set<string> {
+  // `first()` must treat undefined names as empty because external tokens have no rule, but a renamed rule queried
+  // here would otherwise turn these tests into vacuous passes.
+  if (!Grammar.rules[name]) throw new Error(`grammar.json has no rule "${name}"`);
   const { words } = first({ type: 'SYMBOL', name }, new Map(), new Set());
   return new Set([...words].filter((word) => /^[A-Za-z_]\w*$/.test(word)));
 }
