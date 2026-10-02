@@ -139,8 +139,6 @@ module.exports = grammar(C, {
     [$.type_specifier, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
-    [$._string, $._keyword_operand],
-    [$.expression, $._keyword_operand],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
@@ -738,6 +736,16 @@ module.exports = grammar(C, {
 
     _keyword_led_expression: ($) =>
       choice(
+        $._keyword_led_postfix_expression,
+        alias($.keyword_delete_expression, $.delete_expression),
+        alias($.keyword_co_await_expression, $.co_await_expression),
+        alias($.keyword_unary_expression, $.unary_expression)
+      ),
+
+    // Calls, subscripts, and member accesses attach only to these, not to a prefix keyword's expression, so that
+    // `not check()` reads as `not (check())`.
+    _keyword_led_postfix_expression: ($) =>
+      choice(
         $.null,
         $.true,
         $.false,
@@ -746,11 +754,8 @@ module.exports = grammar(C, {
         $.offsetof_expression,
         $.generic_expression,
         $.new_expression,
-        alias($.keyword_delete_expression, $.delete_expression),
-        alias($.keyword_co_await_expression, $.co_await_expression),
         $.requires_expression,
         $.builtin_available_expression,
-        alias($.keyword_unary_expression, $.unary_expression),
         alias($.named_cast_expression, $.call_expression),
         alias($.typeid_expression, $.call_expression),
         alias($.keyword_led_call_expression, $.call_expression),
@@ -761,16 +766,19 @@ module.exports = grammar(C, {
     keyword_led_call_expression: ($) =>
       prec.dynamic(
         1,
-        prec(PREC.CALL, seq(field('function', $._keyword_led_expression), field('arguments', $.argument_list)))
+        prec(PREC.CALL, seq(field('function', $._keyword_led_postfix_expression), field('arguments', $.argument_list)))
       ),
     keyword_led_subscript_expression: ($) =>
       prec(
         PREC.SUBSCRIPT,
-        seq(field('argument', $._keyword_led_expression), field('indices', $.subscript_argument_list))
+        seq(field('argument', $._keyword_led_postfix_expression), field('indices', $.subscript_argument_list))
       ),
     keyword_led_field_expression: ($) =>
       seq(
-        prec(PREC.FIELD, seq(field('argument', $._keyword_led_expression), field('operator', choice('.', '->')))),
+        prec(
+          PREC.FIELD,
+          seq(field('argument', $._keyword_led_postfix_expression), field('operator', choice('.', '->')))
+        ),
         field('field', fieldExpressionMember($))
       ),
     // A prefix keyword takes only a postfix or primary operand here, so that `not x + 1` ends the keyword reading and
@@ -788,6 +796,8 @@ module.exports = grammar(C, {
         $.template_function,
         $.number_literal,
         $.string_literal,
+        $.raw_string_literal,
+        $.concatenated_string,
         $.char_literal,
         $.this,
         $.null,

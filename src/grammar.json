@@ -14277,6 +14277,42 @@
       "members": [
         {
           "type": "SYMBOL",
+          "name": "_keyword_led_postfix_expression"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "keyword_delete_expression"
+          },
+          "named": true,
+          "value": "delete_expression"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "keyword_co_await_expression"
+          },
+          "named": true,
+          "value": "co_await_expression"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "keyword_unary_expression"
+          },
+          "named": true,
+          "value": "unary_expression"
+        }
+      ]
+    },
+    "_keyword_led_postfix_expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
           "name": "null"
         },
         {
@@ -14308,39 +14344,12 @@
           "name": "new_expression"
         },
         {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "keyword_delete_expression"
-          },
-          "named": true,
-          "value": "delete_expression"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "keyword_co_await_expression"
-          },
-          "named": true,
-          "value": "co_await_expression"
-        },
-        {
           "type": "SYMBOL",
           "name": "requires_expression"
         },
         {
           "type": "SYMBOL",
           "name": "builtin_available_expression"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "keyword_unary_expression"
-          },
-          "named": true,
-          "value": "unary_expression"
         },
         {
           "type": "ALIAS",
@@ -14403,7 +14412,7 @@
               "name": "function",
               "content": {
                 "type": "SYMBOL",
-                "name": "_keyword_led_expression"
+                "name": "_keyword_led_postfix_expression"
               }
             },
             {
@@ -14429,7 +14438,7 @@
             "name": "argument",
             "content": {
               "type": "SYMBOL",
-              "name": "_keyword_led_expression"
+              "name": "_keyword_led_postfix_expression"
             }
           },
           {
@@ -14457,7 +14466,7 @@
                 "name": "argument",
                 "content": {
                   "type": "SYMBOL",
-                  "name": "_keyword_led_expression"
+                  "name": "_keyword_led_postfix_expression"
                 }
               },
               {
@@ -14660,6 +14669,14 @@
         {
           "type": "SYMBOL",
           "name": "string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "raw_string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "concatenated_string"
         },
         {
           "type": "SYMBOL",
@@ -21268,14 +21285,6 @@
     ],
     [
       "_function_declarator_seq"
-    ],
-    [
-      "_string",
-      "_keyword_operand"
-    ],
-    [
-      "expression",
-      "_keyword_operand"
     ],
     [
       "_declarator",

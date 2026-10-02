@@ -880,6 +880,7 @@ void f() {
   Foo* n(this->next), *m(static_cast<Foo*>(q)[0]);
   Foo* const v(this->get<Foo>()), *w(not x);
   Foo* nx(not x + 1);
+  const bool& nc(not check());
   Foo* pn(NULL);
   const size_t& sz(sizeof(T) * 2);
   a * b(sizeof(x) + 1);
@@ -1056,6 +1057,17 @@ void f() {
                 (unary_expression
                   (identifier))
                 (number_literal))))))
+      (declaration
+        (type_qualifier)
+        (primitive_type)
+        (init_declarator
+          (reference_declarator
+            (identifier))
+          (argument_list
+            (unary_expression
+              (call_expression
+                (identifier)
+                (argument_list))))))
       (declaration
         (type_identifier)
         (init_declarator
