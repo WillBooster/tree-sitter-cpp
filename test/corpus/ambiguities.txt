@@ -885,13 +885,18 @@ void f() {
   Foo* nb(not static_cast<bool>(x)), *na(not alignof(T)), *ni(not i++);
   Foo* pn(NULL);
   const size_t& sz(sizeof(T) * 2);
+  Foo* sx(sizeof(x)), *st(sizeof(int));
   a * b(sizeof(x) + 1);
+  Foo* sy(sizeof(x[0]) + 1);
   Bar y(a, sizeof(b)), z(a, true);
   ok && check(this->x);
   ok && check(static_cast<int>(x));
   Foo* o(this->a + 1);
   int i, *(*j)(nullptr);
+  Foo* k, *(*l)(nullptr), &(m)(this->x), &&o(this->y);
+  for (Foo* fa, *(*fb)(nullptr);;) {}
   x * (*fp)(this);
+  a, *(*fp)(this);
   Foo* p(x), *u(__extension__ T);
   Foo* t(1);
 }
@@ -1129,6 +1134,22 @@ void f() {
                 (parenthesized_expression
                   (identifier)))
               (number_literal)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (sizeof_expression
+              (parenthesized_expression
+                (identifier)))))
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (sizeof_expression
+              (type_descriptor
+                (primitive_type))))))
       (expression_statement
         (binary_expression
           (identifier)
@@ -1139,6 +1160,20 @@ void f() {
                 (sizeof_expression
                   (parenthesized_expression
                     (identifier)))
+                (number_literal))))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (binary_expression
+                (sizeof_expression
+                  (parenthesized_expression
+                    (subscript_expression
+                      (identifier)
+                      (subscript_argument_list
+                        (number_literal)))))
                 (number_literal))))))
       (declaration
         (type_identifier)
@@ -1198,6 +1233,45 @@ void f() {
                 (identifier))))
           (argument_list
             (null))))
+      (declaration
+        (type_identifier)
+        (pointer_declarator
+          (identifier))
+        (init_declarator
+          (pointer_declarator
+            (parenthesized_declarator
+              (pointer_declarator
+                (identifier))))
+          (argument_list
+            (null)))
+        (init_declarator
+          (reference_declarator
+            (parenthesized_declarator
+              (identifier)))
+          (argument_list
+            (field_expression
+              (this)
+              (field_identifier))))
+        (init_declarator
+          (reference_declarator
+            (identifier))
+          (argument_list
+            (field_expression
+              (this)
+              (field_identifier)))))
+      (for_statement
+        (declaration
+          (type_identifier)
+          (pointer_declarator
+            (identifier))
+          (init_declarator
+            (pointer_declarator
+              (parenthesized_declarator
+                (pointer_declarator
+                  (identifier))))
+            (argument_list
+              (null))))
+        (compound_statement))
       (expression_statement
         (binary_expression
           (identifier)
@@ -1207,6 +1281,16 @@ void f() {
                 (identifier)))
             (argument_list
               (this)))))
+      (expression_statement
+        (comma_expression
+          (identifier)
+          (pointer_expression
+            (call_expression
+              (parenthesized_expression
+                (pointer_expression
+                  (identifier)))
+              (argument_list
+                (this))))))
       (declaration
         (type_identifier)
         (pointer_declarator
@@ -1229,3 +1313,140 @@ void f() {
             (identifier)
             (argument_list
               (number_literal))))))))
+
+================================================================================
+sizeof of a parenthesized expression vs a type
+================================================================================
+
+void f() {
+  n = sizeof(x)[0];
+  n = sizeof (x)->y;
+  n = sizeof(x).m;
+  n = sizeof(x)(y);
+  n = sizeof(int);
+  n = sizeof(x);
+  n = sizeof(ns::T);
+  n = sizeof(ns::x)[0];
+  n = sizeof(ns::x).m;
+  n = sizeof(x[0]) + sizeof(f());
+  n = sizeof(x) + 1;
+  n = sizeof(x).a < b;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (subscript_expression
+              (parenthesized_expression
+                (identifier))
+              (subscript_argument_list
+                (number_literal))))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (field_expression
+              (parenthesized_expression
+                (identifier))
+              (field_identifier)))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (field_expression
+              (parenthesized_expression
+                (identifier))
+              (field_identifier)))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (call_expression
+              (parenthesized_expression
+                (identifier))
+              (argument_list
+                (identifier))))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (type_descriptor
+              (primitive_type)))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (parenthesized_expression
+              (identifier)))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (type_descriptor
+              (qualified_identifier
+                (namespace_identifier)
+                (type_identifier))))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (subscript_expression
+              (parenthesized_expression
+                (qualified_identifier
+                  (namespace_identifier)
+                  (identifier)))
+              (subscript_argument_list
+                (number_literal))))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (sizeof_expression
+            (field_expression
+              (parenthesized_expression
+                (qualified_identifier
+                  (namespace_identifier)
+                  (identifier)))
+              (field_identifier)))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (binary_expression
+            (sizeof_expression
+              (parenthesized_expression
+                (subscript_expression
+                  (identifier)
+                  (subscript_argument_list
+                    (number_literal)))))
+            (sizeof_expression
+              (parenthesized_expression
+                (call_expression
+                  (identifier)
+                  (argument_list)))))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (binary_expression
+            (sizeof_expression
+              (parenthesized_expression
+                (identifier)))
+            (number_literal))))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (binary_expression
+            (sizeof_expression
+              (field_expression
+                (parenthesized_expression
+                  (identifier))
+                (field_identifier)))
+            (identifier)))))))
