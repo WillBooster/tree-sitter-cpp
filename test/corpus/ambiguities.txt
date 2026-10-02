@@ -887,6 +887,7 @@ void f() {
   const size_t& sz(sizeof(T) * 2);
   Foo* sx(sizeof(x)), *st(sizeof(int));
   a * b(sizeof(x) + 1);
+  Foo* sy(sizeof(x[0]) + 1);
   Bar y(a, sizeof(b)), z(a, true);
   ok && check(this->x);
   ok && check(static_cast<int>(x));
@@ -1160,6 +1161,20 @@ void f() {
                   (parenthesized_expression
                     (identifier)))
                 (number_literal))))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (binary_expression
+                (sizeof_expression
+                  (parenthesized_expression
+                    (subscript_expression
+                      (identifier)
+                      (subscript_argument_list
+                        (number_literal)))))
+                (number_literal))))))
       (declaration
         (type_identifier)
         (init_declarator
@@ -1300,7 +1315,7 @@ void f() {
               (number_literal))))))))
 
 ================================================================================
-sizeof of a parenthesized name vs a type
+sizeof of a parenthesized expression vs a type
 ================================================================================
 
 void f() {
@@ -1311,7 +1326,7 @@ void f() {
   n = sizeof(int);
   n = sizeof(x);
   n = sizeof(ns::T);
-  n = sizeof(ns::x)[0];
+  n = sizeof(x[0]) + sizeof(f());
   n = sizeof(x) + 1;
   n = sizeof(x).a < b;
 }
@@ -1382,14 +1397,18 @@ void f() {
       (expression_statement
         (assignment_expression
           (identifier)
-          (sizeof_expression
-            (subscript_expression
+          (binary_expression
+            (sizeof_expression
               (parenthesized_expression
-                (qualified_identifier
-                  (namespace_identifier)
-                  (identifier)))
-              (subscript_argument_list
-                (number_literal))))))
+                (subscript_expression
+                  (identifier)
+                  (subscript_argument_list
+                    (number_literal)))))
+            (sizeof_expression
+              (parenthesized_expression
+                (call_expression
+                  (identifier)
+                  (argument_list)))))))
       (expression_statement
         (assignment_expression
           (identifier)
