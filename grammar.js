@@ -136,10 +136,10 @@ module.exports = grammar(C, {
     [$.type_specifier, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
-    [$._competing_function_declarator_seq],
-    [$.expression, $._keyword_led_expression],
-    [$._declarator, $.argument_initialized_reference_declarator],
-    [$._declarator, $.argument_initialized_pointer_declarator],
+    [$.null, $.expression_keyword_parameter],
+    [$.expression, $.expression_keyword_parameter],
+    [$._declarator, $._argument_initialized_name],
+    [$.init_declarator, $._argument_initialized_declarator],
     [$.type_specifier, $.sized_type_specifier],
     [$.initializer_pair, $.comma_expression],
     [$.expression_statement, $._for_statement_body],
@@ -395,7 +395,7 @@ module.exports = grammar(C, {
         PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
         seq(
           field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
-          $._competing_function_declarator_seq
+          $._function_declarator_seq
         )
       ),
 
@@ -586,7 +586,21 @@ module.exports = grammar(C, {
         )
       ),
 
-    parameter_list: ($) => parameterList($),
+    parameter_list: ($) =>
+      seq(
+        '(',
+        commaSep(
+          choice(
+            $.parameter_declaration,
+            $.explicit_object_parameter_declaration,
+            $.optional_parameter_declaration,
+            $.variadic_parameter_declaration,
+            '...',
+            alias($.expression_keyword_parameter, $.parameter_declaration)
+          )
+        ),
+        ')'
+      ),
 
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
 
@@ -653,10 +667,17 @@ module.exports = grammar(C, {
         // would otherwise read only as a function taking a parameter of type `nullptr`. These alternatives reduce the
         // declarator before the argument list instead: outranking the function and expression readings when no
         // parameter list holds the argument, and as a last resort otherwise, as in `const T& r(*p);`.
+        // `&&` takes only the last-resort alternative, since `ok && check(this->x);` is a common expression statement.
         prec.dynamic(
           PREC.KEYWORD_ARGUMENT_INITIALIZATION,
           seq(
-            field('declarator', $._argument_initialized_declarator),
+            field(
+              'declarator',
+              choice(
+                alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
+                alias($.argument_initialized_reference_declarator, $.reference_declarator)
+              )
+            ),
             field('value', alias($.keyword_argument_list, $.argument_list))
           )
         ),
@@ -669,23 +690,24 @@ module.exports = grammar(C, {
     _argument_initialized_declarator: ($) =>
       choice(
         alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
-        alias($.argument_initialized_reference_declarator, $.reference_declarator)
+        alias($.argument_initialized_reference_declarator, $.reference_declarator),
+        alias($.argument_initialized_rvalue_reference_declarator, $.reference_declarator)
       ),
 
     argument_initialized_pointer_declarator: ($) =>
-      seq(
-        '*',
-        field(
-          'declarator',
-          choice(
-            $.identifier,
-            $.parenthesized_declarator,
-            alias($.argument_initialized_pointer_declarator, $.pointer_declarator)
-          )
+      withDeclarator(
+        C.grammar.rules.pointer_declarator,
+        choice(
+          $._argument_initialized_name,
+          alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
+          alias($.argument_initialized_reference_declarator, $.reference_declarator)
         )
       ),
     argument_initialized_reference_declarator: ($) =>
-      seq(choice('&', '&&'), choice($.identifier, $.parenthesized_declarator)),
+      prec.dynamic(1, prec.right(seq('&', $._argument_initialized_name))),
+    argument_initialized_rvalue_reference_declarator: ($) =>
+      prec.dynamic(1, prec.right(seq('&&', $._argument_initialized_name))),
+    _argument_initialized_name: ($) => choice($.identifier, $.qualified_identifier, $.parenthesized_declarator),
 
     // A single argument that starts with a keyword that no parameter starts with (see
     // test/unit/expressionKeywordParameter.test.ts): an expression that starts with one, possibly followed by calls,
@@ -707,6 +729,7 @@ module.exports = grammar(C, {
         $.co_await_expression,
         $.requires_expression,
         $.builtin_available_expression,
+        alias($.keyword_unary_expression, $.unary_expression),
         alias($.named_cast_expression, $.call_expression),
         alias($.typeid_expression, $.call_expression),
         alias($.keyword_led_call_expression, $.call_expression),
@@ -727,8 +750,10 @@ module.exports = grammar(C, {
     keyword_led_field_expression: ($) =>
       seq(
         prec(PREC.FIELD, seq(field('argument', $._keyword_led_expression), field('operator', choice('.', '->')))),
-        field('field', prec.dynamic(1, $._field_identifier))
+        field('field', fieldExpressionMember($))
       ),
+    keyword_unary_expression: ($) =>
+      prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $.expression))),
 
     operator_cast: ($) =>
       prec.right(1, seq('operator', $._declaration_specifiers, field('declarator', $._abstract_declarator))),
@@ -917,18 +942,21 @@ module.exports = grammar(C, {
 
     ref_qualifier: () => choice('&', '&&'),
 
-    _function_declarator_seq: ($) => functionDeclaratorSeq($, $.parameter_list),
+    _function_declarator_seq: ($) =>
+      seq(
+        field('parameters', $.parameter_list),
+        optional($._function_attributes_start),
+        optional($.ref_qualifier),
+        optional($._function_exception_specification),
+        optional($._function_attributes_end),
+        optional($.trailing_return_type),
+        optional($._function_postfix)
+      ),
 
-    // The function forms that compete with a direct initialization of the same tokens take a parameter list in which a
-    // parameter may start with an expression keyword. Such keywords lex as type names where no keyword is expected, so
+    // A parameter that starts with an expression keyword, which lexes as a type name where no keyword is expected, so
     // `int (*p)(nullptr);` and `long(n)(sizeof(b));` would otherwise read as functions taking parameters of those types;
-    // here the keyword is expected, and the parameter it starts weighs so little that the function reading loses, or
-    // dies at the tokens that follow it.
-    _competing_function_declarator_seq: ($) =>
-      functionDeclaratorSeq($, alias($.competing_parameter_list, $.parameter_list)),
-
-    competing_parameter_list: ($) => parameterList($, alias($.expression_keyword_parameter, $.parameter_declaration)),
-
+    // as a parameter the keyword is expected, and the parameter it starts weighs so little that the function reading
+    // loses, or dies at the tokens that follow it.
     expression_keyword_parameter: ($) =>
       prec.dynamic(
         -20,
@@ -1037,7 +1065,7 @@ module.exports = grammar(C, {
         PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
         seq(
           field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-          $._competing_function_declarator_seq
+          $._function_declarator_seq
         )
       ),
 
@@ -1363,18 +1391,7 @@ module.exports = grammar(C, {
     field_expression: ($) =>
       seq(
         prec(PREC.FIELD, seq(field('argument', $.expression), field('operator', choice('.', '->')))),
-        field(
-          'field',
-          choice(
-            prec.dynamic(1, $._field_identifier),
-            alias($.qualified_field_identifier, $.qualified_identifier),
-            $.destructor_name,
-            $.template_method,
-            alias($.dependent_field_identifier, $.dependent_name),
-            $.operator_name,
-            $.splice_expression
-          )
-        )
+        field('field', fieldExpressionMember($))
       ),
 
     type_requirement: ($) => seq('typename', $._class_name),
@@ -1910,40 +1927,17 @@ module.exports = grammar(C, {
 
 /**
  * @param {GrammarSymbols<string>} $
- * @param {...RuleOrLiteral} extraParameters
  * @returns {Rule}
  */
-function parameterList($, ...extraParameters) {
-  return seq(
-    '(',
-    commaSep(
-      choice(
-        $.parameter_declaration,
-        $.explicit_object_parameter_declaration,
-        $.optional_parameter_declaration,
-        $.variadic_parameter_declaration,
-        '...',
-        ...extraParameters
-      )
-    ),
-    ')'
-  );
-}
-
-/**
- * @param {GrammarSymbols<string>} $
- * @param {RuleOrLiteral} parameters
- * @returns {Rule}
- */
-function functionDeclaratorSeq($, parameters) {
-  return seq(
-    field('parameters', parameters),
-    optional($._function_attributes_start),
-    optional($.ref_qualifier),
-    optional($._function_exception_specification),
-    optional($._function_attributes_end),
-    optional($.trailing_return_type),
-    optional($._function_postfix)
+function fieldExpressionMember($) {
+  return choice(
+    prec.dynamic(1, $._field_identifier),
+    alias($.qualified_field_identifier, $.qualified_identifier),
+    $.destructor_name,
+    $.template_method,
+    alias($.dependent_field_identifier, $.dependent_name),
+    $.operator_name,
+    $.splice_expression
   );
 }
 

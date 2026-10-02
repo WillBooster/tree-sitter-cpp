@@ -868,6 +868,7 @@ pointer and reference declarators vs function declarators
 
 Foo* g(1);
 const Foo& h(*q);
+Foo* S::m(nullptr);
 
 void f() {
   Foo* a(nullptr);
@@ -876,6 +877,10 @@ void f() {
   Foo* e(static_cast<Foo*>(q));
   const Foo& r(*this);
   Foo* n(this->next), *m(static_cast<Foo*>(q)[0]);
+  Foo* const v(this->get<Foo>()), *w(not x);
+  Bar y(a, sizeof(b)), z(a, true);
+  ok && check(this->x);
+  ok && check(static_cast<int>(x));
   Foo* o(this->a + 1);
   int i, *(*j)(nullptr);
   Foo* k, *(*l)(nullptr);
@@ -902,6 +907,15 @@ void f() {
       (argument_list
         (pointer_expression
           (identifier)))))
+  (declaration
+    (type_identifier)
+    (init_declarator
+      (pointer_declarator
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier)))
+      (argument_list
+        (null))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -985,6 +999,65 @@ void f() {
                   (identifier)))
               (subscript_argument_list
                 (number_literal))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (type_qualifier)
+            (identifier))
+          (argument_list
+            (call_expression
+              (field_expression
+                (this)
+                (template_method
+                  (field_identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (type_identifier)))))
+              (argument_list))))
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (unary_expression
+              (identifier)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (identifier)
+            (sizeof_expression
+              (parenthesized_expression
+                (identifier)))))
+        (init_declarator
+          (identifier)
+          (argument_list
+            (identifier)
+            (true))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (field_expression
+                (this)
+                (field_identifier))))))
+      (expression_statement
+        (binary_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (call_expression
+                (template_function
+                  (identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (primitive_type))))
+                (argument_list
+                  (identifier)))))))
       (expression_statement
         (binary_expression
           (identifier)
