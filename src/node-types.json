@@ -6406,6 +6406,10 @@
             "named": true
           },
           {
+            "type": "pack_index_type",
+            "named": true
+          },
+          {
             "type": "splice_expression",
             "named": true
           },

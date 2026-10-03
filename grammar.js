@@ -107,6 +107,7 @@ module.exports = grammar(C, {
   externals: ($) => [$.raw_string_delimiter, $.raw_string_content, $._pack_index_operator],
 
   conflicts: ($) => [
+    [$.pack_index_expression, $.pack_index_type],
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],
     [$.sized_type_specifier],
@@ -1646,7 +1647,7 @@ module.exports = grammar(C, {
 
     parameter_pack_expansion: ($) => prec(-1, seq(field('pattern', $.expression), '...')),
 
-    pack_index_expression: ($) => prec(PREC.CALL, packIndex($, $.identifier)),
+    pack_index_expression: ($) => packIndex($, $.identifier),
 
     pack_index_type: ($) => packIndex($, $._type_identifier),
 
@@ -1785,6 +1786,7 @@ module.exports = grammar(C, {
                 $._namespace_identifier,
                 $.template_type,
                 $.decltype,
+                $.pack_index_type,
                 $.splice_expression,
                 $.splice_type_specifier,
                 alias($.dependent_type_identifier, $.dependent_name)
@@ -1848,6 +1850,7 @@ module.exports = grammar(C, {
     _assignment_left_expression: ($, /** @type {Rule} */ original) =>
       choice(
         original,
+        $.pack_index_expression,
         $.qualified_identifier,
         $.user_defined_literal,
         alias($.pointer_to_member_expression, $.binary_expression),

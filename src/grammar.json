@@ -7952,6 +7952,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "pack_index_expression"
+        },
+        {
+          "type": "SYMBOL",
           "name": "qualified_identifier"
         },
         {
@@ -20400,46 +20404,42 @@
       }
     },
     "pack_index_expression": {
-      "type": "PREC",
-      "value": 15,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "FIELD",
-            "name": "pack",
-            "content": {
-              "type": "SYMBOL",
-              "name": "identifier"
-            }
-          },
-          {
-            "type": "ALIAS",
-            "content": {
-              "type": "SYMBOL",
-              "name": "_pack_index_operator"
-            },
-            "named": false,
-            "value": "..."
-          },
-          {
-            "type": "STRING",
-            "value": "["
-          },
-          {
-            "type": "FIELD",
-            "name": "index",
-            "content": {
-              "type": "SYMBOL",
-              "name": "expression"
-            }
-          },
-          {
-            "type": "STRING",
-            "value": "]"
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "pack",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
           }
-        ]
-      }
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_pack_index_operator"
+          },
+          "named": false,
+          "value": "..."
+        },
+        {
+          "type": "STRING",
+          "value": "["
+        },
+        {
+          "type": "FIELD",
+          "name": "index",
+          "content": {
+            "type": "SYMBOL",
+            "name": "expression"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "]"
+        }
+      ]
     },
     "pack_index_type": {
       "type": "SEQ",
@@ -20882,6 +20882,10 @@
                     {
                       "type": "SYMBOL",
                       "name": "decltype"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "pack_index_type"
                     },
                     {
                       "type": "SYMBOL",
@@ -21910,6 +21914,10 @@
     }
   ],
   "conflicts": [
+    [
+      "pack_index_expression",
+      "pack_index_type"
+    ],
     [
       "type_specifier",
       "_declarator"

@@ -2909,3 +2909,255 @@ template <typename T> void bindMiddle(T triple) { auto [first, ...middle [[maybe
                   name: (identifier)))
               (identifier))
             value: (identifier)))))))
+
+================================================================================
+Pack indexing scopes, line splices and unnamed parameters
+================================================================================
+
+struct Indexed { using type = int; static constexpr int value = 1; };
+template <typename... Ts> using Inner = typename Ts...[0]::type;
+template <typename... Ts> constexpr int value() { return Ts...[0]::value; }
+Inner<Indexed> selected = 0;
+static_assert(value<Indexed>() == 1);
+template <typename... Ts> using Spliced = Ts... \
+[0];
+template <typename... Ts> auto spliced(Ts... args) { return args... \
+[0]; }
+template <typename... Ts> void unnamed(Ts...[0]);
+template <typename... Ts> void prefixed(Ts \
+...[0]);
+template <typename... Ts> void bare(Ts... args) { args...[0]; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (alias_declaration
+        name: (type_identifier)
+        type: (type_descriptor
+          type: (primitive_type)))
+      (field_declaration
+        (storage_class_specifier)
+        (type_qualifier)
+        type: (primitive_type)
+        declarator: (field_identifier)
+        default_value: (number_literal))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (alias_declaration
+      name: (type_identifier)
+      type: (type_descriptor
+        type: (dependent_type
+          (qualified_identifier
+            scope: (pack_index_type
+              pack: (type_identifier)
+              index: (number_literal))
+            name: (type_identifier))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (type_qualifier)
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list))
+      body: (compound_statement
+        (return_statement
+          (qualified_identifier
+            scope: (pack_index_type
+              pack: (type_identifier)
+              index: (number_literal))
+            name: (identifier))))))
+  (declaration
+    type: (template_type
+      name: (type_identifier)
+      arguments: (template_argument_list
+        (type_descriptor
+          type: (type_identifier))))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (number_literal)))
+  (static_assert_declaration
+    condition: (binary_expression
+      left: (call_expression
+        function: (template_function
+          name: (identifier)
+          arguments: (template_argument_list
+            (type_descriptor
+              type: (type_identifier))))
+        arguments: (argument_list))
+      right: (number_literal)))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (alias_declaration
+      name: (type_identifier)
+      type: (type_descriptor
+        type: (pack_index_type
+          pack: (type_identifier)
+          index: (number_literal)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (placeholder_type_specifier
+        (auto))
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (return_statement
+          (pack_index_expression
+            pack: (identifier)
+            index: (number_literal))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (pack_index_type
+              pack: (type_identifier)
+              index: (number_literal)))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (pack_index_type
+              pack: (type_identifier)
+              index: (number_literal)))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (expression_statement
+          (pack_index_expression
+            pack: (identifier)
+            index: (number_literal)))))))
+
+================================================================================
+Pack indexing template arguments, casts, sizeof and assignment
+================================================================================
+
+template <typename T> struct Box {};
+template <typename... Ts> void operations(Ts... args) {
+  Box<Ts...[0]> item;
+  auto converted = static_cast<Ts...[0]>(0);
+  auto typeSize = sizeof(Ts...[0]);
+  auto valueSize = sizeof(args...[0]);
+  args...[0] = 1;
+  args...[0] += 1;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      name: (type_identifier)
+      body: (field_declaration_list)))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (declaration
+          type: (template_type
+            name: (type_identifier)
+            arguments: (template_argument_list
+              (type_descriptor
+                type: (pack_index_type
+                  pack: (type_identifier)
+                  index: (number_literal)))))
+          declarator: (identifier))
+        (declaration
+          type: (placeholder_type_specifier
+            (auto))
+          declarator: (init_declarator
+            declarator: (identifier)
+            value: (call_expression
+              function: (template_function
+                name: (identifier)
+                arguments: (template_argument_list
+                  (type_descriptor
+                    type: (pack_index_type
+                      pack: (type_identifier)
+                      index: (number_literal)))))
+              arguments: (argument_list
+                (number_literal)))))
+        (declaration
+          type: (placeholder_type_specifier
+            (auto))
+          declarator: (init_declarator
+            declarator: (identifier)
+            value: (sizeof_expression
+              value: (parenthesized_expression
+                (pack_index_expression
+                  pack: (identifier)
+                  index: (number_literal))))))
+        (declaration
+          type: (placeholder_type_specifier
+            (auto))
+          declarator: (init_declarator
+            declarator: (identifier)
+            value: (sizeof_expression
+              value: (parenthesized_expression
+                (pack_index_expression
+                  pack: (identifier)
+                  index: (number_literal))))))
+        (expression_statement
+          (assignment_expression
+            left: (pack_index_expression
+              pack: (identifier)
+              index: (number_literal))
+            right: (number_literal)))
+        (expression_statement
+          (assignment_expression
+            left: (pack_index_expression
+              pack: (identifier)
+              index: (number_literal))
+            right: (number_literal)))))))

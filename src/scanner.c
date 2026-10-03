@@ -98,6 +98,7 @@ void *tree_sitter_cpp_external_scanner_create() {
 }
 
 static bool scan_pack_index_operator(TSLexer *lexer);
+static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
 
 bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     Scanner *scanner = (Scanner *)payload;
@@ -147,8 +148,8 @@ void tree_sitter_cpp_external_scanner_destroy(void *payload) {
 }
 
 static bool scan_pack_index_operator(TSLexer *lexer) {
-    while (iswspace(lexer->lookahead)) {
-        lexer->advance(lexer, true);
+    if (!skip_pack_index_whitespace(lexer, true)) {
+        return false;
     }
     for (int i = 0; i < 3; ++i) {
         if (lexer->lookahead != '.') {
@@ -158,8 +159,8 @@ static bool scan_pack_index_operator(TSLexer *lexer) {
     }
     lexer->mark_end(lexer);
     for (;;) {
-        while (iswspace(lexer->lookahead)) {
-            advance(lexer);
+        if (!skip_pack_index_whitespace(lexer, false)) {
+            return false;
         }
         if (lexer->lookahead != '/') {
             break;
@@ -196,4 +197,23 @@ static bool scan_pack_index_operator(TSLexer *lexer) {
     }
     lexer->result_symbol = PACK_INDEX_OPERATOR;
     return true;
+}
+
+static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip) {
+    for (;;) {
+        if (iswspace(lexer->lookahead)) {
+            lexer->advance(lexer, skip);
+        } else if (lexer->lookahead == '\\') {
+            lexer->advance(lexer, skip);
+            if (lexer->lookahead == '\r') {
+                lexer->advance(lexer, skip);
+            }
+            if (lexer->lookahead != '\n') {
+                return false;
+            }
+            lexer->advance(lexer, skip);
+        } else {
+            return true;
+        }
+    }
 }
