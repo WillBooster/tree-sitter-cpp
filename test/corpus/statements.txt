@@ -652,3 +652,58 @@ void foo() {
             (operator_name))
           (argument_list
             (number_literal)))))))
+
+================================================================================
+Consteval if statements use compound bodies
+================================================================================
+
+constexpr int f() { if consteval { return 1; } else { return 2; } }
+constexpr int g() { if !consteval { return 1; } return 2; }
+constexpr int h() { if not consteval { return 1; } else { return 2; } }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (type_qualifier)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (if_statement
+        consequence: (compound_statement
+          (return_statement
+            (number_literal)))
+        alternative: (else_clause
+          (compound_statement
+            (return_statement
+              (number_literal)))))))
+  (function_definition
+    (type_qualifier)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (if_statement
+        consequence: (compound_statement
+          (return_statement
+            (number_literal))))
+      (return_statement
+        (number_literal))))
+  (function_definition
+    (type_qualifier)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (if_statement
+        consequence: (compound_statement
+          (return_statement
+            (number_literal)))
+        alternative: (else_clause
+          (compound_statement
+            (return_statement
+              (number_literal))))))))

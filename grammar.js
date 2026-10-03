@@ -104,10 +104,9 @@ const preprocIf = C.preprocIf;
 module.exports = grammar(C, {
   name: 'cpp',
 
-  externals: ($) => [$.raw_string_delimiter, $.raw_string_content],
+  externals: ($) => [$.raw_string_delimiter, $.raw_string_content, $._pack_index_operator],
 
   conflicts: ($) => [
-    // C
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],
     [$.sized_type_specifier],
@@ -119,7 +118,6 @@ module.exports = grammar(C, {
     [$._block_item, $.statement],
     [$.type_qualifier, $.extension_expression],
 
-    // C++
     [$.template_function, $.template_type],
     [$.template_function, $.template_type, $.expression],
     [$.template_function, $.template_type, $.qualified_identifier],
@@ -227,8 +225,6 @@ module.exports = grammar(C, {
     ...preprocIf('', (/** @type {GrammarSymbols<string>} */ $) => $._top_level_item),
     ...preprocIf('_in_block', (/** @type {GrammarSymbols<string>} */ $) => $._block_item),
 
-    // Types
-
     placeholder_type_specifier: ($) =>
       prec(
         1,
@@ -254,6 +250,7 @@ module.exports = grammar(C, {
         $.enum_specifier,
         $.class_specifier,
         $.sized_type_specifier,
+        $.pack_index_type,
         $.primitive_type,
         $.template_type,
         $.dependent_type,
@@ -431,11 +428,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    virtual_specifier: () =>
-      choice(
-        'final', // the only legal value here for classes
-        'override' // legal for functions in addition to final, plus permutations.
-      ),
+    virtual_specifier: () => choice('final', 'override'),
 
     _declaration_modifiers: ($, /** @type {Rule} */ original) => choice(original, 'virtual'),
 
@@ -502,8 +495,6 @@ module.exports = grammar(C, {
       ),
 
     dependent_type: ($) => prec.dynamic(-1, prec.right(seq('typename', $.type_specifier))),
-
-    // Declarations
 
     module_name: ($) => seq($.identifier, repeat(seq('.', $.identifier))),
 
@@ -1027,7 +1018,6 @@ module.exports = grammar(C, {
       ),
 
     reference_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
-    // Pointers to members (`S::*pm`) are qualified_identifier nodes whose name is the pointer declarator.
     qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
     qualified_pointer_field_declarator: ($) =>
       pointerToMember($, $.qualified_pointer_field_declarator, alias($.pointer_field_declarator, $.pointer_declarator)),
@@ -1039,7 +1029,11 @@ module.exports = grammar(C, {
     reference_type_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
     abstract_reference_declarator: ($) => prec.right(seq(choice('&', '&&'), optional($._abstract_declarator))),
 
-    structured_binding_declarator: ($) => prec.dynamic(PREC.STRUCTURED_BINDING, seq('[', commaSep1($.identifier), ']')),
+    structured_binding_declarator: ($) =>
+      prec.dynamic(
+        PREC.STRUCTURED_BINDING,
+        seq('[', commaSep1(seq(optional('...'), $.identifier, repeat($.attribute_declaration))), ']')
+      ),
 
     ref_qualifier: () => choice('&', '&&'),
 
@@ -1312,8 +1306,6 @@ module.exports = grammar(C, {
 
     concept_definition: ($) => seq('concept', field('name', $.identifier), '=', $.expression, ';'),
 
-    // Statements
-
     _top_level_statement: ($, /** @type {Rule} */ original) =>
       choice(
         original,
@@ -1344,12 +1336,24 @@ module.exports = grammar(C, {
       prec.right(
         seq(
           'if',
-          optional('constexpr'),
-          field('condition', $.condition_clause),
-          field('consequence', $.statement),
-          optional(field('alternative', $.else_clause))
+          choice(
+            seq(
+              optional('constexpr'),
+              field('condition', $.condition_clause),
+              field('consequence', $.statement),
+              optional(field('alternative', $.else_clause))
+            ),
+            seq(
+              optional(choice('!', 'not')),
+              'consteval',
+              field('consequence', $.compound_statement),
+              optional(field('alternative', alias($._consteval_else_clause, $.else_clause)))
+            )
+          )
         )
       ),
+
+    _consteval_else_clause: ($) => seq('else', $.compound_statement),
 
     // Using prec(1) instead of prec.dynamic(1) causes issues with the
     // range loop's declaration specifiers if `int` is passed in, it'll
@@ -1406,8 +1410,6 @@ module.exports = grammar(C, {
 
     catch_clause: ($) => seq('catch', field('parameters', $.parameter_list), field('body', $.compound_statement)),
 
-    // Expressions
-
     _expression_not_binary: ($, /** @type {Rule} */ original) =>
       choice(
         original,
@@ -1420,6 +1422,7 @@ module.exports = grammar(C, {
         $.delete_expression,
         $.lambda_expression,
         $.parameter_pack_expansion,
+        $.pack_index_expression,
         $.this,
         $.user_defined_literal,
         $.fold_expression,
@@ -1527,7 +1530,6 @@ module.exports = grammar(C, {
 
     _requirement_clause_constraint: ($) =>
       choice(
-        // Primary expressions"
         $.true,
         $.false,
         $._class_name,
@@ -1535,10 +1537,8 @@ module.exports = grammar(C, {
         $.lambda_expression,
         $.requires_expression,
 
-        // Parenthesized expressions
         seq('(', $.expression, ')'),
 
-        // conjunction or disjunction of the above
         $.constraint_conjunction,
         $.constraint_disjunction
       ),
@@ -1563,7 +1563,6 @@ module.exports = grammar(C, {
 
     lambda_declarator: ($) =>
       choice(
-        // main declarator form, includes parameter list
         seq(
           repeat($.attribute_declaration),
           field('parameters', $.parameter_list),
@@ -1574,7 +1573,6 @@ module.exports = grammar(C, {
           optional($.requires_clause)
         ),
 
-        // forms supporting omitted parameter list
         repeat1($.attribute_declaration),
         seq(repeat($.attribute_declaration), $.trailing_return_type),
         seq(
@@ -1647,6 +1645,10 @@ module.exports = grammar(C, {
     fold_expression: ($) => seq('(', choice($._unary_right_fold, $._unary_left_fold, $._binary_fold), ')'),
 
     parameter_pack_expansion: ($) => prec(-1, seq(field('pattern', $.expression), '...')),
+
+    pack_index_expression: ($) => prec(PREC.CALL, packIndex($, $.identifier)),
+
+    pack_index_type: ($) => packIndex($, $._type_identifier),
 
     type_parameter_pack_expansion: ($) => seq(field('pattern', $.type_descriptor), '...'),
 
@@ -2183,4 +2185,12 @@ function isOldStyleFunctionDefinition(rule) {
   return (
     rule.type === 'ALIAS' && rule.content.type === 'SYMBOL' && rule.content.name === '_old_style_function_definition'
   );
+}
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {Rule} pack
+ */
+function packIndex($, pack) {
+  return seq(field('pack', pack), alias($._pack_index_operator, '...'), '[', field('index', $.expression), ']');
 }

@@ -272,6 +272,10 @@
         "named": true
       },
       {
+        "type": "pack_index_expression",
+        "named": true
+      },
+      {
         "type": "parameter_pack_expansion",
         "named": true
       },
@@ -457,6 +461,10 @@
       },
       {
         "type": "enum_specifier",
+        "named": true
+      },
+      {
+        "type": "pack_index_type",
         "named": true
       },
       {
@@ -4026,7 +4034,7 @@
       },
       "condition": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "condition_clause",
@@ -4974,6 +4982,58 @@
       "name": {
         "multiple": false,
         "required": false,
+        "types": [
+          {
+            "type": "type_identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "pack_index_expression",
+    "named": true,
+    "fields": {
+      "index": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "pack": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "pack_index_type",
+    "named": true,
+    "fields": {
+      "index": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "pack": {
+        "multiple": false,
+        "required": true,
         "types": [
           {
             "type": "type_identifier",
@@ -6897,6 +6957,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
         {
           "type": "identifier",
           "named": true

@@ -2683,3 +2683,229 @@ inline constexpr MyEnum operator|(MyEnum bit0, MyEnum bit1) noexcept
         (argument_list
           (identifier))))
     (compound_statement)))
+
+================================================================================
+Pack indexing types and expressions preserve variadic declarations
+================================================================================
+
+template <typename... Ts> using First = Ts...[0];
+template <typename... Ts> using FirstComment = Ts... /* index */ [0];
+template <typename... Ts> constexpr auto first(Ts... args) { return args...[0]; }
+template <typename... Ts> constexpr auto firstComment(Ts... args) { return args... /* index */ [0]; }
+template <typename... Ts> using FirstLine = Ts... // index
+[0];
+template <typename... Ts> constexpr auto firstJoined(Ts... args) { return args... // index \
+continued comment
+[0]; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (alias_declaration
+      name: (type_identifier)
+      type: (type_descriptor
+        type: (pack_index_type
+          pack: (type_identifier)
+          index: (number_literal)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (alias_declaration
+      name: (type_identifier)
+      type: (type_descriptor
+        type: (pack_index_type
+          pack: (type_identifier)
+          (comment)
+          index: (number_literal)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (type_qualifier)
+      type: (placeholder_type_specifier
+        (auto))
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (return_statement
+          (pack_index_expression
+            pack: (identifier)
+            index: (number_literal))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (type_qualifier)
+      type: (placeholder_type_specifier
+        (auto))
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (return_statement
+          (pack_index_expression
+            pack: (identifier)
+            (comment)
+            index: (number_literal))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (alias_declaration
+      name: (type_identifier)
+      type: (type_descriptor
+        type: (pack_index_type
+          pack: (type_identifier)
+          (comment)
+          index: (number_literal)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (type_qualifier)
+      type: (placeholder_type_specifier
+        (auto))
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (return_statement
+          (pack_index_expression
+            pack: (identifier)
+            (comment)
+            index: (number_literal)))))))
+
+================================================================================
+Structured binding attributes and packs
+================================================================================
+
+struct Pair { int x, y; };
+void bind(Pair pair) { auto [a [[maybe_unused]], b] = pair; }
+template <typename T> void bindPack(T pair) { auto [a, ...rest [[maybe_unused]]] = pair; }
+template <typename T> void bindFront(T pair) { auto [...prefix [[maybe_unused]], last] = pair; }
+template <typename T> void bindMiddle(T triple) { auto [first, ...middle [[maybe_unused]], last] = triple; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier)
+        declarator: (field_identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (type_identifier)
+          declarator: (identifier))))
+    body: (compound_statement
+      (declaration
+        type: (placeholder_type_specifier
+          (auto))
+        declarator: (init_declarator
+          declarator: (structured_binding_declarator
+            (identifier)
+            (attribute_declaration
+              (attribute
+                name: (identifier)))
+            (identifier))
+          value: (identifier)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (type_identifier)
+            declarator: (identifier))))
+      body: (compound_statement
+        (declaration
+          type: (placeholder_type_specifier
+            (auto))
+          declarator: (init_declarator
+            declarator: (structured_binding_declarator
+              (identifier)
+              (identifier)
+              (attribute_declaration
+                (attribute
+                  name: (identifier))))
+            value: (identifier))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (type_identifier)
+            declarator: (identifier))))
+      body: (compound_statement
+        (declaration
+          type: (placeholder_type_specifier
+            (auto))
+          declarator: (init_declarator
+            declarator: (structured_binding_declarator
+              (identifier)
+              (attribute_declaration
+                (attribute
+                  name: (identifier)))
+              (identifier))
+            value: (identifier))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (type_identifier)
+            declarator: (identifier))))
+      body: (compound_statement
+        (declaration
+          type: (placeholder_type_specifier
+            (auto))
+          declarator: (init_declarator
+            declarator: (structured_binding_declarator
+              (identifier)
+              (identifier)
+              (attribute_declaration
+                (attribute
+                  name: (identifier)))
+              (identifier))
+            value: (identifier)))))))
