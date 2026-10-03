@@ -22,7 +22,6 @@ static inline void reset(Scanner *scanner) {
     memset(scanner->delimiter, 0, sizeof scanner->delimiter);
 }
 
-/// Scan the raw string delimiter in R"delimiter(content)delimiter"
 static bool scan_raw_string_delimiter(Scanner *scanner, TSLexer *lexer) {
     if (scanner->delimiter_length > 0) {
         // Closing delimiter: must exactly match the opening delimiter.
@@ -38,24 +37,22 @@ static bool scan_raw_string_delimiter(Scanner *scanner, TSLexer *lexer) {
         return true;
     }
 
-    // Opening delimiter: record the d-char-sequence up to (.
     // d-char is any basic character except parens, backslashes, and spaces.
     for (;;) {
-        if (scanner->delimiter_length >= MAX_DELIMITER_LENGTH || lexer->eof(lexer) || lexer->lookahead == '\\' ||
-            iswspace(lexer->lookahead)) {
-            return false;
-        }
         if (lexer->lookahead == '(') {
             // Rather than create a token for an empty delimiter, we fail and
             // let the grammar fall back to a delimiter-less rule.
             return scanner->delimiter_length > 0;
+        }
+        if (scanner->delimiter_length >= MAX_DELIMITER_LENGTH || lexer->eof(lexer) || lexer->lookahead == '\\' ||
+            iswspace(lexer->lookahead)) {
+            return false;
         }
         scanner->delimiter[scanner->delimiter_length++] = lexer->lookahead;
         advance(lexer);
     }
 }
 
-/// Scan the raw string content in R"delimiter(content)delimiter"
 static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer) {
     // The progress made through the delimiter since the last ')'.
     // The delimiter may not contain ')' so a single counter suffices.
