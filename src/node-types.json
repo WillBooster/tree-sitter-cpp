@@ -1094,6 +1094,10 @@
           "named": true
         },
         {
+          "type": "pack_index_type",
+          "named": true
+        },
+        {
           "type": "qualified_identifier",
           "named": true
         },
@@ -1680,6 +1684,10 @@
         "multiple": true,
         "required": true,
         "types": [
+          {
+            "type": "pack_index_type",
+            "named": true
+          },
           {
             "type": "primitive_type",
             "named": true
@@ -3170,6 +3178,10 @@
         },
         {
           "type": "initializer_list",
+          "named": true
+        },
+        {
+          "type": "pack_index_type",
           "named": true
         },
         {

@@ -3161,3 +3161,95 @@ template <typename... Ts> void operations(Ts... args) {
               pack: (identifier)
               index: (number_literal))
             right: (number_literal)))))))
+
+================================================================================
+Pack indexing bases, mem-initializers and functional casts
+================================================================================
+
+struct A {}; struct B {};
+template <typename... Ts> struct D : Ts...[0] {};
+template <typename... Ts> struct E : public Ts...[1] { E() : Ts...[1]() {} };
+D<A, B> d; E<A, B> e;
+template <typename... Ts> void q() { auto v = Ts...[0]{}; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      name: (type_identifier)
+      (base_class_clause
+        (pack_index_type
+          pack: (type_identifier)
+          index: (number_literal)))
+      body: (field_declaration_list)))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      name: (type_identifier)
+      (base_class_clause
+        (access_specifier)
+        (pack_index_type
+          pack: (type_identifier)
+          index: (number_literal)))
+      body: (field_declaration_list
+        (function_definition
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))
+          (field_initializer_list
+            (field_initializer
+              (pack_index_type
+                pack: (type_identifier)
+                index: (number_literal))
+              (argument_list)))
+          body: (compound_statement)))))
+  (declaration
+    type: (template_type
+      name: (type_identifier)
+      arguments: (template_argument_list
+        (type_descriptor
+          type: (type_identifier))
+        (type_descriptor
+          type: (type_identifier))))
+    declarator: (identifier))
+  (declaration
+    type: (template_type
+      name: (type_identifier)
+      arguments: (template_argument_list
+        (type_descriptor
+          type: (type_identifier))
+        (type_descriptor
+          type: (type_identifier))))
+    declarator: (identifier))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list))
+      body: (compound_statement
+        (declaration
+          type: (placeholder_type_specifier
+            (auto))
+          declarator: (init_declarator
+            declarator: (identifier)
+            value: (compound_literal_expression
+              type: (pack_index_type
+                pack: (type_identifier)
+                index: (number_literal))
+              value: (initializer_list))))))))

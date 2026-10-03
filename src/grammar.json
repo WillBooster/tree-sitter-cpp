@@ -10384,6 +10384,10 @@
                   },
                   {
                     "type": "SYMBOL",
+                    "name": "pack_index_type"
+                  },
+                  {
+                    "type": "SYMBOL",
                     "name": "primitive_type"
                   },
                   {
@@ -13103,8 +13107,17 @@
                   ]
                 },
                 {
-                  "type": "SYMBOL",
-                  "name": "_class_name"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "_class_name"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "pack_index_type"
+                    }
+                  ]
                 },
                 {
                   "type": "CHOICE",
@@ -13199,8 +13212,17 @@
                         ]
                       },
                       {
-                        "type": "SYMBOL",
-                        "name": "_class_name"
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "SYMBOL",
+                            "name": "_class_name"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "pack_index_type"
+                          }
+                        ]
                       },
                       {
                         "type": "CHOICE",
@@ -15107,6 +15129,10 @@
               {
                 "type": "SYMBOL",
                 "name": "_field_identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "pack_index_type"
               },
               {
                 "type": "SYMBOL",

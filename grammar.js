@@ -448,7 +448,7 @@ module.exports = grammar(C, {
                 seq('virtual', optional($.access_specifier))
               )
             ),
-            $._class_name,
+            choice($._class_name, $.pack_index_type),
             optional('...')
           )
         )
@@ -861,7 +861,12 @@ module.exports = grammar(C, {
       prec(
         1,
         seq(
-          choice($._field_identifier, $.template_method, alias($.qualified_field_identifier, $.qualified_identifier)),
+          choice(
+            $._field_identifier,
+            $.pack_index_type,
+            $.template_method,
+            alias($.qualified_field_identifier, $.qualified_identifier)
+          ),
           choice($.initializer_list, $.argument_list),
           optional('...')
         )
@@ -1766,7 +1771,15 @@ module.exports = grammar(C, {
       choice(
         original,
         seq(
-          field('type', choice($._class_name, $.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
+          field(
+            'type',
+            choice(
+              $._class_name,
+              $.pack_index_type,
+              $.primitive_type,
+              seq(optional('typename'), $.splice_type_specifier)
+            )
+          ),
           field('value', $.initializer_list)
         )
       ),
