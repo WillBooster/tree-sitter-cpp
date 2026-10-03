@@ -13276,6 +13276,10 @@
                 },
                 {
                   "type": "SYMBOL",
+                  "name": "pack_index_type"
+                },
+                {
+                  "type": "SYMBOL",
                   "name": "primitive_type"
                 },
                 {
@@ -18662,6 +18666,10 @@
         {
           "type": "SYMBOL",
           "name": "fold_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "pack_index_expression"
         },
         {
           "type": "SYMBOL",

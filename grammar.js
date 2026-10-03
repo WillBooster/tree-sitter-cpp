@@ -481,6 +481,7 @@ module.exports = grammar(C, {
             choice(
               alias($.qualified_type_identifier, $.qualified_identifier),
               $._type_identifier,
+              $.pack_index_type,
               $.primitive_type,
               $.sized_type_specifier
             )
@@ -1540,6 +1541,7 @@ module.exports = grammar(C, {
         $.false,
         $._class_name,
         $.fold_expression,
+        $.pack_index_expression,
         $.lambda_expression,
         $.requires_expression,
 

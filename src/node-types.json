@@ -2557,6 +2557,10 @@
         "required": false,
         "types": [
           {
+            "type": "pack_index_type",
+            "named": true
+          },
+          {
             "type": "primitive_type",
             "named": true
           },
