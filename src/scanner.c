@@ -99,6 +99,7 @@ void *tree_sitter_cpp_external_scanner_create() {
 
 static bool scan_pack_index_operator(TSLexer *lexer);
 static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
+static bool skip_pack_index_trivia(TSLexer *lexer);
 
 bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     Scanner *scanner = (Scanner *)payload;
@@ -158,6 +159,18 @@ static bool scan_pack_index_operator(TSLexer *lexer) {
         advance(lexer);
     }
     lexer->mark_end(lexer);
+    if (!skip_pack_index_trivia(lexer) || lexer->lookahead != '[') {
+        return false;
+    }
+    advance(lexer);
+    if (!skip_pack_index_trivia(lexer) || lexer->lookahead == ']' || lexer->eof(lexer)) {
+        return false;
+    }
+    lexer->result_symbol = PACK_INDEX_OPERATOR;
+    return true;
+}
+
+static bool skip_pack_index_trivia(TSLexer *lexer) {
     for (;;) {
         if (!skip_pack_index_whitespace(lexer, false)) {
             return false;
@@ -192,10 +205,6 @@ static bool scan_pack_index_operator(TSLexer *lexer) {
             return false;
         }
     }
-    if (lexer->lookahead != '[') {
-        return false;
-    }
-    lexer->result_symbol = PACK_INDEX_OPERATOR;
     return true;
 }
 

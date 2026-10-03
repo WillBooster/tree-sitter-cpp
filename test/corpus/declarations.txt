@@ -3478,3 +3478,209 @@ D<A, B> indexedBase;
         (type_descriptor
           type: (type_identifier))))
     declarator: (identifier)))
+
+==================
+Pack indexing friends, destructors and block statements with variadic arrays
+==================
+
+struct Indexed {};
+template <typename... Ts> struct Friend { friend Ts...[0]; };
+Friend<Indexed> friendly;
+template <typename... Ts> void destruct(Ts... args) { args...[0].~Ts...[0](); }
+void use() { destruct(Indexed{}); }
+template <typename... Ts> void statements(Ts... args) {
+  int x = 0;
+  args...[0];
+  x++;
+  args...[0];
+  args...[0];
+}
+void use_statements() { statements(1); }
+template <typename... Ts> void arrays(Ts... []);
+template <typename... Ts> void spaced_arrays(Ts... [ ]);
+template <typename... Ts> void commented_arrays(Ts... /* before */ [ /* inside */ ]);
+template <typename... Ts> void spliced_arrays(Ts... \
+[ \
+]);
+template <typename... Ts> void index_comment(Ts... args) { args... [ /* index */ 0 ]; }
+
+---
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      name: (type_identifier)
+      body: (field_declaration_list
+        (friend_declaration
+          (pack_index_type
+            pack: (type_identifier)
+            index: (number_literal))))))
+  (declaration
+    type: (template_type
+      name: (type_identifier)
+      arguments: (template_argument_list
+        (type_descriptor
+          type: (type_identifier))))
+    declarator: (identifier))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (expression_statement
+          (call_expression
+            function: (field_expression
+              argument: (pack_index_expression
+                pack: (identifier)
+                index: (number_literal))
+              field: (destructor_name
+                (pack_index_type
+                  pack: (type_identifier)
+                  index: (number_literal))))
+            arguments: (argument_list))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (compound_literal_expression
+              type: (type_identifier)
+              value: (initializer_list)))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (declaration
+          type: (primitive_type)
+          declarator: (init_declarator
+            declarator: (identifier)
+            value: (number_literal)))
+        (expression_statement
+          (pack_index_expression
+            pack: (identifier)
+            index: (number_literal)))
+        (expression_statement
+          (update_expression
+            argument: (identifier)))
+        (expression_statement
+          (pack_index_expression
+            pack: (identifier)
+            index: (number_literal)))
+        (expression_statement
+          (pack_index_expression
+            pack: (identifier)
+            index: (number_literal))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (number_literal))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (init_declarator
+        declarator: (identifier)
+        value: (argument_list
+          (subscript_expression
+            argument: (parameter_pack_expansion
+              pattern: (identifier))
+            indices: (subscript_argument_list))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (init_declarator
+        declarator: (identifier)
+        value: (argument_list
+          (subscript_expression
+            argument: (parameter_pack_expansion
+              pattern: (identifier))
+            indices: (subscript_argument_list))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (init_declarator
+        declarator: (identifier)
+        value: (argument_list
+          (subscript_expression
+            argument: (parameter_pack_expansion
+              pattern: (identifier))
+            (comment)
+            indices: (subscript_argument_list
+              (comment)))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (init_declarator
+        declarator: (identifier)
+        value: (argument_list
+          (subscript_expression
+            argument: (parameter_pack_expansion
+              pattern: (identifier))
+            indices: (subscript_argument_list))))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (expression_statement
+          (pack_index_expression
+            pack: (identifier)
+            (comment)
+            index: (number_literal)))))))

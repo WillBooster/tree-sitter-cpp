@@ -2503,6 +2503,10 @@
         {
           "type": "identifier",
           "named": true
+        },
+        {
+          "type": "pack_index_type",
+          "named": true
         }
       ]
     }
@@ -3568,6 +3572,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "pack_index_type",
           "named": true
         },
         {

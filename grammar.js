@@ -983,7 +983,7 @@ module.exports = grammar(C, {
         choice(
           $.declaration,
           $.function_definition,
-          seq(optional(choice('class', 'struct', 'union')), $._class_name, ';')
+          seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
         )
       ),
 
@@ -1654,6 +1654,9 @@ module.exports = grammar(C, {
 
     parameter_pack_expansion: ($) => prec(-1, seq(field('pattern', $.expression), '...')),
 
+    expression_statement: ($, /** @type {Rule} */ original) =>
+      choice(prec(1, prec.dynamic(1, seq($.pack_index_expression, ';'))), original),
+
     pack_index_expression: ($) => packIndex($, $.identifier),
 
     pack_index_type: ($) => packIndex($, $._type_identifier),
@@ -1767,7 +1770,7 @@ module.exports = grammar(C, {
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
     argument_list: ($) => seq('(', commaSep(choice($.expression, $.initializer_list, $.compound_statement)), ')'),
 
-    destructor_name: ($) => prec(1, seq('~', $.identifier)),
+    destructor_name: ($) => prec(1, seq('~', choice($.identifier, $.pack_index_type))),
 
     compound_literal_expression: ($, /** @type {Rule} */ original) =>
       choice(
