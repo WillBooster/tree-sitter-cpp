@@ -9495,6 +9495,32 @@
                       "name": "primitive_type"
                     },
                     {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": "unsigned"
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "signed"
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "long"
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "short"
+                          }
+                        ]
+                      },
+                      "named": true,
+                      "value": "sized_type_specifier"
+                    },
+                    {
                       "type": "SEQ",
                       "members": [
                         {
@@ -21803,6 +21829,10 @@
     ],
     [
       "type_specifier",
+      "call_expression"
+    ],
+    [
+      "sized_type_specifier",
       "call_expression"
     ],
     [

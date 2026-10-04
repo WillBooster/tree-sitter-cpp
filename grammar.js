@@ -137,6 +137,7 @@ module.exports = grammar(C, {
     [$.structured_binding_declarator, $._lambda_capture_identifier],
     [$.parameter_list, $.argument_list],
     [$.type_specifier, $.call_expression],
+    [$.sized_type_specifier, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
@@ -1450,7 +1451,14 @@ module.exports = grammar(C, {
         choice(
           original,
           seq(
-            field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
+            field(
+              'function',
+              choice(
+                $.primitive_type,
+                alias(choice('unsigned', 'signed', 'long', 'short'), $.sized_type_specifier),
+                seq(optional('typename'), $.splice_type_specifier)
+              )
+            ),
             field('arguments', $.argument_list)
           )
         )
