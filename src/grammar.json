@@ -10682,52 +10682,91 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "SEQ",
+          "type": "CHOICE",
           "members": [
             {
-              "type": "FIELD",
-              "name": "designator",
-              "content": {
-                "type": "REPEAT1",
-                "content": {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "subscript_designator"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "field_designator"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "subscript_range_designator"
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "FIELD",
+                  "name": "designator",
+                  "content": {
+                    "type": "REPEAT1",
+                    "content": {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "subscript_designator"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "field_designator"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "subscript_range_designator"
+                        }
+                      ]
                     }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "STRING",
-              "value": "="
-            },
-            {
-              "type": "FIELD",
-              "name": "value",
-              "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "expression"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "initializer_list"
                   }
-                ]
-              }
+                },
+                {
+                  "type": "STRING",
+                  "value": "="
+                },
+                {
+                  "type": "FIELD",
+                  "name": "value",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "expression"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "initializer_list"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "FIELD",
+                  "name": "designator",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_field_identifier"
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": ":"
+                },
+                {
+                  "type": "FIELD",
+                  "name": "value",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "expression"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "initializer_list"
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           ]
         },
@@ -10739,28 +10778,15 @@
               "name": "designator",
               "content": {
                 "type": "SYMBOL",
-                "name": "_field_identifier"
+                "name": "field_designator"
               }
-            },
-            {
-              "type": "STRING",
-              "value": ":"
             },
             {
               "type": "FIELD",
               "name": "value",
               "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "expression"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "initializer_list"
-                  }
-                ]
+                "type": "SYMBOL",
+                "name": "initializer_list"
               }
             }
           ]

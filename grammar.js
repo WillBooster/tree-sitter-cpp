@@ -866,6 +866,8 @@ module.exports = grammar(C, {
         repeat($.attribute_declaration),
         optional(seq('=', field('value', $.expression)))
       ),
+    initializer_pair: ($, /** @type {Rule} */ original) =>
+      choice(original, seq(field('designator', $.field_designator), field('value', $.initializer_list))),
 
     field_initializer_list: ($) => seq(':', commaSep1($.field_initializer)),
 
