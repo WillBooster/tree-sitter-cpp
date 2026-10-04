@@ -3879,6 +3879,194 @@ enum class Scoped : unsigned {
         (identifier)
         (number_literal)))))
 
+==================
+Leading attributes on friend definitions
+==================
+
+struct Value {
+  int number;
+  [[nodiscard]] friend int get(Value v) { return v.number; }
+  [[nodiscard]] [[maybe_unused]] constexpr friend int twice(Value v) { return v.number * 2; }
+  friend int plain(Value v) { return v.number; }
+};
+static_assert(twice(Value{3}) == 6);
+int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)
+                (identifier))))
+          (compound_statement
+            (return_statement
+              (field_expression
+                (identifier)
+                (field_identifier))))))
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)
+                (identifier))))
+          (compound_statement
+            (return_statement
+              (binary_expression
+                (field_expression
+                  (identifier)
+                  (field_identifier))
+                (number_literal))))))
+      (friend_declaration
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)
+                (identifier))))
+          (compound_statement
+            (return_statement
+              (field_expression
+                (identifier)
+                (field_identifier))))))))
+  (static_assert_declaration
+    (binary_expression
+      (call_expression
+        (identifier)
+        (argument_list
+          (compound_literal_expression
+            (type_identifier)
+            (initializer_list
+              (number_literal)))))
+      (number_literal)))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (conditional_expression
+          (binary_expression
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (compound_literal_expression
+                    (type_identifier)
+                    (initializer_list
+                      (number_literal)))))
+              (call_expression
+                (identifier)
+                (argument_list
+                  (compound_literal_expression
+                    (type_identifier)
+                    (initializer_list
+                      (number_literal))))))
+            (number_literal))
+          (number_literal)
+          (number_literal))))))
+
+==================
+Attributed friend boundaries retain following members
+==================
+
+struct A {
+  [[nodiscard]] friend void f();
+  [[nodiscard]] friend void g();
+  friend class D;
+  friend int h();
+};
+struct B {
+  [[nodiscard]] friend void f();
+  [[maybe_unused]] friend struct S;
+  friend class D;
+  friend int g();
+};
+
+---
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))
+      (friend_declaration
+        (type_identifier))
+      (friend_declaration
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (type_identifier))
+      (friend_declaration
+        (type_identifier))
+      (friend_declaration
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list)))))))
+
 ================================================================================
 Multiple using declarations
 ================================================================================

@@ -15952,6 +15952,13 @@
       "type": "SEQ",
       "members": [
         {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_declaration"
+          }
+        },
+        {
           "type": "CHOICE",
           "members": [
             {
@@ -23076,6 +23083,11 @@
     ],
     [
       "_declaration_modifiers",
+      "friend_declaration"
+    ],
+    [
+      "_declaration_modifiers",
+      "friend_declaration",
       "using_declaration"
     ],
     [
