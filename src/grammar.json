@@ -16409,6 +16409,34 @@
       "type": "SEQ",
       "members": [
         {
+          "type": "SYMBOL",
+          "name": "_function_declarator_core"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_function_postfix"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "contract_specifier"
+          }
+        }
+      ]
+    },
+    "_function_declarator_core": {
+      "type": "SEQ",
+      "members": [
+        {
           "type": "FIELD",
           "name": "parameters",
           "content": {
@@ -16470,18 +16498,6 @@
             {
               "type": "SYMBOL",
               "name": "trailing_return_type"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "_function_postfix"
             },
             {
               "type": "BLANK"
@@ -16768,39 +16784,15 @@
         "type": "CHOICE",
         "members": [
           {
-            "type": "SEQ",
-            "members": [
-              {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "REPEAT1",
-                    "content": {
-                      "type": "SYMBOL",
-                      "name": "virtual_specifier"
-                    }
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "requires_clause"
-                  }
-                ]
-              },
-              {
-                "type": "REPEAT",
-                "content": {
-                  "type": "SYMBOL",
-                  "name": "contract_specifier"
-                }
-              }
-            ]
-          },
-          {
             "type": "REPEAT1",
             "content": {
               "type": "SYMBOL",
-              "name": "contract_specifier"
+              "name": "virtual_specifier"
             }
+          },
+          {
+            "type": "SYMBOL",
+            "name": "requires_clause"
           }
         ]
       }
@@ -17646,7 +17638,7 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_function_declarator_seq"
+            "name": "_function_declarator_core"
           }
         ]
       }
@@ -23095,7 +23087,7 @@
       "_fold_operator"
     ],
     [
-      "_function_declarator_seq"
+      "_function_declarator_core"
     ],
     [
       "_trailing_return_type_descriptor"

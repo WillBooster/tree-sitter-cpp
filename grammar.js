@@ -141,7 +141,7 @@ module.exports = grammar(C, {
     [$.sized_type_specifier, $._top_level_expression_statement],
     [$.expression, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
-    [$._function_declarator_seq],
+    [$._function_declarator_core],
     [$._trailing_return_type_descriptor],
     [$._trailing_abstract_pointer_declarator],
     [$._trailing_abstract_reference_declarator],
@@ -1071,14 +1071,16 @@ module.exports = grammar(C, {
     ref_qualifier: () => choice('&', '&&'),
 
     _function_declarator_seq: ($) =>
+      seq($._function_declarator_core, optional($._function_postfix), repeat($.contract_specifier)),
+
+    _function_declarator_core: ($) =>
       seq(
         field('parameters', $.parameter_list),
         optional($._function_attributes_start),
         optional($.ref_qualifier),
         optional($._function_exception_specification),
         optional($._function_attributes_end),
-        optional($.trailing_return_type),
-        optional($._function_postfix)
+        optional($.trailing_return_type)
       ),
 
     // A parameter that starts with an expression keyword, which lexes as a type name where no keyword is expected, so
@@ -1151,13 +1153,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    _function_postfix: ($) =>
-      prec.right(
-        choice(
-          seq(choice(repeat1($.virtual_specifier), $.requires_clause), repeat($.contract_specifier)),
-          repeat1($.contract_specifier)
-        )
-      ),
+    _function_postfix: ($) => prec.right(choice(repeat1($.virtual_specifier), $.requires_clause)),
 
     contract_specifier: ($) =>
       choice(
@@ -1294,7 +1290,7 @@ module.exports = grammar(C, {
         )
       ),
     _trailing_abstract_function_declarator: ($) =>
-      prec(1, seq(field('declarator', optional($._trailing_abstract_declarator)), $._function_declarator_seq)),
+      prec(1, seq(field('declarator', optional($._trailing_abstract_declarator)), $._function_declarator_core)),
     _trailing_abstract_array_declarator: ($) =>
       prec.dynamic(
         1,

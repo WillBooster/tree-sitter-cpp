@@ -160,24 +160,32 @@ test('preserves contextual type names and pointer-to-member trailing return quer
   }
 });
 
-test('keeps contract fields outside pointer and reference trailing returns', async () => {
+test('keeps contract fields outside pointer, reference and function trailing returns', async () => {
   await Parser.init();
   const language = await loadCurrentWasmBuild();
   const parser = new Parser();
-  parser.setLanguage(language);
-  const query = new Query(
-    language,
-    `(trailing_return_type (type_descriptor declarator: (_) @return))
+  let query: Query | undefined;
+  let tree: Tree | undefined;
+  try {
+    parser.setLanguage(language);
+    query = new Query(
+      language,
+      `(trailing_return_type (type_descriptor declarator: (_) @return))
     (contract_specifier condition: (expression) @condition)
     (contract_specifier result: (identifier) @result)`
-  );
-  const tree = parser.parse(`struct Box { int value; };
+    );
+    tree = parser.parse(`struct Box { int value; };
     auto pointer(int* const p) -> int* pre(p != nullptr) post(result: result == p) { return p; }
     auto reference(int& r) -> int& pre(true) { return r; }
     auto member() -> int Box::* pre(true) { return &Box::value; }
     auto cv_member() -> int Box::* const pre(true) { return &Box::value; }
-    auto closure = [](int& r) -> int& post(result: true) { return r; };`)!;
-  try {
+    auto closure = [](int& r) -> int& post(result: true) { return r; };
+    auto callback(int x) -> int(*)(int) pre(x > 0) post(result: result != nullptr) { return nullptr; }
+    auto callback_closure = [](int x) -> void(*)() post(result: result != nullptr) { return nullptr; };
+    struct Factory { auto method() -> int(Box::*)() pre(true); virtual auto virtual_method() -> int(*)() final pre(true); };
+    template<class T> auto constrained(T x) -> int(*)(int) requires true pre(true) { return nullptr; }
+    auto qualified() noexcept -> int(*)(int) noexcept pre(true) { return nullptr; };
+    auto attributed() -> int(*)(int) [[nodiscard]] pre(true) { return nullptr; }`)!;
     expect(tree.rootNode.hasError).toBe(false);
     const captures = query.captures(tree.rootNode);
     expect(captures.filter(({ name }) => name === 'return').map(({ node }) => [node.type, node.text])).toEqual([
@@ -186,6 +194,13 @@ test('keeps contract fields outside pointer and reference trailing returns', asy
       ['qualified_identifier', 'Box::*'],
       ['qualified_identifier', 'Box::* const'],
       ['abstract_reference_declarator', '&'],
+      ['abstract_function_declarator', '(*)(int)'],
+      ['abstract_function_declarator', '(*)()'],
+      ['abstract_function_declarator', '(Box::*)()'],
+      ['abstract_function_declarator', '(*)()'],
+      ['abstract_function_declarator', '(*)(int)'],
+      ['abstract_function_declarator', '(*)(int) noexcept'],
+      ['abstract_function_declarator', '(*)(int) [[nodiscard]]'],
     ]);
     expect(captures.filter(({ name }) => name === 'condition').map(({ node }) => node.text)).toEqual([
       'p != nullptr',
@@ -194,11 +209,48 @@ test('keeps contract fields outside pointer and reference trailing returns', asy
       'true',
       'true',
       'true',
+      'x > 0',
+      'result != nullptr',
+      'result != nullptr',
+      'true',
+      'true',
+      'true',
+      'true',
+      'true',
     ]);
-    expect(captures.filter(({ name }) => name === 'result').map(({ node }) => node.text)).toEqual(['result', 'result']);
+    expect(captures.filter(({ name }) => name === 'result').map(({ node }) => node.text)).toEqual([
+      'result',
+      'result',
+      'result',
+      'result',
+    ]);
+    expect(tree.rootNode.descendantsOfType('contract_specifier').map((node) => node.parent?.type)).toEqual([
+      'function_declarator',
+      'function_declarator',
+      'function_declarator',
+      'function_declarator',
+      'function_declarator',
+      'lambda_declarator',
+      'function_declarator',
+      'function_declarator',
+      'lambda_declarator',
+      'function_declarator',
+      'function_declarator',
+      'function_declarator',
+      'function_declarator',
+      'function_declarator',
+    ]);
+    expect(
+      tree.rootNode
+        .descendantsOfType(['requires_clause', 'virtual_specifier'])
+        .map((node) => [node.text, node.parent?.type])
+    ).toEqual([
+      ['final', 'function_declarator'],
+      ['requires true', 'function_declarator'],
+    ]);
   } finally {
-    tree.delete();
-    query.delete();
+    tree?.delete();
+    query?.delete();
     parser.delete();
   }
 });
