@@ -1,0 +1,1495 @@
+================================================================================
+Function contracts on declarations, definitions and special members
+================================================================================
+
+int absolute(const int x) pre(x != 0) post(result: result > 0) {
+  return x < 0 ? -x : x;
+}
+template<class T> auto positive(const T x) noexcept -> T requires true
+  pre(x > 0) post(value: value > 0) { return x; }
+struct Counter {
+  explicit Counter(int x) pre(x >= 0) : n(x) {}
+  ~Counter() post(true) {}
+  operator int() const post(r: r >= 0) { return n; }
+  int n;
+};
+int nested(const int x) pre(x > 0 ? x == 1 : x < 0) pre((x, x > 0)) post([]{ return true; }()) { return x; }
+int main() { return absolute(-2) + positive(2) + int(Counter(1)) + nested(1); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (identifier)))
+      (contract_specifier
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal)))
+      (contract_specifier
+        result: (identifier)
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal))))
+    body: (compound_statement
+      (return_statement
+        (conditional_expression
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal))
+          consequence: (unary_expression
+            argument: (identifier))
+          alternative: (identifier)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (placeholder_type_specifier
+        (auto))
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            (type_qualifier)
+            type: (type_identifier)
+            declarator: (identifier)))
+        (noexcept)
+        (trailing_return_type
+          (type_descriptor
+            type: (type_identifier)))
+        (requires_clause
+          constraint: (true))
+        (contract_specifier
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal)))
+        (contract_specifier
+          result: (identifier)
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal))))
+      body: (compound_statement
+        (return_statement
+          (identifier)))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (function_definition
+        (explicit_function_specifier)
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)))
+          (contract_specifier
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        (field_initializer_list
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (identifier))))
+        body: (compound_statement))
+      (function_definition
+        declarator: (function_declarator
+          declarator: (destructor_name
+            (identifier))
+          parameters: (parameter_list)
+          (contract_specifier
+            condition: (true)))
+        body: (compound_statement))
+      (function_definition
+        declarator: (operator_cast
+          type: (primitive_type)
+          declarator: (abstract_function_declarator
+            parameters: (parameter_list)
+            (type_qualifier)
+            (contract_specifier
+              result: (identifier)
+              condition: (binary_expression
+                left: (identifier)
+                right: (number_literal)))))
+        body: (compound_statement
+          (return_statement
+            (identifier))))
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (identifier)))
+      (contract_specifier
+        condition: (conditional_expression
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal))
+          consequence: (binary_expression
+            left: (identifier)
+            right: (number_literal))
+          alternative: (binary_expression
+            left: (identifier)
+            right: (number_literal))))
+      (contract_specifier
+        condition: (parenthesized_expression
+          (comma_expression
+            left: (identifier)
+            right: (binary_expression
+              left: (identifier)
+              right: (number_literal)))))
+      (contract_specifier
+        condition: (call_expression
+          function: (lambda_expression
+            captures: (lambda_capture_specifier)
+            body: (compound_statement
+              (return_statement
+                (true))))
+          arguments: (argument_list))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (return_statement
+        (binary_expression
+          left: (binary_expression
+            left: (binary_expression
+              left: (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (number_literal)))
+              right: (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (number_literal))))
+            right: (call_expression
+              function: (primitive_type)
+              arguments: (argument_list
+                (call_expression
+                  function: (identifier)
+                  arguments: (argument_list
+                    (number_literal))))))
+          right: (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal))))))))
+
+================================================================================
+Function contracts on lambda declarator forms
+================================================================================
+
+auto plain = [] pre(true) post(r: r > 0) { return 1; };
+auto trailing = [] -> int pre(true) post(r: r > 0) { return 1; };
+auto exception = [] noexcept -> int pre(true) post(r: r > 0) { return 1; };
+auto specifier = [] constexpr pre(true) post(r: r > 0) { return 1; };
+auto parameter = [](const int x) mutable noexcept -> int pre(x > 0) post(r: r == x) { return x; };
+int main() { return plain() + trailing() + exception() + specifier() + parameter(1); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (trailing_return_type
+            (type_descriptor
+              type: (primitive_type)))
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (noexcept)
+          (trailing_return_type
+            (type_descriptor
+              type: (primitive_type)))
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (lambda_specifier)
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          parameters: (parameter_list
+            (parameter_declaration
+              (type_qualifier)
+              type: (primitive_type)
+              declarator: (identifier)))
+          (lambda_specifier)
+          (noexcept)
+          (trailing_return_type
+            (type_descriptor
+              type: (primitive_type)))
+          (contract_specifier
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal)))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        body: (compound_statement
+          (return_statement
+            (identifier))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (return_statement
+        (binary_expression
+          left: (binary_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (call_expression
+                  function: (identifier)
+                  arguments: (argument_list))
+                right: (call_expression
+                  function: (identifier)
+                  arguments: (argument_list)))
+              right: (call_expression
+                function: (identifier)
+                arguments: (argument_list)))
+            right: (call_expression
+              function: (identifier)
+              arguments: (argument_list)))
+          right: (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal))))))))
+
+================================================================================
+Function contract attributes, virtual specifiers and constrained lambdas
+================================================================================
+
+struct Base { virtual int value() const pre(true) post(r: r > 0) = 0; };
+struct Derived : Base { int value() const override final pre(true) post(r: r > 0) { return 1; } };
+int attributed(const int x) pre [[maybe_unused]] (x > 0) post(r [[maybe_unused]]: r > 0) { return x; }
+auto generic = []<class T> requires true (const T x) -> T requires true pre(x > 0) post(r: r == x) { return x; };
+auto attributedLambda = [] [[nodiscard]] pre(true) { return 1; };
+int attributedFunction() [[a]] pre(true) { return 1; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)
+          (type_qualifier)
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        default_value: (number_literal))))
+  (struct_specifier
+    name: (type_identifier)
+    (base_class_clause
+      (type_identifier))
+    body: (field_declaration_list
+      (function_definition
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)
+          (type_qualifier)
+          (virtual_specifier)
+          (virtual_specifier)
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (identifier)))
+      (contract_specifier
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal)))
+      (contract_specifier
+        result: (identifier)
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        template_parameters: (template_parameter_list
+          (type_parameter_declaration
+            (type_identifier)))
+        constraint: (requires_clause
+          constraint: (true))
+        declarator: (lambda_declarator
+          parameters: (parameter_list
+            (parameter_declaration
+              (type_qualifier)
+              type: (type_identifier)
+              declarator: (identifier)))
+          (trailing_return_type
+            (type_descriptor
+              type: (type_identifier)))
+          (requires_clause
+            constraint: (true))
+          (contract_specifier
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal)))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        body: (compound_statement
+          (return_statement
+            (identifier))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (attribute_declaration
+            (attribute
+              name: (identifier)))
+          (contract_specifier
+            condition: (true)))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list)
+      (attribute_declaration
+        (attribute
+          name: (identifier)))
+      (contract_specifier
+        condition: (true)))
+    body: (compound_statement
+      (return_statement
+        (number_literal)))))
+
+================================================================================
+Pre and post remain ordinary identifiers outside function contracts
+================================================================================
+
+int pre(int x) { return x; }
+int post(int x) { return x; }
+struct Names { int pre; int post; int call() { return pre + post; } };
+void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }
+int main() { int pre = 1, post = 2; Names n{pre, post}; return ::pre(n.call()) + ::post(post); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))
+      (function_definition
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))
+        body: (compound_statement
+          (return_statement
+            (binary_expression
+              left: (identifier)
+              right: (identifier)))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))))
+    body: (compound_statement
+      (expression_statement
+        (delete_expression
+          (identifier)))
+      (expression_statement
+        (delete_expression
+          (identifier)))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (declaration
+        type: (primitive_type)
+        declarator: (init_declarator
+          declarator: (identifier)
+          value: (number_literal))
+        declarator: (init_declarator
+          declarator: (identifier)
+          value: (number_literal)))
+      (declaration
+        type: (type_identifier)
+        declarator: (init_declarator
+          declarator: (identifier)
+          value: (initializer_list
+            (identifier)
+            (identifier))))
+      (return_statement
+        (binary_expression
+          left: (call_expression
+            function: (qualified_identifier
+              name: (identifier))
+            arguments: (argument_list
+              (call_expression
+                function: (field_expression
+                  argument: (identifier)
+                  field: (field_identifier))
+                arguments: (argument_list))))
+          right: (call_expression
+            function: (qualified_identifier
+              name: (identifier))
+            arguments: (argument_list
+              (identifier))))))))
+
+================================================================================
+Contextual contract names retain type and declaration boundaries
+================================================================================
+
+struct pre { pre(); ~pre(); int post; int f() const; };
+pre::pre() {}
+pre::~pre() {}
+using post = int;
+void accepts(pre, post = 1);
+void use() { pre value; post count(2); auto cast = static_cast<post>(count); auto size = sizeof(post); }
+template<class T> struct Box {};
+Box<post> value;
+namespace N { struct post {}; }
+void qualified(N::post value) { N::post local; }
+auto member() -> int(pre::*)() const;
+auto nested_contextual_scope() -> int* pre::*;
+auto nested_qualified_scope() -> int* N::post::*;
+void capture() { int pre = 1, post = 2; auto f = [pre, &post] { post = pre; return post; }; }
+void assignments(int* a, int pre, int post) { pre = post; post += pre; a[pre] = 1; a[post] += 2; }
+void labels() { pre: goto pre; post: goto post; }
+namespace Scopes { namespace pre { int x; } namespace post { int x; } int sum() { return pre::x + post::x; } }
+namespace Functions {
+  template<class T> T pre(T x) { return x; }
+  template<class T> T post(T x) { return x; }
+  int call() { return pre<int>(1) + post<int>(2); }
+}
+int array[3];
+auto array_reference() -> int(&)[3] { return array; }
+auto array_pointer() -> int(*)[3][4];
+auto array_of_functions() -> int(*(&)[3])(int);
+auto function_pointer() -> int(*)(int);
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (declaration
+        (function_declarator
+          (identifier)
+          (parameter_list)))
+      (declaration
+        (function_declarator
+          (destructor_name
+            (identifier))
+          (parameter_list)))
+      (field_declaration
+        (primitive_type)
+        (field_identifier))
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (field_identifier)
+          (parameter_list)
+          (type_qualifier)))))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (identifier))
+      (parameter_list))
+    (compound_statement))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (destructor_name
+          (identifier)))
+      (parameter_list))
+    (compound_statement))
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier))
+        (optional_parameter_declaration
+          (type_identifier)
+          (number_literal)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (identifier))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (number_literal))))
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (call_expression
+            (template_function
+              (identifier)
+              (template_argument_list
+                (type_descriptor
+                  (type_identifier))))
+            (argument_list
+              (identifier)))))
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (sizeof_expression
+            (parenthesized_expression
+              (identifier)))))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list)))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (type_descriptor
+          (type_identifier))))
+    (identifier))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (struct_specifier
+        (type_identifier)
+        (field_declaration_list))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (qualified_identifier
+            (namespace_identifier)
+            (type_identifier))
+          (identifier))))
+    (compound_statement
+      (declaration
+        (qualified_identifier
+          (namespace_identifier)
+          (type_identifier))
+        (identifier))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (qualified_identifier
+                (namespace_identifier)
+                (abstract_pointer_declarator)))
+            (parameter_list)
+            (type_qualifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (qualified_identifier
+              (namespace_identifier)
+              (abstract_pointer_declarator)))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (qualified_identifier
+              (namespace_identifier)
+              (qualified_identifier
+                (namespace_identifier)
+                (abstract_pointer_declarator))))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (number_literal))
+        (init_declarator
+          (identifier)
+          (number_literal)))
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (lambda_expression
+            (lambda_capture_specifier
+              (identifier)
+              (identifier))
+            (compound_statement
+              (expression_statement
+                (assignment_expression
+                  (identifier)
+                  (identifier)))
+              (return_statement
+                (identifier))))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (pointer_declarator
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (identifier)))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (identifier)))
+      (expression_statement
+        (assignment_expression
+          (subscript_expression
+            (identifier)
+            (subscript_argument_list
+              (identifier)))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (subscript_expression
+            (identifier)
+            (subscript_argument_list
+              (identifier)))
+          (number_literal)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (labeled_statement
+        (statement_identifier)
+        (goto_statement
+          (statement_identifier)))
+      (labeled_statement
+        (statement_identifier)
+        (goto_statement
+          (statement_identifier)))))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (namespace_definition
+        (namespace_identifier)
+        (declaration_list
+          (declaration
+            (primitive_type)
+            (identifier))))
+      (namespace_definition
+        (namespace_identifier)
+        (declaration_list
+          (declaration
+            (primitive_type)
+            (identifier))))
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list))
+        (compound_statement
+          (return_statement
+            (binary_expression
+              (qualified_identifier
+                (namespace_identifier)
+                (identifier))
+              (qualified_identifier
+                (namespace_identifier)
+                (identifier))))))))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (template_declaration
+        (template_parameter_list
+          (type_parameter_declaration
+            (type_identifier)))
+        (function_definition
+          (type_identifier)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)
+                (identifier))))
+          (compound_statement
+            (return_statement
+              (identifier)))))
+      (template_declaration
+        (template_parameter_list
+          (type_parameter_declaration
+            (type_identifier)))
+        (function_definition
+          (type_identifier)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)
+                (identifier))))
+          (compound_statement
+            (return_statement
+              (identifier)))))
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list))
+        (compound_statement
+          (return_statement
+            (binary_expression
+              (call_expression
+                (template_function
+                  (identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (primitive_type))))
+                (argument_list
+                  (number_literal)))
+              (call_expression
+                (template_function
+                  (identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (primitive_type))))
+                (argument_list
+                  (number_literal)))))))))
+  (declaration
+    (primitive_type)
+    (array_declarator
+      (identifier)
+      (number_literal)))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_parenthesized_declarator
+              (abstract_reference_declarator))
+            (number_literal)))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_array_declarator
+              (abstract_parenthesized_declarator
+                (abstract_pointer_declarator))
+              (number_literal))
+            (number_literal))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator
+                (abstract_array_declarator
+                  (abstract_parenthesized_declarator
+                    (abstract_reference_declarator))
+                  (number_literal))))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type)))))))))
+
+================================================================================
+Contracts follow complete trailing pointer, reference and function returns
+================================================================================
+
+struct Box { int value; };
+    auto pointer(int* const p) -> int* pre(p != nullptr) post(result: result == p) { return p; }
+    auto reference(int& r) -> int& pre(true) { return r; }
+    auto member() -> int Box::* pre(true) { return &Box::value; }
+    auto cv_member() -> int Box::* const pre(true) { return &Box::value; }
+    auto closure = [](int& r) -> int& post(result: true) { return r; };
+    auto callback(int x) -> int(*)(int) pre(x > 0) post(result: result != nullptr) { return nullptr; }
+    auto callback_closure = [](int x) -> void(*)() post(result: result != nullptr) { return nullptr; };
+    struct Factory { auto method() -> int(Box::*)() pre(true); virtual auto virtual_method() -> int(*)() final pre(true); };
+    template<class T> auto constrained(T x) -> int(*)(int) requires true pre(true) { return nullptr; }
+    auto qualified() noexcept -> int(*)(int) noexcept pre(true) { return nullptr; };
+    auto attributed() -> int(*)(int) [[nodiscard]] pre(true) { return nullptr; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (pointer_declarator
+            (type_qualifier)
+            (identifier))))
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator)))
+      (contract_specifier
+        (binary_expression
+          (identifier)
+          (null)))
+      (contract_specifier
+        (identifier)
+        (binary_expression
+          (identifier)
+          (identifier))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (reference_declarator
+            (identifier))))
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_reference_declarator)))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (qualified_identifier
+            (namespace_identifier)
+            (abstract_pointer_declarator))))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (pointer_expression
+          (qualified_identifier
+            (namespace_identifier)
+            (identifier))))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (qualified_identifier
+            (namespace_identifier)
+            (abstract_pointer_declarator
+              (type_qualifier)))))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (pointer_expression
+          (qualified_identifier
+            (namespace_identifier)
+            (identifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (lambda_expression
+        (lambda_capture_specifier)
+        (lambda_declarator
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (reference_declarator
+                (identifier))))
+          (trailing_return_type
+            (type_descriptor
+              (primitive_type)
+              (abstract_reference_declarator)))
+          (contract_specifier
+            (identifier)
+            (true)))
+        (compound_statement
+          (return_statement
+            (identifier))))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier)))
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))))
+      (contract_specifier
+        (binary_expression
+          (identifier)
+          (number_literal)))
+      (contract_specifier
+        (identifier)
+        (binary_expression
+          (identifier)
+          (null))))
+    (compound_statement
+      (return_statement
+        (null))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (lambda_expression
+        (lambda_capture_specifier)
+        (lambda_declarator
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier)))
+          (trailing_return_type
+            (type_descriptor
+              (primitive_type)
+              (abstract_function_declarator
+                (abstract_parenthesized_declarator
+                  (abstract_pointer_declarator))
+                (parameter_list))))
+          (contract_specifier
+            (identifier)
+            (binary_expression
+              (identifier)
+              (null))))
+        (compound_statement
+          (return_statement
+            (null))))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (placeholder_type_specifier
+          (auto))
+        (function_declarator
+          (field_identifier)
+          (parameter_list)
+          (trailing_return_type
+            (type_descriptor
+              (primitive_type)
+              (abstract_function_declarator
+                (abstract_parenthesized_declarator
+                  (qualified_identifier
+                    (namespace_identifier)
+                    (abstract_pointer_declarator)))
+                (parameter_list))))
+          (contract_specifier
+            (true))))
+      (field_declaration
+        (placeholder_type_specifier
+          (auto))
+        (function_declarator
+          (field_identifier)
+          (parameter_list)
+          (trailing_return_type
+            (type_descriptor
+              (primitive_type)
+              (abstract_function_declarator
+                (abstract_parenthesized_declarator
+                  (abstract_pointer_declarator))
+                (parameter_list))))
+          (virtual_specifier)
+          (contract_specifier
+            (true))))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (placeholder_type_specifier
+        (auto))
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (type_identifier)
+            (identifier)))
+        (trailing_return_type
+          (type_descriptor
+            (primitive_type)
+            (abstract_function_declarator
+              (abstract_parenthesized_declarator
+                (abstract_pointer_declarator))
+              (parameter_list
+                (parameter_declaration
+                  (primitive_type))))))
+        (requires_clause
+          (true))
+        (contract_specifier
+          (true)))
+      (compound_statement
+        (return_statement
+          (null)))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (noexcept)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type)))
+            (noexcept))))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (null))))
+  (expression_statement)
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type)))
+            (attribute_declaration
+              (attribute
+                (identifier))))))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (null)))))
+
+================================================================================
+Trailing array and pointer syntax preserves return nesting
+================================================================================
+
+auto array() -> int[3];
+auto matrix() -> int[3][4];
+auto array_definition() -> int[3] { return {}; }
+auto matrix_definition() -> int[3][4] { return {}; }
+auto pointer_array() -> int*[3];
+auto nested_pointer_array() -> int**[3];
+auto callbacks() -> int(*[3])(int);
+auto callback_matrix() -> int(*[3][4])(int);
+auto pointer_array_definition() -> int*[3] { return {}; }
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (number_literal))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_array_declarator
+              (number_literal))
+            (number_literal))))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (number_literal)))))
+    (compound_statement
+      (return_statement
+        (initializer_list))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_array_declarator
+              (number_literal))
+            (number_literal)))))
+    (compound_statement
+      (return_statement
+        (initializer_list))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (abstract_array_declarator
+              (number_literal)))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (abstract_pointer_declarator
+              (abstract_array_declarator
+                (number_literal))))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator
+                (abstract_array_declarator
+                  (number_literal))))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator
+                (abstract_array_declarator
+                  (abstract_array_declarator
+                    (number_literal))
+                  (number_literal))))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (abstract_array_declarator
+              (number_literal))))))
+    (compound_statement
+      (return_statement
+        (initializer_list)))))

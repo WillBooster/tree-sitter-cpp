@@ -583,6 +583,10 @@
           "named": true
         },
         {
+          "type": "contract_specifier",
+          "named": true
+        },
+        {
           "type": "gnu_asm_expression",
           "named": true
         },
@@ -2193,6 +2197,42 @@
     "fields": {}
   },
   {
+    "type": "contract_specifier",
+    "named": true,
+    "fields": {
+      "condition": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "result": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "attribute_declaration",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "declaration",
     "named": true,
     "fields": {
@@ -3661,6 +3701,10 @@
           "named": true
         },
         {
+          "type": "contract_specifier",
+          "named": true
+        },
+        {
           "type": "gnu_asm_expression",
           "named": true
         },
@@ -4384,6 +4428,10 @@
       "types": [
         {
           "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "contract_specifier",
           "named": true
         },
         {
@@ -8844,6 +8892,14 @@
   },
   {
     "type": "override",
+    "named": false
+  },
+  {
+    "type": "post",
+    "named": false
+  },
+  {
+    "type": "pre",
     "named": false
   },
   {
