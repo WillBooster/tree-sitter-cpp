@@ -1348,14 +1348,18 @@ struct Box { int value; };
         (null)))))
 
 ================================================================================
-Bare trailing array syntax preserves return descriptors
+Trailing array and pointer syntax preserves return nesting
 ================================================================================
 
 auto array() -> int[3];
 auto matrix() -> int[3][4];
 auto array_definition() -> int[3] { return {}; }
 auto matrix_definition() -> int[3][4] { return {}; }
-
+auto pointer_array() -> int*[3];
+auto nested_pointer_array() -> int**[3];
+auto callbacks() -> int(*[3])(int);
+auto callback_matrix() -> int(*[3][4])(int);
+auto pointer_array_definition() -> int*[3] { return {}; }
 --------------------------------------------------------------------------------
 
 (translation_unit
@@ -1410,6 +1414,82 @@ auto matrix_definition() -> int[3][4] { return {}; }
             (abstract_array_declarator
               (number_literal))
             (number_literal)))))
+    (compound_statement
+      (return_statement
+        (initializer_list))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (abstract_array_declarator
+              (number_literal)))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (abstract_pointer_declarator
+              (abstract_array_declarator
+                (number_literal))))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator
+                (abstract_array_declarator
+                  (number_literal))))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator
+                (abstract_array_declarator
+                  (abstract_array_declarator
+                    (number_literal))
+                  (number_literal))))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (abstract_array_declarator
+              (number_literal))))))
     (compound_statement
       (return_statement
         (initializer_list)))))

@@ -1278,17 +1278,13 @@ module.exports = grammar(C, {
         alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator),
         alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)
       ),
-    _trailing_abstract_pointer_declarator: ($) =>
-      prec.dynamic(
-        1,
-        seq(
-          '*',
-          repeat($.attribute_declaration),
-          repeat($.ms_pointer_modifier),
-          repeat($.type_qualifier),
-          field('declarator', choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank())))
-        )
-      ),
+    _trailing_abstract_pointer_declarator: ($) => {
+      const prefix = seq('*', repeat($.attribute_declaration), repeat($.ms_pointer_modifier), repeat($.type_qualifier));
+      return choice(
+        prec.dynamic(2, seq(prefix, field('declarator', prec.right(1, $._trailing_abstract_declarator)))),
+        prec.dynamic(1, seq(prefix, prec(1, blank())))
+      );
+    },
     _trailing_abstract_function_declarator: ($) =>
       prec(1, seq(field('declarator', optional($._trailing_abstract_declarator)), $._function_declarator_core)),
     _trailing_abstract_array_declarator: ($) =>

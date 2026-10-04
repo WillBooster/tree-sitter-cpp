@@ -255,7 +255,7 @@ test('keeps contract fields outside pointer, reference and function trailing ret
   }
 });
 
-test('keeps bare trailing arrays in public return descriptors and function tags', async () => {
+test('keeps trailing array and pointer nesting in public return descriptors and function tags', async () => {
   await Parser.init();
   const language = await loadCurrentWasmBuild();
   const parser = new Parser();
@@ -266,15 +266,39 @@ test('keeps bare trailing arrays in public return descriptors and function tags'
     parser.setLanguage(language);
     returns = new Query(
       language,
-      '(trailing_return_type (type_descriptor declarator: (abstract_array_declarator) @return))'
+      `(trailing_return_type (type_descriptor declarator: (_) @return))
+      (abstract_pointer_declarator declarator: (abstract_array_declarator) @pointee)`
     );
     tags = new Query(language, readFileSync(new URL('../../queries/tags.scm', import.meta.url), 'utf8'));
     tree = parser.parse(`auto array() -> int[3];
       auto matrix() -> int[3][4];
       auto array_definition() -> int[3] { return {}; }
-      auto matrix_definition() -> int[3][4] { return {}; }`)!;
+      auto matrix_definition() -> int[3][4] { return {}; }
+      auto pointer_array() -> int*[3];
+      auto nested_pointer_array() -> int**[3];
+      auto callbacks() -> int(*[3])(int);
+      auto callback_matrix() -> int(*[3][4])(int);
+      auto pointer_array_definition() -> int*[3] { return {}; }`)!;
     expect(tree.rootNode.hasError).toBe(false);
-    expect(returns.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['[3]', '[3][4]', '[3]', '[3][4]']);
+    const captures = returns.captures(tree.rootNode);
+    expect(captures.filter(({ name }) => name === 'return').map(({ node }) => [node.type, node.text])).toEqual([
+      ['abstract_array_declarator', '[3]'],
+      ['abstract_array_declarator', '[3][4]'],
+      ['abstract_array_declarator', '[3]'],
+      ['abstract_array_declarator', '[3][4]'],
+      ['abstract_pointer_declarator', '*[3]'],
+      ['abstract_pointer_declarator', '**[3]'],
+      ['abstract_function_declarator', '(*[3])(int)'],
+      ['abstract_function_declarator', '(*[3][4])(int)'],
+      ['abstract_pointer_declarator', '*[3]'],
+    ]);
+    expect(captures.filter(({ name }) => name === 'pointee').map(({ node }) => node.text)).toEqual([
+      '[3]',
+      '[3]',
+      '[3]',
+      '[3][4]',
+      '[3]',
+    ]);
     expect(
       tags
         .captures(tree.rootNode)
@@ -285,6 +309,11 @@ test('keeps bare trailing arrays in public return descriptors and function tags'
       'matrix() -> int[3][4]',
       'array_definition() -> int[3]',
       'matrix_definition() -> int[3][4]',
+      'pointer_array() -> int*[3]',
+      'nested_pointer_array() -> int**[3]',
+      'callbacks() -> int(*[3])(int)',
+      'callback_matrix() -> int(*[3][4])(int)',
+      'pointer_array_definition() -> int*[3]',
     ]);
   } finally {
     tree?.delete();
