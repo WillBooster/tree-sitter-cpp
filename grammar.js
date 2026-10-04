@@ -143,8 +143,6 @@ module.exports = grammar(C, {
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
     [$._trailing_return_type_descriptor],
-    [$.abstract_array_declarator, $._trailing_return_type_descriptor],
-    [$.abstract_function_declarator, $._trailing_return_type_descriptor],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
@@ -841,7 +839,7 @@ module.exports = grammar(C, {
     _keyword_operand: ($) =>
       choice(
         $.identifier,
-        prec.dynamic(-2, alias(choice('pre', 'post'), $.identifier)),
+        alias(choice('pre', 'post'), $.identifier),
         $.qualified_identifier,
         $.template_function,
         $.number_literal,
@@ -1257,13 +1255,7 @@ module.exports = grammar(C, {
 
     trailing_return_type: ($) => seq('->', alias($._trailing_return_type_descriptor, $.type_descriptor)),
     _trailing_return_type_descriptor: ($) =>
-      prec(
-        1,
-        withDeclarator(
-          C.grammar.rules.type_descriptor,
-          optional(choice(prec.dynamic(2, $.abstract_function_declarator), $._abstract_declarator))
-        )
-      ),
+      prec(1, withDeclarator(C.grammar.rules.type_descriptor, optional(prec.right(1, $._abstract_declarator)))),
 
     noexcept: ($) => prec.right(seq('noexcept', optional(seq('(', optional($.expression), ')')))),
 
@@ -1463,7 +1455,8 @@ module.exports = grammar(C, {
     _expression_not_binary: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short', 'pre', 'post'), $.identifier)),
+        prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
+        alias(choice('pre', 'post'), $.identifier),
         $.co_await_expression,
         $.requires_expression,
         $.requires_clause,
@@ -1924,7 +1917,7 @@ module.exports = grammar(C, {
     _assignment_left_expression: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        prec.dynamic(-2, alias(choice('pre', 'post'), $.identifier)),
+        alias(choice('pre', 'post'), $.identifier),
         $.pack_index_expression,
         $.qualified_identifier,
         $.user_defined_literal,
@@ -2167,9 +2160,9 @@ module.exports = grammar(C, {
     user_defined_literal: ($) => seq(choice($.number_literal, $.char_literal, $._string), $.literal_suffix),
 
     _type_identifier: ($, /** @type {Rule} */ original) =>
-      choice(original, prec.dynamic(-2, alias(choice('pre', 'post'), $.type_identifier))),
+      choice(original, alias(choice('pre', 'post'), $.type_identifier)),
 
-    _contextual_identifier: ($) => choice($.identifier, prec.dynamic(-2, alias(choice('pre', 'post'), $.identifier))),
+    _contextual_identifier: ($) => choice($.identifier, alias(choice('pre', 'post'), $.identifier)),
 
     _field_identifier: ($, /** @type {Rule} */ original) =>
       choice(original, alias(choice('pre', 'post'), $.field_identifier)),
@@ -2178,10 +2171,7 @@ module.exports = grammar(C, {
       choice(original, alias(choice('pre', 'post'), $.statement_identifier)),
 
     _namespace_identifier: ($) =>
-      choice(
-        alias($.identifier, $.namespace_identifier),
-        prec.dynamic(-2, alias(choice('pre', 'post'), $.namespace_identifier))
-      ),
+      choice(alias($.identifier, $.namespace_identifier), alias(choice('pre', 'post'), $.namespace_identifier)),
   },
 });
 

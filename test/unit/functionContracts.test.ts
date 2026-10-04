@@ -21,6 +21,7 @@ test('exposes contract predicates as canonical expressions and postcondition res
     pre [[maybe_unused]] (x > 0)
     post [[maybe_unused]] (result [[maybe_unused]]: result > 0)
     post(true) { return x; }
+int contextual() post(pre: pre > 0) post(post: post > 0) { return 1; }
 int following() { int pre = 1, post = 2; return pre + post; }
 void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }`;
   const tree = parser.parse(source)!;
@@ -31,19 +32,28 @@ void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }`;
       'x > 0',
       'result > 0',
       'true',
+      'pre > 0',
+      'post > 0',
     ]);
-    expect(captures.filter(({ name }) => name === 'result').map(({ node }) => node.text)).toEqual(['result']);
+    expect(captures.filter(({ name }) => name === 'result').map(({ node }) => node.text)).toEqual([
+      'result',
+      'pre',
+      'post',
+    ]);
     expect(captures.filter(({ name }) => name === 'binary').map(({ node }) => node.text)).toEqual([
       'x > 0',
       'result > 0',
+      'pre > 0',
+      'post > 0',
       'pre + post',
     ]);
     const contractKeywords = highlights
       .captures(tree.rootNode)
       .filter(({ name, node }) => name === 'keyword' && ['pre', 'post'].includes(node.text));
-    expect(contractKeywords.map(({ node }) => node.text)).toEqual(['pre', 'post', 'post']);
+    expect(contractKeywords.map(({ node }) => node.text)).toEqual(['pre', 'post', 'post', 'post', 'post']);
     expect(contractKeywords.every(({ node }) => !node.isNamed)).toBe(true);
     expect(tree.rootNode.namedChildren.map((node) => node.type)).toEqual([
+      'function_definition',
       'function_definition',
       'function_definition',
       'function_definition',
@@ -98,7 +108,9 @@ test('preserves contextual type names and pointer-to-member trailing return quer
   const query = new Query(
     language,
     `(parameter_declaration type: (type_identifier) @parameter)
-    (trailing_return_type (type_descriptor declarator: (abstract_function_declarator) @return))`
+    (trailing_return_type (type_descriptor declarator: (abstract_function_declarator) @return))
+    (trailing_return_type (type_descriptor declarator: (abstract_array_declarator) @array))
+    (assignment_expression left: (subscript_expression indices: (subscript_argument_list (identifier) @index))) @assignment`
   );
   const highlights = new Query(
     language,
@@ -107,13 +119,32 @@ test('preserves contextual type names and pointer-to-member trailing return quer
   const tree = parser.parse(`struct pre { int f() const; }; using post = int;
     void accepts(pre, post);
     void use() { pre value; post count(1); }
-    auto member() -> int(pre::*)() const;`)!;
+    auto member() -> int(pre::*)() const;
+    auto reference() -> int(&)[3]; auto pointer() -> int(*)[3][4];
+    void indices(int* a, int pre, int post) { a[pre] = 1; a[post] += 2; }`)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    expect(query.captures(tree.rootNode).map(({ name, node }) => [name, node.type, node.text])).toEqual([
+    const captures = query.captures(tree.rootNode);
+    expect(
+      captures
+        .filter(({ name }) => ['parameter', 'return'].includes(name))
+        .map(({ name, node }) => [name, node.type, node.text])
+    ).toEqual([
       ['parameter', 'type_identifier', 'pre'],
       ['parameter', 'type_identifier', 'post'],
       ['return', 'abstract_function_declarator', '(pre::*)() const'],
+    ]);
+    expect(captures.filter(({ name }) => name === 'array').map(({ node }) => [node.type, node.text])).toEqual([
+      ['abstract_array_declarator', '(&)[3]'],
+      ['abstract_array_declarator', '(*)[3][4]'],
+    ]);
+    expect(captures.filter(({ name }) => name === 'assignment').map(({ node }) => node.text)).toEqual([
+      'a[pre] = 1',
+      'a[post] += 2',
+    ]);
+    expect(captures.filter(({ name }) => name === 'index').map(({ node }) => [node.type, node.text])).toEqual([
+      ['identifier', 'pre'],
+      ['identifier', 'post'],
     ]);
     expect(tree.rootNode.descendantsOfType('init_declarator').map((node) => node.text)).toEqual(['count(1)']);
     expect(
