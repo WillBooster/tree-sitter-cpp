@@ -40,3 +40,24 @@ const char *raw = R"tag(_Pragma("not a directive"))tag";
     parser.delete();
   }
 });
+
+test('preserves va_arg identifiers in C++ namespace and contextual positions', () => {
+  const source = `namespace va_arg { int x; }
+namespace alias = va_arg;
+auto value = va_arg::x;
+struct S { int va_arg; };
+namespace E { enum E { va_arg = 1 }; }
+bool check() { int va_arg = 0; return not va_arg; }
+template<class va_arg> struct Box { va_arg value; };
+`;
+  const parser = new Parser().setLanguage(language);
+  const tree = parser.parse(source)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(tree.rootNode.descendantsOfType('qualified_identifier').map((n) => n.text)).toContain('va_arg::x');
+    expect(tree.rootNode.descendantsOfType('namespace_identifier').map((n) => n.text)).toContain('va_arg');
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});

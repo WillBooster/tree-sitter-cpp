@@ -864,8 +864,7 @@ module.exports = grammar(C, {
     // does not decide between the variable and expression readings.
     _keyword_operand: ($) =>
       choice(
-        $.identifier,
-        alias(choice('pre', 'post'), $.identifier),
+        $._contextual_identifier,
         $.qualified_identifier,
         $.template_function,
         $.number_literal,
@@ -895,7 +894,7 @@ module.exports = grammar(C, {
 
     enumerator: ($) =>
       seq(
-        field('name', $.identifier),
+        field('name', choice($.identifier, alias(choice('va_arg', '__builtin_va_arg'), $.identifier))),
         repeat($.attribute_specifier),
         repeat($.attribute_declaration),
         optional(seq('=', field('value', $.expression)))
@@ -2251,7 +2250,8 @@ module.exports = grammar(C, {
     _type_identifier: ($, /** @type {Rule} */ original) =>
       choice(original, alias(choice('pre', 'post'), $.type_identifier)),
 
-    _contextual_identifier: ($) => choice($.identifier, alias(choice('pre', 'post'), $.identifier)),
+    _contextual_identifier: ($) =>
+      choice($.identifier, alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg'), $.identifier)),
 
     _field_identifier: ($, /** @type {Rule} */ original) =>
       choice(original, alias(choice('pre', 'post'), $.field_identifier)),
@@ -2260,7 +2260,10 @@ module.exports = grammar(C, {
       choice(original, alias(choice('pre', 'post'), $.statement_identifier)),
 
     _namespace_identifier: ($) =>
-      choice(alias($.identifier, $.namespace_identifier), alias(choice('pre', 'post'), $.namespace_identifier)),
+      choice(
+        alias($.identifier, $.namespace_identifier),
+        alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg'), $.namespace_identifier)
+      ),
   },
 });
 

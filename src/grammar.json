@@ -7175,8 +7175,31 @@
           "type": "FIELD",
           "name": "name",
           "content": {
-            "type": "SYMBOL",
-            "name": "identifier"
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": "va_arg"
+                    },
+                    {
+                      "type": "STRING",
+                      "value": "__builtin_va_arg"
+                    }
+                  ]
+                },
+                "named": true,
+                "value": "identifier"
+              }
+            ]
           }
         },
         {
@@ -17101,25 +17124,7 @@
       "members": [
         {
           "type": "SYMBOL",
-          "name": "identifier"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "pre"
-              },
-              {
-                "type": "STRING",
-                "value": "post"
-              }
-            ]
-          },
-          "named": true,
-          "value": "identifier"
+          "name": "_contextual_identifier"
         },
         {
           "type": "SYMBOL",
@@ -24936,6 +24941,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "va_arg"
+              },
+              {
+                "type": "STRING",
+                "value": "__builtin_va_arg"
               }
             ]
           },
@@ -24968,6 +24981,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "va_arg"
+              },
+              {
+                "type": "STRING",
+                "value": "__builtin_va_arg"
               }
             ]
           },
