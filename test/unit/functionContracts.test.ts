@@ -159,3 +159,46 @@ test('preserves contextual type names and pointer-to-member trailing return quer
     parser.delete();
   }
 });
+
+test('keeps contract fields outside pointer and reference trailing returns', async () => {
+  await Parser.init();
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  parser.setLanguage(language);
+  const query = new Query(
+    language,
+    `(trailing_return_type (type_descriptor declarator: (_) @return))
+    (contract_specifier condition: (expression) @condition)
+    (contract_specifier result: (identifier) @result)`
+  );
+  const tree = parser.parse(`struct Box { int value; };
+    auto pointer(int* const p) -> int* pre(p != nullptr) post(result: result == p) { return p; }
+    auto reference(int& r) -> int& pre(true) { return r; }
+    auto member() -> int Box::* pre(true) { return &Box::value; }
+    auto cv_member() -> int Box::* const pre(true) { return &Box::value; }
+    auto closure = [](int& r) -> int& post(result: true) { return r; };`)!;
+  try {
+    expect(tree.rootNode.hasError).toBe(false);
+    const captures = query.captures(tree.rootNode);
+    expect(captures.filter(({ name }) => name === 'return').map(({ node }) => [node.type, node.text])).toEqual([
+      ['abstract_pointer_declarator', '*'],
+      ['abstract_reference_declarator', '&'],
+      ['qualified_identifier', 'Box::*'],
+      ['qualified_identifier', 'Box::* const'],
+      ['abstract_reference_declarator', '&'],
+    ]);
+    expect(captures.filter(({ name }) => name === 'condition').map(({ node }) => node.text)).toEqual([
+      'p != nullptr',
+      'result == p',
+      'true',
+      'true',
+      'true',
+      'true',
+    ]);
+    expect(captures.filter(({ name }) => name === 'result').map(({ node }) => node.text)).toEqual(['result', 'result']);
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});

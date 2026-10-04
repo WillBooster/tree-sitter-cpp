@@ -143,6 +143,8 @@ module.exports = grammar(C, {
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
     [$._trailing_return_type_descriptor],
+    [$._trailing_abstract_pointer_declarator],
+    [$._trailing_abstract_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
@@ -1258,7 +1260,48 @@ module.exports = grammar(C, {
 
     trailing_return_type: ($) => seq('->', alias($._trailing_return_type_descriptor, $.type_descriptor)),
     _trailing_return_type_descriptor: ($) =>
-      prec(1, withDeclarator(C.grammar.rules.type_descriptor, optional(prec.right(1, $._abstract_declarator)))),
+      prec(
+        1,
+        withDeclarator(C.grammar.rules.type_descriptor, optional(prec.right(1, $._trailing_abstract_declarator)))
+      ),
+
+    _trailing_abstract_declarator: ($) =>
+      choice(
+        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
+        alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
+        alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
+        alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
+        alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator),
+        alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)
+      ),
+    _trailing_abstract_pointer_declarator: ($) =>
+      prec.dynamic(
+        1,
+        seq(
+          '*',
+          repeat($.attribute_declaration),
+          repeat($.ms_pointer_modifier),
+          repeat($.type_qualifier),
+          field('declarator', choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank())))
+        )
+      ),
+    _trailing_abstract_function_declarator: ($) =>
+      prec(1, seq(field('declarator', optional($._trailing_abstract_declarator)), $._function_declarator_seq)),
+    _trailing_abstract_array_declarator: ($) =>
+      withDeclarator(
+        C.grammar.rules.abstract_array_declarator,
+        optional(prec.right(1, $._trailing_abstract_declarator))
+      ),
+    _trailing_abstract_parenthesized_declarator: ($) =>
+      prec(1, seq('(', optional($.ms_call_modifier), $._trailing_abstract_declarator, ')')),
+    _trailing_abstract_reference_declarator: ($) =>
+      seq(choice('&', '&&'), choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank()))),
+    _trailing_abstract_qualified_pointer_declarator: ($) =>
+      pointerToMember(
+        $,
+        $._trailing_abstract_qualified_pointer_declarator,
+        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator)
+      ),
 
     noexcept: ($) => prec.right(seq('noexcept', optional(seq('(', optional($.expression), ')')))),
 

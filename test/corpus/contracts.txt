@@ -617,6 +617,8 @@ Box<post> value;
 namespace N { struct post {}; }
 void qualified(N::post value) { N::post local; }
 auto member() -> int(pre::*)() const;
+auto nested_contextual_scope() -> int* pre::*;
+auto nested_qualified_scope() -> int* N::post::*;
 void capture() { int pre = 1, post = 2; auto f = [pre, &post] { post = pre; return post; }; }
 void assignments(int* a, int pre, int post) { pre = post; post += pre; a[pre] = 1; a[post] += 2; }
 void labels() { pre: goto pre; post: goto post; }
@@ -773,6 +775,34 @@ auto function_pointer() -> int(*)(int);
                 (abstract_pointer_declarator)))
             (parameter_list)
             (type_qualifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (qualified_identifier
+              (namespace_identifier)
+              (abstract_pointer_declarator)))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator
+            (qualified_identifier
+              (namespace_identifier)
+              (qualified_identifier
+                (namespace_identifier)
+                (abstract_pointer_declarator))))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -1011,3 +1041,134 @@ auto function_pointer() -> int(*)(int);
             (parameter_list
               (parameter_declaration
                 (primitive_type)))))))))
+
+================================================================================
+Contracts follow complete trailing pointer and reference returns
+================================================================================
+
+struct Box { int value; };
+auto pointer(int* const p) -> int* pre(p != nullptr) post(result: result == p) { return p; }
+auto reference(int& r) -> int& pre(true) { return r; }
+auto member() -> int Box::* pre(true) { return &Box::value; }
+auto cv_member() -> int Box::* const pre(true) { return &Box::value; }
+auto closure = [](int& r) -> int& post(result: true) { return r; };
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (pointer_declarator
+            (type_qualifier)
+            (identifier))))
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_pointer_declarator)))
+      (contract_specifier
+        (binary_expression
+          (identifier)
+          (null)))
+      (contract_specifier
+        (identifier)
+        (binary_expression
+          (identifier)
+          (identifier))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (reference_declarator
+            (identifier))))
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_reference_declarator)))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (qualified_identifier
+            (namespace_identifier)
+            (abstract_pointer_declarator))))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (pointer_expression
+          (qualified_identifier
+            (namespace_identifier)
+            (identifier))))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (qualified_identifier
+            (namespace_identifier)
+            (abstract_pointer_declarator
+              (type_qualifier)))))
+      (contract_specifier
+        (true)))
+    (compound_statement
+      (return_statement
+        (pointer_expression
+          (qualified_identifier
+            (namespace_identifier)
+            (identifier))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (lambda_expression
+        (lambda_capture_specifier)
+        (lambda_declarator
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (reference_declarator
+                (identifier))))
+          (trailing_return_type
+            (type_descriptor
+              (primitive_type)
+              (abstract_reference_declarator)))
+          (contract_specifier
+            (identifier)
+            (true)))
+        (compound_statement
+          (return_statement
+            (identifier)))))))
