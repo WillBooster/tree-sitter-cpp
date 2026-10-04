@@ -5311,6 +5311,10 @@
           {
             "type": "_type_declarator",
             "named": true
+          },
+          {
+            "type": "variadic_declarator",
+            "named": true
           }
         ]
       }
@@ -8025,6 +8029,10 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "pointer_declarator",
+            "named": true
+          },
           {
             "type": "reference_declarator",
             "named": true
