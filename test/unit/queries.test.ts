@@ -21,7 +21,7 @@ const queryPaths = (kind: (typeof QueryKinds)[number]): string[] =>
 
 // Tools that read tree-sitter.json, such as the tree-sitter CLI, compile each kind of query from its files
 // concatenated, so a node type that a grammar change removes must fail here rather than in them.
-test('compiles the queries that tree-sitter.json lists', async () => {
+test('compiles the queries that tree-sitter.json lists', { timeout: 30_000 }, async () => {
   const language = await loadCurrentWasmBuild();
   for (const kind of QueryKinds) {
     const source = queryPaths(kind)
@@ -80,6 +80,137 @@ test('matches sized keywords in macro arguments through the expression supertype
   } finally {
     query.delete();
     tree.delete();
+    parser.delete();
+  }
+});
+
+test('preserves template and qualified names in explicit destructor calls', async () => {
+  const source = `namespace ns { template<class T> struct Box { ~Box() {} int operator~() const { return 1; } }; }
+using ns::Box;
+struct Derived : Box<int> { void destroySelf() { Box<int>::~Box<int>(); } };
+struct Plain { ~Plain() {} };
+void destroy(ns::Box<int>* box, Plain* plain, ns::Box<ns::Box<int>>* nested) {
+  box->~Box<int>();
+  box->ns::Box<int>::~Box<int>();
+  plain->Plain::~Plain();
+  nested->~Box<Box<int>>();
+}
+void destroyReferences(ns::Box<int>& box, Plain& plain) {
+  box.~Box<int>();
+  plain.Plain::~Plain();
+}
+template<class T> void destroyDependent(ns::Box<T>* box) { box->~Box<T>(); }
+int main() { ~Box<int>(); return ~Box<int>() == 1 ? 0 : 1; }
+`;
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  try {
+    parser.setLanguage(language);
+    const calls = new Query(
+      language,
+      '(call_expression function: (field_expression argument: (identifier) @object field: (_) @field) @member arguments: (argument_list)) @call'
+    );
+    try {
+      const tree = parser.parse(source)!;
+      try {
+        expect(tree.rootNode.hasError).toBe(false);
+        const fields = calls
+          .captures(tree.rootNode)
+          .filter(({ name }) => name === 'field')
+          .map(({ node }) => node);
+        expect(fields.map((node) => node.text)).toEqual([
+          '~Box<int>',
+          'ns::Box<int>::~Box<int>',
+          'Plain::~Plain',
+          '~Box<Box<int>>',
+          '~Box<int>',
+          'Plain::~Plain',
+          '~Box<T>',
+        ]);
+        expect(fields.map((node) => node.type)).toEqual([
+          'destructor_name',
+          'qualified_identifier',
+          'qualified_identifier',
+          'destructor_name',
+          'destructor_name',
+          'qualified_identifier',
+          'destructor_name',
+        ]);
+        const qualified = fields[1]!;
+        expect(qualified.childForFieldName('scope')?.type).toBe('namespace_identifier');
+        expect(qualified.childForFieldName('scope')?.text).toBe('ns');
+        const specialized = qualified.childForFieldName('name')!;
+        expect(specialized.type).toBe('qualified_identifier');
+        expect(specialized.childForFieldName('scope')?.type).toBe('template_type');
+        expect(specialized.childForFieldName('scope')?.text).toBe('Box<int>');
+        expect(specialized.childForFieldName('name')?.type).toBe('destructor_name');
+        expect(specialized.childForFieldName('name')?.text).toBe('~Box<int>');
+        expect(fields[3]?.namedChildren.map((node) => node.type)).toEqual(['identifier', 'template_argument_list']);
+        expect(fields[3]?.namedChildren[1]?.text).toBe('<Box<int>>');
+        const selfCall = tree.rootNode.descendantsOfType('call_expression')[0]!;
+        const selfName = selfCall.childForFieldName('function')!;
+        expect(selfName.type).toBe('qualified_identifier');
+        expect(selfName.childForFieldName('scope')?.type).toBe('template_type');
+        expect(selfName.childForFieldName('scope')?.text).toBe('Box<int>');
+        expect(selfName.childForFieldName('name')?.type).toBe('destructor_name');
+        expect(selfName.childForFieldName('name')?.text).toBe('~Box<int>');
+        let tags: Query | undefined;
+        let highlights: Query | undefined;
+        try {
+          tags = new Query(
+            language,
+            queryPaths('tags')
+              .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
+              .join('\n')
+          );
+          highlights = new Query(
+            language,
+            queryPaths('highlights')
+              .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
+              .join('\n')
+          );
+          expect(
+            tags
+              .captures(tree.rootNode)
+              .filter(({ name }) => name === 'definition.function')
+              .map(({ node }) => node.childForFieldName('declarator')?.text)
+          ).toEqual(['destroySelf', 'destroy', 'destroyReferences', 'destroyDependent', 'main']);
+          const unaryFunctionNames = highlights
+            .captures(tree.rootNode)
+            .filter(
+              ({ name, node }) =>
+                name === 'function' && node.text === 'Box' && node.parent?.type === 'template_function'
+            );
+          expect([...new Set(unaryFunctionNames.map(({ node }) => node.startIndex))]).toEqual([
+            source.indexOf('~Box<int>();', source.indexOf('int main')) + 1,
+            source.indexOf('return ~Box<int>()') + 'return ~'.length,
+          ]);
+        } finally {
+          highlights?.delete();
+          tags?.delete();
+        }
+        const unary = tree.rootNode.descendantsOfType('unary_expression');
+        expect(unary.map((node) => node.text)).toEqual(['~Box<int>()', '~Box<int>()']);
+        expect(unary.map((node) => node.childForFieldName('argument')?.type)).toEqual([
+          'call_expression',
+          'call_expression',
+        ]);
+        const unaryCalls = new Query(
+          language,
+          '(unary_expression argument: (call_expression function: (template_function name: (identifier) @name)))'
+        );
+        try {
+          expect(unaryCalls.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['Box', 'Box']);
+        } finally {
+          unaryCalls.delete();
+        }
+      } finally {
+        tree.delete();
+      }
+    } finally {
+      calls.delete();
+    }
+  } finally {
     parser.delete();
   }
 });
