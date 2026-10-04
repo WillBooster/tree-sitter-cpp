@@ -2666,6 +2666,10 @@
         {
           "type": "attribute_declaration",
           "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
         }
       ]
     }

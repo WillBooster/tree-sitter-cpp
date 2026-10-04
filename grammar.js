@@ -865,6 +865,7 @@ module.exports = grammar(C, {
     enumerator: ($) =>
       seq(
         field('name', $.identifier),
+        repeat($.attribute_specifier),
         repeat($.attribute_declaration),
         optional(seq('=', field('value', $.expression)))
       ),
