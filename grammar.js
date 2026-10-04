@@ -142,6 +142,9 @@ module.exports = grammar(C, {
     [$.expression, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
+    [$._trailing_return_type_descriptor],
+    [$.abstract_array_declarator, $._trailing_return_type_descriptor],
+    [$.abstract_function_declarator, $._trailing_return_type_descriptor],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
@@ -173,7 +176,7 @@ module.exports = grammar(C, {
     [$._declarator, $._function_definition_declarator],
   ],
 
-  inline: ($, original) => [...original, $._namespace_identifier],
+  inline: ($, original) => [...original, $._namespace_identifier, $._contextual_identifier],
 
   precedences: ($) => [
     [$.argument_list, $.type_qualifier],
@@ -270,7 +273,7 @@ module.exports = grammar(C, {
     type_descriptor: (_, /** @type {Rule} */ original) => prec.right(original),
 
     attribute: ($, /** @type {SeqRule} */ original) =>
-      seq(optional(seq('using', field('namespace', $.identifier), ':')), ...original.members),
+      seq(optional(seq('using', field('namespace', $._contextual_identifier), ':')), ...original.members),
 
     annotation: ($) => seq('=', $.expression),
 
@@ -406,7 +409,11 @@ module.exports = grammar(C, {
       ),
 
     built_in_parenthesized_declarator: ($) =>
-      seq('(', choice($.identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)), ')'),
+      seq(
+        '(',
+        choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+        ')'
+      ),
     built_in_parenthesized_array_declarator: ($) =>
       withDeclarator(
         C.grammar.rules.array_declarator,
@@ -502,7 +509,7 @@ module.exports = grammar(C, {
 
     dependent_type: ($) => prec.dynamic(-1, prec.right(seq('typename', $.type_specifier))),
 
-    module_name: ($) => seq($.identifier, repeat(seq('.', $.identifier))),
+    module_name: ($) => seq($._contextual_identifier, repeat(seq('.', $._contextual_identifier))),
 
     module_partition: ($) => seq(':', $.module_name),
 
@@ -675,7 +682,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    variadic_declarator: ($) => seq('...', optional($.identifier)),
+    variadic_declarator: ($) => seq('...', optional($._contextual_identifier)),
 
     variadic_reference_declarator: ($) => seq(choice('&&', '&'), $.variadic_declarator),
 
@@ -747,7 +754,7 @@ module.exports = grammar(C, {
       ),
     argument_initialized_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(seq('&', $._argument_initialized_name))),
-    _argument_initialized_name: ($) => choice($.identifier, $.qualified_identifier),
+    _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
     parenthesized_argument_initialized_pointer_declarator: ($) =>
       withDeclarator(
         C.grammar.rules.pointer_declarator,
@@ -998,6 +1005,7 @@ module.exports = grammar(C, {
     _declarator: ($, /** @type {Rule} */ original) =>
       choice(
         original,
+        alias(choice('pre', 'post'), $.identifier),
         $.reference_declarator,
         alias($.qualified_pointer_declarator, $.qualified_identifier),
         $.qualified_identifier,
@@ -1040,12 +1048,13 @@ module.exports = grammar(C, {
       pointerToMember($, $.abstract_qualified_pointer_declarator, $.abstract_pointer_declarator),
     reference_field_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
     reference_type_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
+
     abstract_reference_declarator: ($) => prec.right(seq(choice('&', '&&'), optional($._abstract_declarator))),
 
     structured_binding_declarator: ($) =>
       prec.dynamic(
         PREC.STRUCTURED_BINDING,
-        seq('[', commaSep1(seq(optional('...'), $.identifier, repeat($.attribute_declaration))), ']')
+        seq('[', commaSep1(seq(optional('...'), $._contextual_identifier, repeat($.attribute_declaration))), ']')
       ),
 
     ref_qualifier: () => choice('&', '&&'),
@@ -1146,7 +1155,7 @@ module.exports = grammar(C, {
           'post',
           repeat($.attribute_declaration),
           '(',
-          optional(seq(field('result', $.identifier), repeat($.attribute_declaration), ':')),
+          optional(seq(field('result', $._contextual_identifier), repeat($.attribute_declaration), ':')),
           field('condition', $.expression),
           ')'
         )
@@ -1244,9 +1253,17 @@ module.exports = grammar(C, {
     function_type_declarator: ($) => prec(1, seq(field('declarator', $._type_declarator), $._function_declarator_seq)),
 
     abstract_function_declarator: ($) =>
-      seq(field('declarator', optional($._abstract_declarator)), $._function_declarator_seq),
+      prec(1, seq(field('declarator', optional($._abstract_declarator)), $._function_declarator_seq)),
 
-    trailing_return_type: ($) => seq('->', $.type_descriptor),
+    trailing_return_type: ($) => seq('->', alias($._trailing_return_type_descriptor, $.type_descriptor)),
+    _trailing_return_type_descriptor: ($) =>
+      prec(
+        1,
+        withDeclarator(
+          C.grammar.rules.type_descriptor,
+          optional(choice(prec.dynamic(2, $.abstract_function_declarator), $._abstract_declarator))
+        )
+      ),
 
     noexcept: ($) => prec.right(seq('noexcept', optional(seq('(', optional($.expression), ')')))),
 
@@ -1257,7 +1274,8 @@ module.exports = grammar(C, {
     template_method: ($) =>
       seq(field('name', choice($._field_identifier, $.operator_name)), field('arguments', $.template_argument_list)),
 
-    template_function: ($) => seq(field('name', $.identifier), field('arguments', $.template_argument_list)),
+    template_function: ($) =>
+      seq(field('name', $._contextual_identifier), field('arguments', $.template_argument_list)),
 
     template_argument_list: ($) =>
       seq(
@@ -1310,7 +1328,7 @@ module.exports = grammar(C, {
         repeat($.attribute_declaration),
         'using',
         optional(choice('namespace', 'enum')),
-        choice($.identifier, $.qualified_identifier, $.splice_type_specifier),
+        choice($._contextual_identifier, $.qualified_identifier, $.splice_type_specifier),
         ';'
       ),
 
@@ -1336,7 +1354,7 @@ module.exports = grammar(C, {
 
     consteval_block_declaration: ($) => seq('consteval', field('body', $.compound_statement)),
 
-    concept_definition: ($) => seq('concept', field('name', $.identifier), '=', $.expression, ';'),
+    concept_definition: ($) => seq('concept', field('name', $._contextual_identifier), '=', $.expression, ';'),
 
     _top_level_statement: ($, /** @type {Rule} */ original) =>
       choice(
@@ -1666,14 +1684,14 @@ module.exports = grammar(C, {
       seq(
         optional('&'),
         choice(
-          $.identifier,
+          $._contextual_identifier,
           $.qualified_identifier,
           alias($.identifier_parameter_pack_expansion, $.parameter_pack_expansion)
         )
       ),
 
     lambda_capture_initializer: ($) =>
-      seq(optional('&'), optional('...'), field('left', $.identifier), '=', field('right', $.expression)),
+      seq(optional('&'), optional('...'), field('left', $._contextual_identifier), '=', field('right', $.expression)),
 
     _lambda_capture: ($) =>
       choice(seq(optional('*'), $.this), $._lambda_capture_identifier, $.lambda_capture_initializer),
@@ -1695,20 +1713,20 @@ module.exports = grammar(C, {
     expression_statement: ($, /** @type {Rule} */ original) =>
       choice(prec(1, prec.dynamic(1, seq($.pack_index_expression, ';'))), original),
 
-    pack_index_expression: ($) => packIndex($, $.identifier),
+    pack_index_expression: ($) => packIndex($, $._contextual_identifier),
 
     pack_index_type: ($) => packIndex($, $._type_identifier),
 
     type_parameter_pack_expansion: ($) => seq(field('pattern', $.type_descriptor), '...'),
 
-    identifier_parameter_pack_expansion: ($) => seq(field('pattern', $.identifier), '...'),
+    identifier_parameter_pack_expansion: ($) => seq(field('pattern', $._contextual_identifier), '...'),
 
     sizeof_expression: ($) =>
       prec.right(
         PREC.SIZEOF,
         choice(
           seq('sizeof', choice(field('value', $.expression), sizeofTypeOperand($))),
-          seq('sizeof', '...', '(', field('value', $.identifier), ')'),
+          seq('sizeof', '...', '(', field('value', $._contextual_identifier), ')'),
           // A size cannot take a postfix operator, so one after `sizeof(ns::x)` makes `ns::x` an expression. This
           // outweighs the type reading of the qualified name together with the postfix expression applied to it.
           prec.dynamic(2, seq('sizeof', field('value', $._sizeof_qualified_postfix_expression)))
@@ -1808,7 +1826,7 @@ module.exports = grammar(C, {
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
     argument_list: ($) => seq('(', commaSep(choice($.expression, $.initializer_list, $.compound_statement)), ')'),
 
-    destructor_name: ($) => prec(1, seq('~', choice($.identifier, $.pack_index_type))),
+    destructor_name: ($) => prec(1, seq('~', choice($._contextual_identifier, $.pack_index_type))),
 
     compound_literal_expression: ($, /** @type {Rule} */ original) =>
       choice(
@@ -1876,7 +1894,7 @@ module.exports = grammar(C, {
             alias($.dependent_identifier, $.dependent_name),
             $.qualified_identifier,
             $.template_function,
-            prec.dynamic(1, seq(optional('template'), $.identifier)),
+            prec.dynamic(1, seq(optional('template'), $._contextual_identifier)),
             $.operator_name,
             $.destructor_name
           )
@@ -1906,6 +1924,7 @@ module.exports = grammar(C, {
     _assignment_left_expression: ($, /** @type {Rule} */ original) =>
       choice(
         original,
+        prec.dynamic(-2, alias(choice('pre', 'post'), $.identifier)),
         $.pack_index_expression,
         $.qualified_identifier,
         $.user_defined_literal,
@@ -2078,7 +2097,7 @@ module.exports = grammar(C, {
             'and',
             'or',
             seq(choice('new', 'delete'), optional('[]')),
-            seq('""', $.identifier)
+            seq('""', $._contextual_identifier)
           )
         )
       ),
@@ -2088,9 +2107,9 @@ module.exports = grammar(C, {
     concatenated_string: ($) =>
       prec.right(
         seq(
-          choice($.identifier, $.string_literal, $.raw_string_literal),
+          choice($._contextual_identifier, $.string_literal, $.raw_string_literal),
           choice($.string_literal, $.raw_string_literal),
-          repeat(choice($.identifier, $.string_literal, $.raw_string_literal))
+          repeat(choice($._contextual_identifier, $.string_literal, $.raw_string_literal))
         )
       ),
 
@@ -2147,7 +2166,22 @@ module.exports = grammar(C, {
 
     user_defined_literal: ($) => seq(choice($.number_literal, $.char_literal, $._string), $.literal_suffix),
 
-    _namespace_identifier: ($) => alias($.identifier, $.namespace_identifier),
+    _type_identifier: ($, /** @type {Rule} */ original) =>
+      choice(original, prec.dynamic(-2, alias(choice('pre', 'post'), $.type_identifier))),
+
+    _contextual_identifier: ($) => choice($.identifier, prec.dynamic(-2, alias(choice('pre', 'post'), $.identifier))),
+
+    _field_identifier: ($, /** @type {Rule} */ original) =>
+      choice(original, alias(choice('pre', 'post'), $.field_identifier)),
+
+    _statement_identifier: ($, /** @type {Rule} */ original) =>
+      choice(original, alias(choice('pre', 'post'), $.statement_identifier)),
+
+    _namespace_identifier: ($) =>
+      choice(
+        alias($.identifier, $.namespace_identifier),
+        prec.dynamic(-2, alias(choice('pre', 'post'), $.namespace_identifier))
+      ),
   },
 });
 

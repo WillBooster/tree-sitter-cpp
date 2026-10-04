@@ -89,3 +89,42 @@ test('rejects malformed result bindings, empty predicates and misplaced contract
     parser.delete();
   }
 });
+
+test('preserves contextual type names and pointer-to-member trailing return queries', async () => {
+  await Parser.init();
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  parser.setLanguage(language);
+  const query = new Query(
+    language,
+    `(parameter_declaration type: (type_identifier) @parameter)
+    (trailing_return_type (type_descriptor declarator: (abstract_function_declarator) @return))`
+  );
+  const highlights = new Query(
+    language,
+    readFileSync(new URL('../../queries/highlights.scm', import.meta.url), 'utf8')
+  );
+  const tree = parser.parse(`struct pre { int f() const; }; using post = int;
+    void accepts(pre, post);
+    void use() { pre value; post count(1); }
+    auto member() -> int(pre::*)() const;`)!;
+  try {
+    expect(tree.rootNode.hasError).toBe(false);
+    expect(query.captures(tree.rootNode).map(({ name, node }) => [name, node.type, node.text])).toEqual([
+      ['parameter', 'type_identifier', 'pre'],
+      ['parameter', 'type_identifier', 'post'],
+      ['return', 'abstract_function_declarator', '(pre::*)() const'],
+    ]);
+    expect(tree.rootNode.descendantsOfType('init_declarator').map((node) => node.text)).toEqual(['count(1)']);
+    expect(
+      highlights
+        .captures(tree.rootNode)
+        .filter(({ name, node }) => name === 'keyword' && ['pre', 'post'].includes(node.text))
+    ).toEqual([]);
+  } finally {
+    tree.delete();
+    query.delete();
+    highlights.delete();
+    parser.delete();
+  }
+});
