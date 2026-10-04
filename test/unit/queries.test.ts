@@ -334,3 +334,102 @@ int main() { Both value; return left + right + value.first() + value.second() ==
     parser.delete();
   }
 });
+
+test('keeps GNU attributes with friend definitions through query edits', async () => {
+  const source = `struct Value {
+  __attribute__((unused)) friend int first(Value) { return 1; }
+  __attribute__((unused)) __attribute__((noinline)) friend int second(Value) { return 2; }
+  [[nodiscard]] __attribute__((unused)) friend int third(Value) { return 3; }
+  constexpr __attribute__((unused)) friend int before(Value) { return 4; }
+  __attribute__((unused)) constexpr friend int after(Value) { return 5; }
+  int member = 0;
+};
+int main() { Value value; return first(value) + second(value) + third(value) + before(value) + after(value) == 15 ? 0 : 1; }
+`;
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  let tree: Tree | undefined;
+  let attributes: Query | undefined;
+  const shipped: Query[] = [];
+  try {
+    parser.setLanguage(language);
+    attributes = new Query(language, '(friend_declaration (attribute_specifier) @attribute) @friend');
+    for (const kind of ['tags', 'highlights'] as const) {
+      shipped.push(
+        new Query(
+          language,
+          queryPaths(kind)
+            .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
+            .join('\n')
+        )
+      );
+    }
+    tree = parser.parse(source)!;
+    expect(tree.rootNode.hasError).toBe(false);
+    expect(
+      attributes
+        .captures(tree.rootNode)
+        .filter(({ name }) => name === 'attribute')
+        .map(({ node }) => ({ text: node.text, parent: node.parent?.type }))
+    ).toEqual([
+      { text: '__attribute__((unused))', parent: 'friend_declaration' },
+      { text: '__attribute__((unused))', parent: 'friend_declaration' },
+      { text: '__attribute__((noinline))', parent: 'friend_declaration' },
+      { text: '__attribute__((unused))', parent: 'friend_declaration' },
+      { text: '__attribute__((unused))', parent: 'friend_declaration' },
+      { text: '__attribute__((unused))', parent: 'friend_declaration' },
+    ]);
+    expect(
+      shipped[0]!
+        .captures(tree.rootNode)
+        .filter(
+          ({ name, node }) =>
+            name === 'definition.function' &&
+            node.parent?.type === 'function_definition' &&
+            node.parent.parent?.type === 'friend_declaration'
+        )
+        .map(({ node }) => node.childForFieldName('declarator')?.text)
+    ).toEqual(['first', 'second', 'third', 'before', 'after']);
+    expect(tree.rootNode.descendantsOfType('field_identifier').map((node) => node.text)).toEqual(['member']);
+
+    const prefix = '__attribute__((unused)) ';
+    const startIndex = source.indexOf(prefix);
+    const editedSource = source.slice(0, startIndex) + source.slice(startIndex + prefix.length);
+    tree.edit(
+      new Edit({
+        startIndex,
+        oldEndIndex: startIndex + prefix.length,
+        newEndIndex: startIndex,
+        startPosition: { row: 1, column: 2 },
+        oldEndPosition: { row: 1, column: 2 + prefix.length },
+        newEndPosition: { row: 1, column: 2 },
+      })
+    );
+    let edited: Tree | undefined;
+    let fresh: Tree | undefined;
+    try {
+      edited = parser.parse(editedSource, tree)!;
+      fresh = parser.parse(editedSource)!;
+      expect(edited.rootNode.hasError).toBe(false);
+      expect(edited.rootNode.toString()).toBe(fresh.rootNode.toString());
+      for (const query of [attributes, ...shipped]) {
+        const captures = (parsed: Tree): { name: string; text: string; start: number; end: number }[] =>
+          query.captures(parsed.rootNode).map(({ name, node }) => ({
+            name,
+            text: node.text,
+            start: node.startIndex,
+            end: node.endIndex,
+          }));
+        expect(captures(edited)).toEqual(captures(fresh));
+      }
+    } finally {
+      fresh?.delete();
+      edited?.delete();
+    }
+  } finally {
+    for (const query of shipped) query.delete();
+    attributes?.delete();
+    tree?.delete();
+    parser.delete();
+  }
+});

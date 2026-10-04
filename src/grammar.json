@@ -15954,16 +15954,37 @@
         {
           "type": "REPEAT",
           "content": {
-            "type": "SYMBOL",
-            "name": "attribute_declaration"
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "attribute_declaration"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "attribute_specifier"
+              }
+            ]
           }
         },
         {
           "type": "CHOICE",
           "members": [
             {
-              "type": "STRING",
-              "value": "constexpr"
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "constexpr"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "attribute_specifier"
+                  }
+                }
+              ]
             },
             {
               "type": "BLANK"
@@ -23083,6 +23104,10 @@
     ],
     [
       "_declaration_modifiers",
+      "friend_declaration"
+    ],
+    [
+      "type_qualifier",
       "friend_declaration"
     ],
     [

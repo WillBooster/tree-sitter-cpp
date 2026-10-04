@@ -3629,6 +3629,10 @@
           "named": true
         },
         {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
           "type": "declaration",
           "named": true
         },
