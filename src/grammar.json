@@ -25252,24 +25252,6 @@
       "pack_index_type"
     ],
     [
-      "type_specifier",
-      "_declarator"
-    ],
-    [
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "sized_type_specifier"
-    ],
-    [
-      "attributed_statement"
-    ],
-    [
-      "_declaration_modifiers",
-      "attributed_statement"
-    ],
-    [
       "_declaration_modifiers",
       "friend_declaration"
     ],
@@ -25286,18 +25268,6 @@
       "_declaration_modifiers",
       "attributed_statement",
       "using_declaration"
-    ],
-    [
-      "_top_level_item",
-      "_top_level_statement"
-    ],
-    [
-      "_block_item",
-      "statement"
-    ],
-    [
-      "type_qualifier",
-      "extension_expression"
     ],
     [
       "template_function",
@@ -25441,10 +25411,6 @@
     [
       "expression",
       "parenthesized_qualified_identifier"
-    ],
-    [
-      "type_specifier",
-      "sized_type_specifier"
     ],
     [
       "initializer_pair",
