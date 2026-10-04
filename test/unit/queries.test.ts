@@ -465,3 +465,113 @@ int main() { Both value; return left + right + value.first() + value.second() ==
     parser.delete();
   }
 });
+
+test('retains dependent using names and pack expansions through query edits', async () => {
+  const source = `struct Base { using value_type = int; using other_type = int; };
+template<class T> struct Derived : T { using typename T::value_type; value_type value = 0; };
+struct First { int f(int) { return 0; } };
+struct Second { int f(double) { return 1; } };
+template<class... Bases> struct Joined : Bases... { using Bases::f...; };
+int main() { Derived<Base> derived; Joined<First, Second> joined; return derived.value + joined.f(1); }
+`;
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  let tree: Tree | undefined;
+  let names: Query | undefined;
+  let highlights: Query | undefined;
+  try {
+    parser.setLanguage(language);
+    names = new Query(
+      language,
+      '(using_declaration (qualified_identifier scope: (_) @scope name: (identifier) @name)) @using'
+    );
+    highlights = new Query(
+      language,
+      queryPaths('highlights')
+        .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
+        .join('\n')
+    );
+    tree = parser.parse(source)!;
+    expect(tree.rootNode.hasError).toBe(false);
+    const declarations = tree.rootNode.descendantsOfType('using_declaration');
+    expect(declarations.map((node) => node.children.map((child) => child.type))).toEqual([
+      ['using', 'typename', 'qualified_identifier', ';'],
+      ['using', 'qualified_identifier', '...', ';'],
+    ]);
+    expect(declarations.map((node) => node.namedChildren[0]!.childForFieldName('scope')!.text)).toEqual(['T', 'Bases']);
+    expect(declarations.map((node) => node.namedChildren[0]!.childForFieldName('name')!.text)).toEqual([
+      'value_type',
+      'f',
+    ]);
+    expect(
+      names
+        .captures(tree.rootNode)
+        .filter(({ name }) => name === 'name')
+        .map(({ node }) => node.text)
+    ).toEqual(['value_type', 'f']);
+    expect(
+      highlights
+        .captures(tree.rootNode)
+        .filter(({ name, node }) => name === 'keyword' && node.text === 'typename')
+        .map(({ node }) => [node.startIndex, node.endIndex])
+    ).toEqual([[source.indexOf('typename'), source.indexOf('typename') + 'typename'.length]]);
+    const oldLine = `${source.split('\n')[1]}\n`;
+    const newLine = oldLine.replaceAll('value_type', 'other_type');
+    const startIndex = source.indexOf(oldLine);
+    const editedSource = source.replace(oldLine, newLine);
+    tree.edit(
+      new Edit({
+        startIndex,
+        oldEndIndex: startIndex + oldLine.length,
+        newEndIndex: startIndex + newLine.length,
+        startPosition: { row: 1, column: 0 },
+        oldEndPosition: { row: 2, column: 0 },
+        newEndPosition: { row: 2, column: 0 },
+      })
+    );
+    let edited: Tree | undefined;
+    let fresh: Tree | undefined;
+    try {
+      edited = parser.parse(editedSource, tree)!;
+      fresh = parser.parse(editedSource)!;
+      expect(edited.rootNode.hasError).toBe(false);
+      expect(edited.rootNode.toString()).toBe(fresh.rootNode.toString());
+      expect(
+        names
+          .captures(edited.rootNode)
+          .filter(({ name }) => name === 'name')
+          .map(({ node }) => node.text)
+      ).toEqual(['other_type', 'f']);
+      for (const query of [names, highlights]) {
+        const captures = (parsed: Tree): { name: string; text: string; start: number; end: number }[] =>
+          query
+            .captures(parsed.rootNode)
+            .map(({ name, node }) => ({ name, text: node.text, start: node.startIndex, end: node.endIndex }));
+        expect(captures(edited)).toEqual(captures(fresh));
+      }
+    } finally {
+      edited?.delete();
+      fresh?.delete();
+    }
+    for (const invalid of [
+      'using typename value_type;',
+      'using value_type...;',
+      'using namespace source...;',
+      'using enum E...;',
+      'using namespace typename T::value_type;',
+      'using Bases::f......;',
+    ]) {
+      const invalidTree = parser.parse(invalid)!;
+      try {
+        expect(invalidTree.rootNode.hasError, invalid).toBe(true);
+      } finally {
+        invalidTree.delete();
+      }
+    }
+  } finally {
+    highlights?.delete();
+    names?.delete();
+    tree?.delete();
+    parser.delete();
+  }
+});
