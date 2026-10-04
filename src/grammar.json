@@ -4235,6 +4235,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -7193,6 +7201,14 @@
                     {
                       "type": "STRING",
                       "value": "__builtin_va_arg"
+                    },
+                    {
+                      "type": "STRING",
+                      "value": "typeof"
+                    },
+                    {
+                      "type": "STRING",
+                      "value": "typeof_unqual"
                     }
                   ]
                 },
@@ -8747,6 +8763,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -8986,6 +9010,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -13718,6 +13750,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -13768,6 +13808,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -13818,6 +13866,14 @@
               {
                 "type": "STRING",
                 "value": "post"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -24949,6 +25005,14 @@
               {
                 "type": "STRING",
                 "value": "__builtin_va_arg"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -24989,6 +25053,14 @@
               {
                 "type": "STRING",
                 "value": "__builtin_va_arg"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof"
+              },
+              {
+                "type": "STRING",
+                "value": "typeof_unqual"
               }
             ]
           },
@@ -25200,6 +25272,30 @@
       "type_specifier",
       "expression",
       "va_arg_expression"
+    ],
+    [
+      "_declarator",
+      "type_specifier",
+      "typeof_specifier",
+      "expression"
+    ],
+    [
+      "typeof_specifier",
+      "expression"
+    ],
+    [
+      "type_specifier",
+      "typeof_specifier",
+      "expression"
+    ],
+    [
+      "_type_declarator",
+      "typeof_specifier"
+    ],
+    [
+      "_declarator",
+      "type_specifier",
+      "typeof_specifier"
     ],
     [
       "_declarator",

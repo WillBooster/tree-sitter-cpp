@@ -61,3 +61,29 @@ template<class va_arg> struct Box { va_arg value; };
     parser.delete();
   }
 });
+
+test('preserves C typeof spellings as ordinary C++ identifiers', () => {
+  const parser = new Parser().setLanguage(language);
+  try {
+    for (const name of ['typeof', 'typeof_unqual']) {
+      const source = `namespace ${name} { int x; }
+namespace alias = ${name};
+template<class ${name}> struct Box { ${name} value; };
+struct S { int ${name}; };
+namespace E { enum E { ${name} = 1 }; }
+void f() { int ${name} = 1; ${name}++; goto ${name}; ${name}:; }
+`;
+      const tree = parser.parse(source)!;
+      try {
+        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+        expect(tree.rootNode.descendantsOfType('namespace_identifier').map((n) => n.text)).toContain(name);
+        expect(tree.rootNode.descendantsOfType('update_expression').map((n) => n.text)).toEqual([`${name}++`]);
+        expect(tree.rootNode.descendantsOfType('statement_identifier').map((n) => n.text)).toEqual([name, name]);
+      } finally {
+        tree.delete();
+      }
+    }
+  } finally {
+    parser.delete();
+  }
+});

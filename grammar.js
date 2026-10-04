@@ -117,6 +117,11 @@ module.exports = grammar(C, {
     [$._block_item, $._initializer_directive],
     [$.type_specifier, $.expression, $.template_type],
     [$.type_specifier, $.expression, $.va_arg_expression],
+    [$._declarator, $.type_specifier, $.typeof_specifier, $.expression],
+    [$.typeof_specifier, $.expression],
+    [$.type_specifier, $.typeof_specifier, $.expression],
+    [$._type_declarator, $.typeof_specifier],
+    [$._declarator, $.type_specifier, $.typeof_specifier],
     [$._declarator, $.expression, $.va_arg_expression],
     [$.type_definition, $._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
     [$.type_definition, $.type_specifier, $._built_in_declaration_specifiers],
@@ -885,7 +890,10 @@ module.exports = grammar(C, {
 
     enumerator: ($) =>
       seq(
-        field('name', choice($.identifier, alias(choice('va_arg', '__builtin_va_arg'), $.identifier))),
+        field(
+          'name',
+          choice($.identifier, alias(choice('va_arg', '__builtin_va_arg', 'typeof', 'typeof_unqual'), $.identifier))
+        ),
         repeat($.attribute_specifier),
         repeat($.attribute_declaration),
         optional(seq('=', field('value', $.expression)))
@@ -1030,7 +1038,7 @@ module.exports = grammar(C, {
     _declarator: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        alias(choice('pre', 'post'), $.identifier),
+        alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.identifier),
         $.reference_declarator,
         alias($.qualified_pointer_declarator, $.qualified_identifier),
         $.qualified_identifier,
@@ -1530,7 +1538,7 @@ module.exports = grammar(C, {
       choice(
         original,
         prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
-        alias(choice('pre', 'post'), $.identifier),
+        alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.identifier),
         $.co_await_expression,
         $.requires_expression,
         $.requires_clause,
@@ -1996,7 +2004,7 @@ module.exports = grammar(C, {
     _assignment_left_expression: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        alias(choice('pre', 'post'), $.identifier),
+        alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.identifier),
         $.pack_index_expression,
         $.qualified_identifier,
         $.user_defined_literal,
@@ -2239,21 +2247,24 @@ module.exports = grammar(C, {
     user_defined_literal: ($) => seq(choice($.number_literal, $.char_literal, $._string), $.literal_suffix),
 
     _type_identifier: ($, /** @type {Rule} */ original) =>
-      choice(original, alias(choice('pre', 'post'), $.type_identifier)),
+      choice(original, alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.type_identifier)),
 
     _contextual_identifier: ($) =>
-      choice($.identifier, alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg'), $.identifier)),
+      choice(
+        $.identifier,
+        alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg', 'typeof', 'typeof_unqual'), $.identifier)
+      ),
 
     _field_identifier: ($, /** @type {Rule} */ original) =>
-      choice(original, alias(choice('pre', 'post'), $.field_identifier)),
+      choice(original, alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.field_identifier)),
 
     _statement_identifier: ($, /** @type {Rule} */ original) =>
-      choice(original, alias(choice('pre', 'post'), $.statement_identifier)),
+      choice(original, alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.statement_identifier)),
 
     _namespace_identifier: ($) =>
       choice(
         alias($.identifier, $.namespace_identifier),
-        alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg'), $.namespace_identifier)
+        alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg', 'typeof', 'typeof_unqual'), $.namespace_identifier)
       ),
   },
 });
