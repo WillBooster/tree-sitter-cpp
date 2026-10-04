@@ -114,6 +114,7 @@ module.exports = grammar(C, {
     [$.attributed_statement],
     [$._declaration_modifiers, $.attributed_statement],
     [$._declaration_modifiers, $.friend_declaration],
+    [$.type_qualifier, $.friend_declaration],
     [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
     [$._declaration_modifiers, $.attributed_statement, $.using_declaration],
     [$._top_level_item, $._top_level_statement],
@@ -1005,8 +1006,8 @@ module.exports = grammar(C, {
 
     friend_declaration: ($) =>
       seq(
-        repeat($.attribute_declaration),
-        optional('constexpr'),
+        repeat(choice($.attribute_declaration, $.attribute_specifier)),
+        optional(seq('constexpr', repeat($.attribute_specifier))),
         'friend',
         choice(
           $.declaration,

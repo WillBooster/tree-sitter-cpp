@@ -4283,3 +4283,143 @@ int main() { Derived<Base> derived; Joined<First, Second> joined; return derived
               (field_identifier))
             (argument_list
               (number_literal))))))))
+
+================================================================================
+GNU prefix attributes on friend definitions
+================================================================================
+
+struct Value {
+  __attribute__((unused)) friend int first(Value) { return 1; }
+  __attribute__((unused)) __attribute__((noinline)) friend int second(Value) { return 2; }
+  [[nodiscard]] __attribute__((unused)) friend int third(Value) { return 3; }
+  constexpr __attribute__((unused)) friend int before(Value) { return 4; }
+  __attribute__((unused)) constexpr friend int after(Value) { return 5; }
+  int member = 0;
+};
+int main() { Value value; return first(value) + second(value) + third(value) + before(value) + after(value) == 15 ? 0 : 1; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (friend_declaration
+        (attribute_specifier
+          (argument_list
+            (identifier)))
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))
+          (compound_statement
+            (return_statement
+              (number_literal)))))
+      (friend_declaration
+        (attribute_specifier
+          (argument_list
+            (identifier)))
+        (attribute_specifier
+          (argument_list
+            (identifier)))
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))
+          (compound_statement
+            (return_statement
+              (number_literal)))))
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (attribute_specifier
+          (argument_list
+            (identifier)))
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))
+          (compound_statement
+            (return_statement
+              (number_literal)))))
+      (friend_declaration
+        (attribute_specifier
+          (argument_list
+            (identifier)))
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))
+          (compound_statement
+            (return_statement
+              (number_literal)))))
+      (friend_declaration
+        (attribute_specifier
+          (argument_list
+            (identifier)))
+        (function_definition
+          (primitive_type)
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))
+          (compound_statement
+            (return_statement
+              (number_literal)))))
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (number_literal))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (identifier))
+      (return_statement
+        (conditional_expression
+          (binary_expression
+            (binary_expression
+              (binary_expression
+                (binary_expression
+                  (binary_expression
+                    (call_expression
+                      (identifier)
+                      (argument_list
+                        (identifier)))
+                    (call_expression
+                      (identifier)
+                      (argument_list
+                        (identifier))))
+                  (call_expression
+                    (identifier)
+                    (argument_list
+                      (identifier))))
+                (call_expression
+                  (identifier)
+                  (argument_list
+                    (identifier))))
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier))))
+            (number_literal))
+          (number_literal)
+          (number_literal))))))
