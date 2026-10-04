@@ -104,9 +104,28 @@ const preprocIf = C.preprocIf;
 module.exports = grammar(C, {
   name: 'cpp',
 
-  externals: ($) => [$.raw_string_delimiter, $.raw_string_content, $._pack_index_operator],
+  externals: ($, original) => [$.raw_string_delimiter, $.raw_string_content, $._pack_index_operator, ...original],
 
-  conflicts: ($) => [
+  conflicts: ($, original) => [
+    ...original,
+    [$.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_block],
+    [$.preproc_if_in_initializer_list, $.preproc_if_in_block],
+    [$.preproc_elif_in_initializer_list, $.preproc_elif_in_block],
+    [$.preproc_else_in_initializer_list, $.preproc_else_in_block],
+    [$.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_block],
+    [$.comma_expression, $._initializer_element],
+    [$._block_item, $._initializer_directive],
+    [$.type_specifier, $.expression, $.template_type],
+    [$.type_specifier, $.expression, $.va_arg_expression],
+    [$._declarator, $.expression, $.va_arg_expression],
+    [$.type_definition, $._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
+    [$.type_definition, $.type_specifier, $._built_in_declaration_specifiers],
+    [$.storage_class_specifier, $.expression],
+    [$.sized_type_specifier, $._sized_bit_int_specifier, $._top_level_expression_statement],
+    [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression],
+    [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression, $.call_expression],
+    [$.expression, $.template_type],
+    [$._declarator, $.type_specifier, $.expression, $.va_arg_expression],
     [$.pack_index_expression, $.pack_index_type],
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],

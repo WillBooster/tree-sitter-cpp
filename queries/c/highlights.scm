@@ -3,6 +3,9 @@
 ((identifier) @constant
  (#match? @constant "^[A-Z][A-Z\\d_]*$"))
 
+((storage_class_specifier) @keyword
+ (#eq? @keyword "auto"))
+"_Thread_local" @keyword
 "break" @keyword
 "case" @keyword
 "const" @keyword
@@ -79,3 +82,10 @@
   name: (identifier) @function.special)
 
 (comment) @comment
+
+(typeof_specifier
+  ["typeof" "typeof_unqual" "__typeof__" "__typeof" "__typeof_unqual" "__typeof_unqual__"] @keyword)
+(bit_int_specifier "_BitInt" @type)
+(pragma_operator) @keyword
+
+(va_arg_expression ["va_arg" "__builtin_va_arg"] @keyword)
