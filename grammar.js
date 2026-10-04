@@ -136,6 +136,10 @@ module.exports = grammar(C, {
     [$.structured_binding_declarator, $._lambda_capture_identifier],
     [$.parameter_list, $.argument_list],
     [$.type_specifier, $.call_expression],
+    [$.sized_type_specifier, $.expression, $.call_expression],
+    [$.sized_type_specifier, $.expression],
+    [$.sized_type_specifier, $._top_level_expression_statement],
+    [$.expression, $.call_expression],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
@@ -1439,6 +1443,7 @@ module.exports = grammar(C, {
     _expression_not_binary: ($, /** @type {Rule} */ original) =>
       choice(
         original,
+        prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
         $.co_await_expression,
         $.requires_expression,
         $.requires_clause,
@@ -1474,14 +1479,20 @@ module.exports = grammar(C, {
     subscript_argument_list: ($) => seq('[', commaSep(choice($.expression, $.initializer_list)), ']'),
 
     call_expression: ($, /** @type {Rule} */ original) =>
-      prec.dynamic(
-        1,
-        choice(
-          original,
-          seq(
-            field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
-            field('arguments', $.argument_list)
+      choice(
+        prec.dynamic(
+          1,
+          choice(
+            original,
+            seq(
+              field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
+              field('arguments', $.argument_list)
+            )
           )
+        ),
+        seq(
+          field('function', alias(choice('unsigned', 'signed', 'long', 'short'), $.sized_type_specifier)),
+          field('arguments', $.argument_list)
         )
       ),
 

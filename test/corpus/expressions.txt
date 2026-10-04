@@ -2055,3 +2055,283 @@ int after_raw_string() { return 1; }
     (primitive_type)
     (function_declarator (identifier) (parameter_list))
     (compound_statement (return_statement (number_literal)))))
+
+================================================================================
+Single-keyword sized functional casts
+================================================================================
+
+bool check(int value) {
+  if (unsigned(value) < 8) return true;
+  while (long(value) > 0) --value;
+  switch (short(value)) { default: break; }
+  return signed(value) == 0;
+}
+void declarations() {
+  unsigned (*pointer)(int);
+  unsigned long value = 1;
+  (void)pointer;
+  (void)value;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (binary_expression
+            (call_expression
+              (sized_type_specifier)
+              (argument_list
+                (identifier)))
+            (number_literal)))
+        (return_statement
+          (true)))
+      (while_statement
+        (condition_clause
+          (binary_expression
+            (call_expression
+              (sized_type_specifier)
+              (argument_list
+                (identifier)))
+            (number_literal)))
+        (expression_statement
+          (update_expression
+            (identifier))))
+      (switch_statement
+        (condition_clause
+          (call_expression
+            (sized_type_specifier)
+            (argument_list
+              (identifier))))
+        (compound_statement
+          (case_statement
+            (break_statement))))
+      (return_statement
+        (binary_expression
+          (call_expression
+            (sized_type_specifier)
+            (argument_list
+              (identifier)))
+          (number_literal)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (sized_type_specifier)
+        (function_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)))))
+      (declaration
+        (sized_type_specifier)
+        (init_declarator
+          (identifier)
+          (number_literal)))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (identifier)))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (identifier))))))
+
+================================================================================
+Sized parameter declarations are not variable initializers
+================================================================================
+
+int f(unsigned(x));
+void h(unsigned(x), long(y));
+short g(signed(x), short(y));
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (sized_type_specifier)
+          (abstract_function_declarator
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (sized_type_specifier)
+          (abstract_function_declarator
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)))))
+        (parameter_declaration
+          (sized_type_specifier)
+          (abstract_function_declarator
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))))))
+  (declaration
+    (sized_type_specifier)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (sized_type_specifier)
+          (abstract_function_declarator
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)))))
+        (parameter_declaration
+          (sized_type_specifier)
+          (abstract_function_declarator
+            (parameter_list
+              (parameter_declaration
+                (type_identifier)))))))))
+
+================================================================================
+Sized keywords in macro arguments and type contexts
+================================================================================
+
+#include <typeinfo>
+#define MACRO(type, name) type name
+#define PAIR(type, a, b) type a, b
+void macro_types() {
+  MACRO(long, x);
+  MACRO(unsigned, u);
+  MACRO(short, s);
+  MACRO(signed, i);
+  PAIR(long, y, z);
+  int one(unsigned);
+  int two(long(value));
+  (void)sizeof(long);
+  (void)alignof(long);
+  (void)typeid(long);
+  (void)unsigned(x);
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_include
+    (system_lib_string))
+  (preproc_function_def
+    (identifier)
+    (preproc_params
+      (identifier)
+      (identifier))
+    (preproc_arg))
+  (preproc_function_def
+    (identifier)
+    (preproc_params
+      (identifier)
+      (identifier)
+      (identifier))
+    (preproc_arg))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (identifier)
+            (identifier))))
+      (declaration
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (sized_type_specifier)))))
+      (declaration
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (sized_type_specifier)
+              (abstract_function_declarator
+                (parameter_list
+                  (parameter_declaration
+                    (type_identifier))))))))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (sizeof_expression
+            (type_descriptor
+              (sized_type_specifier)))))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (alignof_expression
+            (type_descriptor
+              (sized_type_specifier)))))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (call_expression
+            (identifier)
+            (argument_list
+              (type_descriptor
+                (sized_type_specifier))))))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (call_expression
+            (sized_type_specifier)
+            (argument_list
+              (identifier))))))))

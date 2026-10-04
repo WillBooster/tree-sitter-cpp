@@ -1330,6 +1330,10 @@
             "named": true
           },
           {
+            "type": "sized_type_specifier",
+            "named": true
+          },
+          {
             "type": "splice_type_specifier",
             "named": true
           },
