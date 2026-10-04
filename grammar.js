@@ -167,6 +167,7 @@ module.exports = grammar(C, {
     [$.qualified_field_identifier, $.template_method, $.template_type],
     [$.type_specifier, $.template_type, $.template_function, $.expression],
     [$.splice_type_specifier, $.splice_expression],
+    [$.destructor_name, $._template_destructor_name],
     [$._declarator, $.parenthesized_pointer_declarator],
     [$._declarator, $.built_in_parenthesized_declarator],
     [$.required_parentheses_function_declarator, $._direct_initialized_parenthesized_declarator],
@@ -1879,6 +1880,8 @@ module.exports = grammar(C, {
 
     destructor_name: ($) => prec(1, seq('~', choice($._contextual_identifier, $.pack_index_type))),
 
+    _template_destructor_name: ($) => prec(1, seq('~', $._contextual_identifier, $.template_argument_list)),
+
     compound_literal_expression: ($, /** @type {Rule} */ original) =>
       choice(
         original,
@@ -1931,6 +1934,8 @@ module.exports = grammar(C, {
             alias($.dependent_field_identifier, $.dependent_name),
             alias($.qualified_field_identifier, $.qualified_identifier),
             $.template_method,
+            $.destructor_name,
+            alias($._template_destructor_name, $.destructor_name),
             prec.dynamic(2, $._field_identifier)
           )
         )
@@ -1947,7 +1952,8 @@ module.exports = grammar(C, {
             $.template_function,
             prec.dynamic(1, seq(optional('template'), $._contextual_identifier)),
             $.operator_name,
-            $.destructor_name
+            $.destructor_name,
+            alias($._template_destructor_name, $.destructor_name)
           )
         )
       ),
@@ -2242,6 +2248,7 @@ function fieldExpressionMember($) {
     prec.dynamic(1, $._field_identifier),
     alias($.qualified_field_identifier, $.qualified_identifier),
     $.destructor_name,
+    alias($._template_destructor_name, $.destructor_name),
     $.template_method,
     alias($.dependent_field_identifier, $.dependent_name),
     $.operator_name,

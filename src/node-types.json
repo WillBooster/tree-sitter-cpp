@@ -2541,7 +2541,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
@@ -2550,6 +2550,10 @@
         },
         {
           "type": "pack_index_type",
+          "named": true
+        },
+        {
+          "type": "template_argument_list",
           "named": true
         }
       ]
