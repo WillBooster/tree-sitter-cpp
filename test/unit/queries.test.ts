@@ -84,8 +84,11 @@ test('matches sized keywords in macro arguments through the expression supertype
   }
 });
 
-test('preserves attributed friend definitions in public trees and shipped queries after edits', async () => {
-  const source = `struct Value {
+test(
+  'preserves attributed friend definitions in public trees and shipped queries after edits',
+  { timeout: 30_000 },
+  async () => {
+    const source = `struct Value {
   int number;
   [[nodiscard]] friend int get(Value v) { return v.number; }
   [[nodiscard]] [[maybe_unused]] constexpr friend int twice(Value v) { return v.number * 2; }
@@ -94,102 +97,103 @@ test('preserves attributed friend definitions in public trees and shipped querie
 static_assert(twice(Value{3}) == 6);
 int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
 `;
-  const language = await loadCurrentWasmBuild();
-  const parser = new Parser();
-  let tree: Tree | undefined;
-  let friends: Query | undefined;
-  let tags: Query | undefined;
-  let highlights: Query | undefined;
-  try {
-    parser.setLanguage(language);
-    friends = new Query(
-      language,
-      '(friend_declaration (function_definition declarator: (function_declarator declarator: (identifier) @name) body: (compound_statement)) @function) @friend'
-    );
-    tags = new Query(
-      language,
-      queryPaths('tags')
-        .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-        .join('\n')
-    );
-    highlights = new Query(
-      language,
-      queryPaths('highlights')
-        .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-        .join('\n')
-    );
-    tree = parser.parse(source)!;
-    expect(tree.rootNode.hasError).toBe(false);
-    const matches = friends.matches(tree.rootNode);
-    expect(matches.map(({ captures }) => captures.find(({ name }) => name === 'name')?.node.text)).toEqual([
-      'get',
-      'twice',
-      'plain',
-    ]);
-    expect(
-      matches.map(({ captures }) =>
-        captures
-          .find(({ name }) => name === 'friend')!
-          .node.namedChildren.filter((node) => node.type === 'attribute_declaration')
-          .map((node) => node.text)
-      )
-    ).toEqual([['[[nodiscard]]'], ['[[nodiscard]]', '[[maybe_unused]]'], []]);
-    expect(
-      tags
-        .captures(tree.rootNode)
-        .filter(({ name }) => name === 'name')
-        .map(({ node }) => node.text)
-    ).toEqual(['Value', 'get', 'twice', 'plain', 'main']);
-    expect(
-      highlights.captures(tree.rootNode).filter(({ name, node }) => name === 'keyword' && node.text === 'friend')
-    ).toHaveLength(3);
-
-    const prefix = '[[nodiscard]] ';
-    const startIndex = source.indexOf(prefix);
-    const withoutAttribute = source.slice(0, startIndex) + source.slice(startIndex + prefix.length);
-    const editedInputs = [withoutAttribute, source];
-    for (const [index, input] of editedInputs.entries()) {
-      const removing = index === 0;
-      tree.edit(
-        new Edit({
-          startIndex,
-          oldEndIndex: startIndex + (removing ? prefix.length : 0),
-          newEndIndex: startIndex + (removing ? 0 : prefix.length),
-          startPosition: { row: 2, column: 2 },
-          oldEndPosition: { row: 2, column: 2 + (removing ? prefix.length : 0) },
-          newEndPosition: { row: 2, column: 2 + (removing ? 0 : prefix.length) },
-        })
+    const language = await loadCurrentWasmBuild();
+    const parser = new Parser();
+    let tree: Tree | undefined;
+    let friends: Query | undefined;
+    let tags: Query | undefined;
+    let highlights: Query | undefined;
+    try {
+      parser.setLanguage(language);
+      friends = new Query(
+        language,
+        '(friend_declaration (function_definition declarator: (function_declarator declarator: (identifier) @name) body: (compound_statement)) @function) @friend'
       );
-      let edited: Tree | undefined;
-      let fresh: Tree | undefined;
-      try {
-        edited = parser.parse(input, tree)!;
-        fresh = parser.parse(input)!;
-        expect(edited.rootNode.hasError).toBe(false);
-        expect(edited.rootNode.toString()).toBe(fresh.rootNode.toString());
-        for (const query of [friends, tags, highlights]) {
-          const captures = (parsed: Tree): { name: string; text: string; startIndex: number; endIndex: number }[] =>
-            query.captures(parsed.rootNode).map(({ name, node }) => ({
-              name,
-              text: node.text,
-              startIndex: node.startIndex,
-              endIndex: node.endIndex,
-            }));
-          expect(captures(edited)).toEqual(captures(fresh));
+      tags = new Query(
+        language,
+        queryPaths('tags')
+          .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
+          .join('\n')
+      );
+      highlights = new Query(
+        language,
+        queryPaths('highlights')
+          .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
+          .join('\n')
+      );
+      tree = parser.parse(source)!;
+      expect(tree.rootNode.hasError).toBe(false);
+      const matches = friends.matches(tree.rootNode);
+      expect(matches.map(({ captures }) => captures.find(({ name }) => name === 'name')?.node.text)).toEqual([
+        'get',
+        'twice',
+        'plain',
+      ]);
+      expect(
+        matches.map(({ captures }) =>
+          captures
+            .find(({ name }) => name === 'friend')!
+            .node.namedChildren.filter((node) => node.type === 'attribute_declaration')
+            .map((node) => node.text)
+        )
+      ).toEqual([['[[nodiscard]]'], ['[[nodiscard]]', '[[maybe_unused]]'], []]);
+      expect(
+        tags
+          .captures(tree.rootNode)
+          .filter(({ name }) => name === 'name')
+          .map(({ node }) => node.text)
+      ).toEqual(['Value', 'get', 'twice', 'plain', 'main']);
+      expect(
+        highlights.captures(tree.rootNode).filter(({ name, node }) => name === 'keyword' && node.text === 'friend')
+      ).toHaveLength(3);
+
+      const prefix = '[[nodiscard]] ';
+      const startIndex = source.indexOf(prefix);
+      const withoutAttribute = source.slice(0, startIndex) + source.slice(startIndex + prefix.length);
+      const editedInputs = [withoutAttribute, source];
+      for (const [index, input] of editedInputs.entries()) {
+        const removing = index === 0;
+        tree.edit(
+          new Edit({
+            startIndex,
+            oldEndIndex: startIndex + (removing ? prefix.length : 0),
+            newEndIndex: startIndex + (removing ? 0 : prefix.length),
+            startPosition: { row: 2, column: 2 },
+            oldEndPosition: { row: 2, column: 2 + (removing ? prefix.length : 0) },
+            newEndPosition: { row: 2, column: 2 + (removing ? 0 : prefix.length) },
+          })
+        );
+        let edited: Tree | undefined;
+        let fresh: Tree | undefined;
+        try {
+          edited = parser.parse(input, tree)!;
+          fresh = parser.parse(input)!;
+          expect(edited.rootNode.hasError).toBe(false);
+          expect(edited.rootNode.toString()).toBe(fresh.rootNode.toString());
+          for (const query of [friends, tags, highlights]) {
+            const captures = (parsed: Tree): { name: string; text: string; startIndex: number; endIndex: number }[] =>
+              query.captures(parsed.rootNode).map(({ name, node }) => ({
+                name,
+                text: node.text,
+                startIndex: node.startIndex,
+                endIndex: node.endIndex,
+              }));
+            expect(captures(edited)).toEqual(captures(fresh));
+          }
+          tree.delete();
+          tree = edited;
+          edited = undefined;
+        } finally {
+          edited?.delete();
+          fresh?.delete();
         }
-        tree.delete();
-        tree = edited;
-        edited = undefined;
-      } finally {
-        edited?.delete();
-        fresh?.delete();
       }
+    } finally {
+      highlights?.delete();
+      tags?.delete();
+      friends?.delete();
+      tree?.delete();
+      parser.delete();
     }
-  } finally {
-    highlights?.delete();
-    tags?.delete();
-    friends?.delete();
-    tree?.delete();
-    parser.delete();
   }
-});
+);

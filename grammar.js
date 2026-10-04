@@ -113,7 +113,6 @@ module.exports = grammar(C, {
     [$.sized_type_specifier],
     [$.attributed_statement],
     [$._declaration_modifiers, $.attributed_statement],
-    [$._declaration_modifiers, $.using_declaration],
     [$._declaration_modifiers, $.friend_declaration],
     [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
     [$._declaration_modifiers, $.attributed_statement, $.using_declaration],
