@@ -3878,3 +3878,105 @@ enum class Scoped : unsigned {
       (enumerator
         (identifier)
         (number_literal)))))
+
+================================================================================
+Multiple using declarations
+================================================================================
+
+namespace source { int left = 1; int right = 2; }
+using source::left, source::right;
+struct First { int first() const { return 3; } };
+struct Second { int second() const { return 4; } };
+struct Both : First, Second { using First::first, Second::second; };
+int main() { Both value; return left + right + value.first() + value.second() == 10 ? 0 : 1; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (number_literal)))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (number_literal)))))
+  (using_declaration
+    (qualified_identifier
+      (namespace_identifier)
+      (identifier))
+    (qualified_identifier
+      (namespace_identifier)
+      (identifier)))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (field_identifier)
+          (parameter_list)
+          (type_qualifier))
+        (compound_statement
+          (return_statement
+            (number_literal))))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (field_identifier)
+          (parameter_list)
+          (type_qualifier))
+        (compound_statement
+          (return_statement
+            (number_literal))))))
+  (struct_specifier
+    (type_identifier)
+    (base_class_clause
+      (type_identifier)
+      (type_identifier))
+    (field_declaration_list
+      (using_declaration
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier))
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (identifier))
+      (return_statement
+        (conditional_expression
+          (binary_expression
+            (binary_expression
+              (binary_expression
+                (binary_expression
+                  (identifier)
+                  (identifier))
+                (call_expression
+                  (field_expression
+                    (identifier)
+                    (field_identifier))
+                  (argument_list)))
+              (call_expression
+                (field_expression
+                  (identifier)
+                  (field_identifier))
+                (argument_list)))
+            (number_literal))
+          (number_literal)
+          (number_literal))))))
