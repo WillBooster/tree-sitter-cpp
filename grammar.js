@@ -114,6 +114,8 @@ module.exports = grammar(C, {
     [$.attributed_statement],
     [$._declaration_modifiers, $.attributed_statement],
     [$._declaration_modifiers, $.using_declaration],
+    [$._declaration_modifiers, $.friend_declaration],
+    [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
     [$._declaration_modifiers, $.attributed_statement, $.using_declaration],
     [$._top_level_item, $._top_level_statement],
     [$._block_item, $.statement],
@@ -1002,13 +1004,16 @@ module.exports = grammar(C, {
     pure_virtual_clause: () => seq('=', /0/, ';'),
 
     friend_declaration: ($) =>
-      seq(
-        optional('constexpr'),
-        'friend',
-        choice(
-          $.declaration,
-          $.function_definition,
-          seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
+      choice(
+        seq(repeat1($.attribute_declaration), optional('constexpr'), 'friend', $.function_definition),
+        seq(
+          optional('constexpr'),
+          'friend',
+          choice(
+            $.declaration,
+            $.function_definition,
+            seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
+          )
         )
       ),
 

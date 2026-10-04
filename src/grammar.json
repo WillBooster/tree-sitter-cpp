@@ -15949,84 +15949,121 @@
       ]
     },
     "friend_declaration": {
-      "type": "SEQ",
+      "type": "CHOICE",
       "members": [
         {
-          "type": "CHOICE",
+          "type": "SEQ",
           "members": [
             {
-              "type": "STRING",
-              "value": "constexpr"
+              "type": "REPEAT1",
+              "content": {
+                "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
             },
             {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "STRING",
-          "value": "friend"
-        },
-        {
-          "type": "CHOICE",
-          "members": [
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "constexpr"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
             {
-              "type": "SYMBOL",
-              "name": "declaration"
+              "type": "STRING",
+              "value": "friend"
             },
             {
               "type": "SYMBOL",
               "name": "function_definition"
-            },
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
             {
-              "type": "SEQ",
+              "type": "CHOICE",
               "members": [
                 {
-                  "type": "CHOICE",
+                  "type": "STRING",
+                  "value": "constexpr"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "STRING",
+              "value": "friend"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "declaration"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "function_definition"
+                },
+                {
+                  "type": "SEQ",
                   "members": [
                     {
-                      "type": "SEQ",
+                      "type": "CHOICE",
                       "members": [
                         {
-                          "type": "CHOICE",
+                          "type": "SEQ",
                           "members": [
                             {
                               "type": "CHOICE",
                               "members": [
                                 {
-                                  "type": "STRING",
-                                  "value": "class"
+                                  "type": "CHOICE",
+                                  "members": [
+                                    {
+                                      "type": "STRING",
+                                      "value": "class"
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "struct"
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "union"
+                                    }
+                                  ]
                                 },
                                 {
-                                  "type": "STRING",
-                                  "value": "struct"
-                                },
-                                {
-                                  "type": "STRING",
-                                  "value": "union"
+                                  "type": "BLANK"
                                 }
                               ]
                             },
                             {
-                              "type": "BLANK"
+                              "type": "SYMBOL",
+                              "name": "_class_name"
                             }
                           ]
                         },
                         {
                           "type": "SYMBOL",
-                          "name": "_class_name"
+                          "name": "pack_index_type"
                         }
                       ]
                     },
                     {
-                      "type": "SYMBOL",
-                      "name": "pack_index_type"
+                      "type": "STRING",
+                      "value": ";"
                     }
                   ]
-                },
-                {
-                  "type": "STRING",
-                  "value": ";"
                 }
               ]
             }
@@ -23023,6 +23060,15 @@
     ],
     [
       "_declaration_modifiers",
+      "using_declaration"
+    ],
+    [
+      "_declaration_modifiers",
+      "friend_declaration"
+    ],
+    [
+      "_declaration_modifiers",
+      "friend_declaration",
       "using_declaration"
     ],
     [
