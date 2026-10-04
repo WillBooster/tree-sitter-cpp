@@ -5,7 +5,7 @@
 #include <string.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
@@ -97,6 +97,10 @@ void *tree_sitter_cpp_external_scanner_create() {
     return scanner;
 }
 
+static bool scan_pack_index_operator(TSLexer *lexer);
+static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
+static bool skip_pack_index_trivia(TSLexer *lexer);
+
 bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     Scanner *scanner = (Scanner *)payload;
 
@@ -116,7 +120,7 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
         return scan_raw_string_content(scanner, lexer);
     }
 
-    return false;
+    return valid_symbols[PACK_INDEX_OPERATOR] && scan_pack_index_operator(lexer);
 }
 
 unsigned tree_sitter_cpp_external_scanner_serialize(void *payload, char *buffer) {
@@ -142,4 +146,83 @@ void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buf
 void tree_sitter_cpp_external_scanner_destroy(void *payload) {
     Scanner *scanner = (Scanner *)payload;
     ts_free(scanner);
+}
+
+static bool scan_pack_index_operator(TSLexer *lexer) {
+    if (!skip_pack_index_whitespace(lexer, true)) {
+        return false;
+    }
+    for (int i = 0; i < 3; ++i) {
+        if (lexer->lookahead != '.') {
+            return false;
+        }
+        advance(lexer);
+    }
+    lexer->mark_end(lexer);
+    if (!skip_pack_index_trivia(lexer) || lexer->lookahead != '[') {
+        return false;
+    }
+    advance(lexer);
+    if (!skip_pack_index_trivia(lexer) || lexer->lookahead == ']' || lexer->eof(lexer)) {
+        return false;
+    }
+    lexer->result_symbol = PACK_INDEX_OPERATOR;
+    return true;
+}
+
+static bool skip_pack_index_trivia(TSLexer *lexer) {
+    for (;;) {
+        if (!skip_pack_index_whitespace(lexer, false)) {
+            return false;
+        }
+        if (lexer->lookahead != '/') {
+            break;
+        }
+        advance(lexer);
+        if (lexer->lookahead == '/') {
+            int32_t previous = 0;
+            while (!lexer->eof(lexer) && (lexer->lookahead != '\n' || previous == '\\')) {
+                if (lexer->lookahead != '\r') {
+                    previous = lexer->lookahead;
+                }
+                advance(lexer);
+            }
+        } else if (lexer->lookahead == '*') {
+            advance(lexer);
+            bool star = false;
+            for (;;) {
+                if (lexer->eof(lexer)) {
+                    return false;
+                }
+                int32_t c = lexer->lookahead;
+                advance(lexer);
+                if (star && c == '/') {
+                    break;
+                }
+                star = c == '*';
+            }
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip) {
+    for (;;) {
+        if (iswspace(lexer->lookahead)) {
+            lexer->advance(lexer, skip);
+        } else if (lexer->lookahead == '\\') {
+            lexer->advance(lexer, skip);
+            if (lexer->lookahead == '\r') {
+                lexer->advance(lexer, skip);
+            }
+            if (lexer->lookahead != '\n') {
+                return false;
+            }
+            lexer->advance(lexer, skip);
+        } else {
+            return true;
+        }
+    }
 }
