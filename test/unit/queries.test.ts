@@ -239,3 +239,98 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
     }
   }
 );
+
+test('retains every qualified name in multiple using declarations', async () => {
+  const source = `namespace source { int left = 1; int right = 2; }
+using source::left, source::right;
+struct First { int first() const { return 3; } };
+struct Second { int second() const { return 4; } };
+struct Both : First, Second { using First::first, Second::second; };
+int main() { Both value; return left + right + value.first() + value.second() == 10 ? 0 : 1; }
+`;
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  try {
+    parser.setLanguage(language);
+    const query = new Query(
+      language,
+      '(using_declaration (qualified_identifier scope: (_) @scope name: (identifier) @name) @entry) @using'
+    );
+    try {
+      const tree = parser.parse(source)!;
+      try {
+        expect(tree.rootNode.hasError).toBe(false);
+        const declarations = tree.rootNode.descendantsOfType('using_declaration');
+        expect(declarations.map((node) => node.namedChildren.map((child) => child.text))).toEqual([
+          ['source::left', 'source::right'],
+          ['First::first', 'Second::second'],
+        ]);
+        expect(declarations.map((node) => node.children.map((child) => child.type))).toEqual([
+          ['using', 'qualified_identifier', ',', 'qualified_identifier', ';'],
+          ['using', 'qualified_identifier', ',', 'qualified_identifier', ';'],
+        ]);
+        expect(
+          query
+            .captures(tree.rootNode)
+            .filter(({ name }) => name === 'name')
+            .map(({ node }) => node.text)
+        ).toEqual(['left', 'right', 'first', 'second']);
+        expect(
+          query
+            .captures(tree.rootNode)
+            .filter(({ name }) => name === 'scope')
+            .map(({ node }) => node.text)
+        ).toEqual(['source', 'source', 'First', 'Second']);
+        const editedSource = source.replace(', source::right', '');
+        const startIndex = source.indexOf(', source::right');
+        const startPosition = { row: 1, column: startIndex - source.indexOf('using source') };
+        tree.edit(
+          new Edit({
+            startIndex,
+            oldEndIndex: startIndex + ', source::right'.length,
+            newEndIndex: startIndex,
+            startPosition,
+            oldEndPosition: { row: 1, column: startPosition.column + ', source::right'.length },
+            newEndPosition: startPosition,
+          })
+        );
+        const edited = parser.parse(editedSource, tree)!;
+        try {
+          expect(edited.rootNode.hasError).toBe(false);
+          expect(
+            query
+              .captures(edited.rootNode)
+              .filter(({ name }) => name === 'name')
+              .map(({ node }) => node.text)
+          ).toEqual(['left', 'first', 'second']);
+          const fresh = parser.parse(editedSource)!;
+          try {
+            const captures = (input: typeof fresh): { name: string; text: string; start: number; end: number }[] =>
+              query
+                .captures(input.rootNode)
+                .map(({ name, node }) => ({ name, text: node.text, start: node.startIndex, end: node.endIndex }));
+            expect(captures(edited)).toEqual(captures(fresh));
+          } finally {
+            fresh.delete();
+          }
+        } finally {
+          edited.delete();
+        }
+      } finally {
+        tree.delete();
+      }
+      for (const invalid of ['using namespace source, other;', 'using enum E, F;', 'using source::left,;']) {
+        const tree = parser.parse(invalid)!;
+        try {
+          expect(tree.rootNode.hasError, invalid).toBe(true);
+        } finally {
+          tree.delete();
+        }
+      }
+    } finally {
+      query.delete();
+    }
+  } finally {
+    parser.delete();
+  }
+});
