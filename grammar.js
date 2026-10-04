@@ -1125,7 +1125,26 @@ module.exports = grammar(C, {
         )
       ),
 
-    _function_postfix: ($) => prec.right(choice(repeat1($.virtual_specifier), $.requires_clause)),
+    _function_postfix: ($) =>
+      prec.right(
+        choice(
+          seq(choice(repeat1($.virtual_specifier), $.requires_clause), repeat($.contract_specifier)),
+          repeat1($.contract_specifier)
+        )
+      ),
+
+    contract_specifier: ($) =>
+      choice(
+        seq('pre', repeat($.attribute_declaration), '(', field('condition', $.expression), ')'),
+        seq(
+          'post',
+          repeat($.attribute_declaration),
+          '(',
+          optional(seq(field('result', $.identifier), repeat($.attribute_declaration), ':')),
+          field('condition', $.expression),
+          ')'
+        )
+      ),
 
     function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
 
@@ -1578,23 +1597,27 @@ module.exports = grammar(C, {
           optional($._function_exception_specification),
           repeat($.attribute_declaration),
           optional($.trailing_return_type),
-          optional($.requires_clause)
+          optional($.requires_clause),
+          repeat($.contract_specifier)
         ),
 
-        repeat1($.attribute_declaration),
-        seq(repeat($.attribute_declaration), $.trailing_return_type),
+        seq(repeat1($.attribute_declaration), repeat($.contract_specifier)),
+        repeat1($.contract_specifier),
+        seq(repeat($.attribute_declaration), $.trailing_return_type, repeat($.contract_specifier)),
         seq(
           repeat($.attribute_declaration),
           $._function_exception_specification,
           repeat($.attribute_declaration),
-          optional($.trailing_return_type)
+          optional($.trailing_return_type),
+          repeat($.contract_specifier)
         ),
         seq(
           repeat($.attribute_declaration),
           repeat1($.lambda_specifier),
           optional($._function_exception_specification),
           repeat($.attribute_declaration),
-          optional($.trailing_return_type)
+          optional($.trailing_return_type),
+          repeat($.contract_specifier)
         )
       ),
 

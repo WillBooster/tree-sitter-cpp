@@ -1,0 +1,551 @@
+================================================================================
+Function contracts on declarations, definitions and special members
+================================================================================
+
+int absolute(const int x) pre(x != 0) post(result: result > 0) {
+  return x < 0 ? -x : x;
+}
+template<class T> auto positive(const T x) noexcept -> T requires true
+  pre(x > 0) post(value: value > 0) { return x; }
+struct Counter {
+  explicit Counter(int x) pre(x >= 0) : n(x) {}
+  ~Counter() post(true) {}
+  operator int() const post(r: r >= 0) { return n; }
+  int n;
+};
+int nested(const int x) pre(x > 0 ? x == 1 : x < 0) pre((x, x > 0)) post([]{ return true; }()) { return x; }
+int main() { return absolute(-2) + positive(2) + int(Counter(1)) + nested(1); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (identifier)))
+      (contract_specifier
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal)))
+      (contract_specifier
+        result: (identifier)
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal))))
+    body: (compound_statement
+      (return_statement
+        (conditional_expression
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal))
+          consequence: (unary_expression
+            argument: (identifier))
+          alternative: (identifier)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (placeholder_type_specifier
+        (auto))
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            (type_qualifier)
+            type: (type_identifier)
+            declarator: (identifier)))
+        (noexcept)
+        (trailing_return_type
+          (type_descriptor
+            type: (type_identifier)))
+        (requires_clause
+          constraint: (true))
+        (contract_specifier
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal)))
+        (contract_specifier
+          result: (identifier)
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal))))
+      body: (compound_statement
+        (return_statement
+          (identifier)))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (function_definition
+        (explicit_function_specifier)
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)))
+          (contract_specifier
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        (field_initializer_list
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (identifier))))
+        body: (compound_statement))
+      (function_definition
+        declarator: (function_declarator
+          declarator: (destructor_name
+            (identifier))
+          parameters: (parameter_list)
+          (contract_specifier
+            condition: (true)))
+        body: (compound_statement))
+      (function_definition
+        declarator: (operator_cast
+          type: (primitive_type)
+          declarator: (abstract_function_declarator
+            parameters: (parameter_list)
+            (type_qualifier)
+            (contract_specifier
+              result: (identifier)
+              condition: (binary_expression
+                left: (identifier)
+                right: (number_literal)))))
+        body: (compound_statement
+          (return_statement
+            (identifier))))
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (identifier)))
+      (contract_specifier
+        condition: (conditional_expression
+          condition: (binary_expression
+            left: (identifier)
+            right: (number_literal))
+          consequence: (binary_expression
+            left: (identifier)
+            right: (number_literal))
+          alternative: (binary_expression
+            left: (identifier)
+            right: (number_literal))))
+      (contract_specifier
+        condition: (parenthesized_expression
+          (comma_expression
+            left: (identifier)
+            right: (binary_expression
+              left: (identifier)
+              right: (number_literal)))))
+      (contract_specifier
+        condition: (call_expression
+          function: (lambda_expression
+            captures: (lambda_capture_specifier)
+            body: (compound_statement
+              (return_statement
+                (true))))
+          arguments: (argument_list))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (return_statement
+        (binary_expression
+          left: (binary_expression
+            left: (binary_expression
+              left: (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (number_literal)))
+              right: (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (number_literal))))
+            right: (call_expression
+              function: (primitive_type)
+              arguments: (argument_list
+                (call_expression
+                  function: (identifier)
+                  arguments: (argument_list
+                    (number_literal))))))
+          right: (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal))))))))
+
+================================================================================
+Function contracts on lambda declarator forms
+================================================================================
+
+auto plain = [] pre(true) post(r: r > 0) { return 1; };
+auto trailing = [] -> int pre(true) post(r: r > 0) { return 1; };
+auto exception = [] noexcept -> int pre(true) post(r: r > 0) { return 1; };
+auto specifier = [] constexpr pre(true) post(r: r > 0) { return 1; };
+auto parameter = [](const int x) mutable noexcept -> int pre(x > 0) post(r: r == x) { return x; };
+int main() { return plain() + trailing() + exception() + specifier() + parameter(1); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (trailing_return_type
+            (type_descriptor
+              type: (primitive_type)))
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (noexcept)
+          (trailing_return_type
+            (type_descriptor
+              type: (primitive_type)))
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (lambda_specifier)
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          parameters: (parameter_list
+            (parameter_declaration
+              (type_qualifier)
+              type: (primitive_type)
+              declarator: (identifier)))
+          (lambda_specifier)
+          (noexcept)
+          (trailing_return_type
+            (type_descriptor
+              type: (primitive_type)))
+          (contract_specifier
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal)))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        body: (compound_statement
+          (return_statement
+            (identifier))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (return_statement
+        (binary_expression
+          left: (binary_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (call_expression
+                  function: (identifier)
+                  arguments: (argument_list))
+                right: (call_expression
+                  function: (identifier)
+                  arguments: (argument_list)))
+              right: (call_expression
+                function: (identifier)
+                arguments: (argument_list)))
+            right: (call_expression
+              function: (identifier)
+              arguments: (argument_list)))
+          right: (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal))))))))
+
+================================================================================
+Function contract attributes, virtual specifiers and constrained lambdas
+================================================================================
+
+struct Base { virtual int value() const pre(true) post(r: r > 0) = 0; };
+struct Derived : Base { int value() const override final pre(true) post(r: r > 0) { return 1; } };
+int attributed(const int x) pre [[maybe_unused]] (x > 0) post(r [[maybe_unused]]: r > 0) { return x; }
+auto generic = []<class T> requires true (const T x) -> T requires true pre(x > 0) post(r: r == x) { return x; };
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)
+          (type_qualifier)
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        default_value: (number_literal))))
+  (struct_specifier
+    name: (type_identifier)
+    (base_class_clause
+      (type_identifier))
+    body: (field_declaration_list
+      (function_definition
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)
+          (type_qualifier)
+          (virtual_specifier)
+          (virtual_specifier)
+          (contract_specifier
+            condition: (true))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (identifier)))
+      (contract_specifier
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal)))
+      (contract_specifier
+        result: (identifier)
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        condition: (binary_expression
+          left: (identifier)
+          right: (number_literal))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        template_parameters: (template_parameter_list
+          (type_parameter_declaration
+            (type_identifier)))
+        constraint: (requires_clause
+          constraint: (true))
+        declarator: (lambda_declarator
+          parameters: (parameter_list
+            (parameter_declaration
+              (type_qualifier)
+              type: (type_identifier)
+              declarator: (identifier)))
+          (trailing_return_type
+            (type_descriptor
+              type: (type_identifier)))
+          (requires_clause
+            constraint: (true))
+          (contract_specifier
+            condition: (binary_expression
+              left: (identifier)
+              right: (number_literal)))
+          (contract_specifier
+            result: (identifier)
+            condition: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        body: (compound_statement
+          (return_statement
+            (identifier)))))))
+
+================================================================================
+Pre and post remain ordinary identifiers outside function contracts
+================================================================================
+
+int pre(int x) { return x; }
+int post(int x) { return x; }
+struct Names { int pre; int post; int call() { return pre + post; } };
+int main() { int pre = 1, post = 2; Names n{pre, post}; return ::pre(n.call()) + ::post(post); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))
+      (function_definition
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))
+        body: (compound_statement
+          (return_statement
+            (binary_expression
+              left: (identifier)
+              right: (identifier)))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (declaration
+        type: (primitive_type)
+        declarator: (init_declarator
+          declarator: (identifier)
+          value: (number_literal))
+        declarator: (init_declarator
+          declarator: (identifier)
+          value: (number_literal)))
+      (declaration
+        type: (type_identifier)
+        declarator: (init_declarator
+          declarator: (identifier)
+          value: (initializer_list
+            (identifier)
+            (identifier))))
+      (return_statement
+        (binary_expression
+          left: (call_expression
+            function: (qualified_identifier
+              name: (identifier))
+            arguments: (argument_list
+              (call_expression
+                function: (field_expression
+                  argument: (identifier)
+                  field: (field_identifier))
+                arguments: (argument_list))))
+          right: (call_expression
+            function: (qualified_identifier
+              name: (identifier))
+            arguments: (argument_list
+              (identifier))))))))
