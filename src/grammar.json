@@ -10488,6 +10488,15 @@
                 "name": "destructor_name"
               },
               {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_template_destructor_name"
+                },
+                "named": true,
+                "value": "destructor_name"
+              },
+              {
                 "type": "SYMBOL",
                 "name": "template_method"
               },
@@ -15105,6 +15114,15 @@
               {
                 "type": "SYMBOL",
                 "name": "destructor_name"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_template_destructor_name"
+                },
+                "named": true,
+                "value": "destructor_name"
               },
               {
                 "type": "SYMBOL",
@@ -21805,6 +21823,15 @@
                   "name": "destructor_name"
                 },
                 {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_template_destructor_name"
+                  },
+                  "named": true,
+                  "value": "destructor_name"
+                },
+                {
                   "type": "SYMBOL",
                   "name": "template_method"
                 },
@@ -21908,6 +21935,27 @@
                 "name": "pack_index_type"
               }
             ]
+          }
+        ]
+      }
+    },
+    "_template_destructor_name": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "~"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "_contextual_identifier"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "template_argument_list"
           }
         ]
       }
@@ -22050,6 +22098,19 @@
                 "name": "template_method"
               },
               {
+                "type": "SYMBOL",
+                "name": "destructor_name"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_template_destructor_name"
+                },
+                "named": true,
+                "value": "destructor_name"
+              },
+              {
                 "type": "PREC_DYNAMIC",
                 "value": 2,
                 "content": {
@@ -22124,6 +22185,15 @@
               {
                 "type": "SYMBOL",
                 "name": "destructor_name"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_template_destructor_name"
+                },
+                "named": true,
+                "value": "destructor_name"
               }
             ]
           }
@@ -23298,6 +23368,10 @@
     [
       "splice_type_specifier",
       "splice_expression"
+    ],
+    [
+      "destructor_name",
+      "_template_destructor_name"
     ],
     [
       "_declarator",
