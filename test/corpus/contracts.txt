@@ -352,6 +352,8 @@ struct Base { virtual int value() const pre(true) post(r: r > 0) = 0; };
 struct Derived : Base { int value() const override final pre(true) post(r: r > 0) { return 1; } };
 int attributed(const int x) pre [[maybe_unused]] (x > 0) post(r [[maybe_unused]]: r > 0) { return x; }
 auto generic = []<class T> requires true (const T x) -> T requires true pre(x > 0) post(r: r == x) { return x; };
+auto attributedLambda = [] [[nodiscard]] pre(true) { return 1; };
+int attributedFunction() [[a]] pre(true) { return 1; }
 
 --------------------------------------------------------------------------------
 
@@ -457,7 +459,36 @@ auto generic = []<class T> requires true (const T x) -> T requires true pre(x > 
               right: (identifier))))
         body: (compound_statement
           (return_statement
-            (identifier)))))))
+            (identifier))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          (attribute_declaration
+            (attribute
+              name: (identifier)))
+          (contract_specifier
+            condition: (true)))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list)
+      (attribute_declaration
+        (attribute
+          name: (identifier)))
+      (contract_specifier
+        condition: (true)))
+    body: (compound_statement
+      (return_statement
+        (number_literal)))))
 
 ================================================================================
 Pre and post remain ordinary identifiers outside function contracts
@@ -466,6 +497,7 @@ Pre and post remain ordinary identifiers outside function contracts
 int pre(int x) { return x; }
 int post(int x) { return x; }
 struct Names { int pre; int post; int call() { return pre + post; } };
+void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }
 int main() { int pre = 1, post = 2; Names n{pre, post}; return ::pre(n.call()) + ::post(post); }
 
 --------------------------------------------------------------------------------
@@ -512,6 +544,26 @@ int main() { int pre = 1, post = 2; Names n{pre, post}; return ::pre(n.call()) +
             (binary_expression
               left: (identifier)
               right: (identifier)))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))))
+    body: (compound_statement
+      (expression_statement
+        (delete_expression
+          (identifier)))
+      (expression_statement
+        (delete_expression
+          (identifier)))))
   (function_definition
     type: (primitive_type)
     declarator: (function_declarator

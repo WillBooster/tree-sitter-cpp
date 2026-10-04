@@ -21,7 +21,8 @@ test('exposes contract predicates as canonical expressions and postcondition res
     pre [[maybe_unused]] (x > 0)
     post [[maybe_unused]] (result [[maybe_unused]]: result > 0)
     post(true) { return x; }
-int following() { int pre = 1, post = 2; return pre + post; }`;
+int following() { int pre = 1, post = 2; return pre + post; }
+void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }`;
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
@@ -45,8 +46,15 @@ int following() { int pre = 1, post = 2; return pre + post; }`;
     expect(tree.rootNode.namedChildren.map((node) => node.type)).toEqual([
       'function_definition',
       'function_definition',
+      'function_definition',
     ]);
-    expect(tree.rootNode.namedChildren.at(-1)?.childForFieldName('declarator')?.text).toBe('following()');
+    expect(tree.rootNode.namedChildren.at(-2)?.childForFieldName('declarator')?.text).toBe('following()');
+    const destroy = tree.rootNode.namedChildren.at(-1)!;
+    expect(
+      destroy
+        .descendantsOfType('delete_expression')
+        .map((node) => node.namedChildren.map((child) => [child.type, child.text]))
+    ).toEqual([[['identifier', 'pre']], [['identifier', 'post']]]);
   } finally {
     tree.delete();
     query.delete();

@@ -827,12 +827,14 @@ module.exports = grammar(C, {
       prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $._keyword_operand))),
     keyword_sizeof_expression: ($) =>
       prec.left(PREC.SIZEOF, seq('sizeof', choice(field('value', $._keyword_operand), sizeofTypeOperand($)))),
-    keyword_delete_expression: ($) => seq(optional('::'), 'delete', optional(seq('[', ']')), $._keyword_operand),
+    keyword_delete_expression: ($) =>
+      seq(choice(seq(optional('::'), 'delete'), $._array_delete_operator), $._keyword_operand),
     // Every primary and postfix expression form, plus `++`/`--` and `new`, so that which operand follows the keyword
     // does not decide between the variable and expression readings.
     _keyword_operand: ($) =>
       choice(
         $.identifier,
+        prec.dynamic(-2, alias(choice('pre', 'post'), $.identifier)),
         $.qualified_identifier,
         $.template_function,
         $.number_literal,
@@ -1443,7 +1445,7 @@ module.exports = grammar(C, {
     _expression_not_binary: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
+        prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short', 'pre', 'post'), $.identifier)),
         $.co_await_expression,
         $.requires_expression,
         $.requires_clause,
@@ -1527,7 +1529,9 @@ module.exports = grammar(C, {
       ),
     new_declarator: ($) => prec.right(seq('[', field('length', $.expression), ']', optional($.new_declarator))),
 
-    delete_expression: ($) => seq(optional('::'), 'delete', optional(seq('[', ']')), $.expression),
+    _array_delete_operator: () => prec(PREC.LAMBDA + 1, seq(optional('::'), 'delete', '[', ']')),
+
+    delete_expression: ($) => seq(choice(seq(optional('::'), 'delete'), $._array_delete_operator), $.expression),
 
     field_expression: ($) =>
       seq(

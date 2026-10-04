@@ -7796,6 +7796,14 @@
                 {
                   "type": "STRING",
                   "value": "short"
+                },
+                {
+                  "type": "STRING",
+                  "value": "pre"
+                },
+                {
+                  "type": "STRING",
+                  "value": "post"
                 }
               ]
             },
@@ -15046,36 +15054,29 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "STRING",
-              "value": "::"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "STRING",
-          "value": "delete"
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
               "type": "SEQ",
               "members": [
                 {
-                  "type": "STRING",
-                  "value": "["
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": "::"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
                 },
                 {
                   "type": "STRING",
-                  "value": "]"
+                  "value": "delete"
                 }
               ]
             },
             {
-              "type": "BLANK"
+              "type": "SYMBOL",
+              "name": "_array_delete_operator"
             }
           ]
         },
@@ -15091,6 +15092,28 @@
         {
           "type": "SYMBOL",
           "name": "identifier"
+        },
+        {
+          "type": "PREC_DYNAMIC",
+          "value": -2,
+          "content": {
+            "type": "ALIAS",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "pre"
+                },
+                {
+                  "type": "STRING",
+                  "value": "post"
+                }
+              ]
+            },
+            "named": true,
+            "value": "identifier"
+          }
         },
         {
           "type": "SYMBOL",
@@ -18661,6 +18684,39 @@
         ]
       }
     },
+    "_array_delete_operator": {
+      "type": "PREC",
+      "value": 19,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "STRING",
+            "value": "delete"
+          },
+          {
+            "type": "STRING",
+            "value": "["
+          },
+          {
+            "type": "STRING",
+            "value": "]"
+          }
+        ]
+      }
+    },
     "delete_expression": {
       "type": "SEQ",
       "members": [
@@ -18668,36 +18724,29 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "STRING",
-              "value": "::"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "STRING",
-          "value": "delete"
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
               "type": "SEQ",
               "members": [
                 {
-                  "type": "STRING",
-                  "value": "["
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": "::"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
                 },
                 {
                   "type": "STRING",
-                  "value": "]"
+                  "value": "delete"
                 }
               ]
             },
             {
-              "type": "BLANK"
+              "type": "SYMBOL",
+              "name": "_array_delete_operator"
             }
           ]
         },
