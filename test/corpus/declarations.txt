@@ -3686,6 +3686,82 @@ template <typename... Ts> void index_comment(Ts... args) { args... [ /* index */
             index: (number_literal)))))))
 
 ================================================================================
+Pointer parameter packs
+================================================================================
+
+template<typename... T> void pointers(T *...args) {}
+template<typename... T> void qualified(T * const...args) {}
+template<typename... T> void nested(T **...args) {}
+template<typename... T> void references(T *&...args) {}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (variadic_parameter_declaration
+            (type_identifier)
+            (pointer_declarator
+              (variadic_declarator
+                (identifier))))))
+      (compound_statement)))
+  (template_declaration
+    (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (variadic_parameter_declaration
+            (type_identifier)
+            (pointer_declarator
+              (type_qualifier)
+              (variadic_declarator
+                (identifier))))))
+      (compound_statement)))
+  (template_declaration
+    (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (variadic_parameter_declaration
+            (type_identifier)
+            (pointer_declarator
+              (pointer_declarator
+                (variadic_declarator
+                  (identifier)))))))
+      (compound_statement)))
+  (template_declaration
+    (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (variadic_parameter_declaration
+            (type_identifier)
+            (pointer_declarator
+              (reference_declarator
+                (variadic_declarator
+                  (identifier)))))))
+      (compound_statement))))
+
+================================================================================
 Enumerator attributes
 ================================================================================
 

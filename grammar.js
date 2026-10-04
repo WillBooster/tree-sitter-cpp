@@ -666,18 +666,20 @@ module.exports = grammar(C, {
         )
       ),
 
-    variadic_parameter_declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        field(
-          'declarator',
-          choice($.variadic_declarator, alias($.variadic_reference_declarator, $.reference_declarator))
-        )
-      ),
+    variadic_parameter_declaration: ($) => seq($._declaration_specifiers, field('declarator', $._variadic_declarator)),
 
     variadic_declarator: ($) => seq('...', optional($.identifier)),
 
-    variadic_reference_declarator: ($) => seq(choice('&&', '&'), $.variadic_declarator),
+    _variadic_declarator: ($) =>
+      choice(
+        $.variadic_declarator,
+        alias($.variadic_pointer_declarator, $.pointer_declarator),
+        alias($.variadic_reference_declarator, $.reference_declarator)
+      ),
+
+    variadic_pointer_declarator: ($) => withDeclarator(C.grammar.rules.pointer_declarator, $._variadic_declarator),
+
+    variadic_reference_declarator: ($) => seq(choice('&&', '&'), $._variadic_declarator),
 
     init_declarator: ($, /** @type {Rule} */ original) =>
       choice(
