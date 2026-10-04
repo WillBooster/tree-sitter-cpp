@@ -58,6 +58,8 @@
  "noexcept"
  "new"
  "override"
+ "pre"
+ "post"
  "private"
  "protected"
  "public"
