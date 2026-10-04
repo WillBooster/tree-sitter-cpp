@@ -1378,7 +1378,13 @@ module.exports = grammar(C, {
             choice('namespace', 'enum'),
             choice($._contextual_identifier, $.qualified_identifier, $.splice_type_specifier)
           ),
-          commaSep1(choice($._contextual_identifier, $.qualified_identifier, $.splice_type_specifier))
+          commaSep1(
+            choice(
+              $._contextual_identifier,
+              $.splice_type_specifier,
+              seq(optional('typename'), $.qualified_identifier, optional('...'))
+            )
+          )
         ),
         ';'
       ),
