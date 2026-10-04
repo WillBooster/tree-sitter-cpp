@@ -272,6 +272,10 @@
         "named": true
       },
       {
+        "type": "pack_index_expression",
+        "named": true
+      },
+      {
         "type": "parameter_pack_expansion",
         "named": true
       },
@@ -457,6 +461,10 @@
       },
       {
         "type": "enum_specifier",
+        "named": true
+      },
+      {
+        "type": "pack_index_type",
         "named": true
       },
       {
@@ -1086,6 +1094,10 @@
           "named": true
         },
         {
+          "type": "pack_index_type",
+          "named": true
+        },
+        {
           "type": "qualified_identifier",
           "named": true
         },
@@ -1672,6 +1684,10 @@
         "multiple": true,
         "required": true,
         "types": [
+          {
+            "type": "pack_index_type",
+            "named": true
+          },
           {
             "type": "primitive_type",
             "named": true
@@ -2487,6 +2503,10 @@
         {
           "type": "identifier",
           "named": true
+        },
+        {
+          "type": "pack_index_type",
+          "named": true
         }
       ]
     }
@@ -2540,6 +2560,10 @@
         "multiple": false,
         "required": false,
         "types": [
+          {
+            "type": "pack_index_type",
+            "named": true
+          },
           {
             "type": "primitive_type",
             "named": true
@@ -3165,6 +3189,10 @@
           "named": true
         },
         {
+          "type": "pack_index_type",
+          "named": true
+        },
+        {
           "type": "qualified_identifier",
           "named": true
         },
@@ -3544,6 +3572,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "pack_index_type",
           "named": true
         },
         {
@@ -4026,7 +4058,7 @@
       },
       "condition": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "condition_clause",
@@ -4974,6 +5006,58 @@
       "name": {
         "multiple": false,
         "required": false,
+        "types": [
+          {
+            "type": "type_identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "pack_index_expression",
+    "named": true,
+    "fields": {
+      "index": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "pack": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "pack_index_type",
+    "named": true,
+    "fields": {
+      "index": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "pack": {
+        "multiple": false,
+        "required": true,
         "types": [
           {
             "type": "type_identifier",
@@ -6346,6 +6430,10 @@
             "named": true
           },
           {
+            "type": "pack_index_type",
+            "named": true
+          },
+          {
             "type": "splice_expression",
             "named": true
           },
@@ -6897,6 +6985,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
         {
           "type": "identifier",
           "named": true
