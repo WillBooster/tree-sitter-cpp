@@ -1,20 +1,27 @@
-import { Language, Parser, Query } from '@willbooster/web-tree-sitter';
+import { readFileSync } from 'node:fs';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
+
+import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 test('exposes contract predicates as canonical expressions and postcondition result bindings', async () => {
   await Parser.init();
-  const language = await Language.load('tree-sitter-cpp.wasm');
+  const language = await loadCurrentWasmBuild();
   const parser = new Parser();
   parser.setLanguage(language);
   const query = new Query(
     language,
     '(contract_specifier condition: (expression) @predicate) (contract_specifier result: (identifier) @result) (expression/binary_expression) @binary'
   );
+  const highlights = new Query(
+    language,
+    readFileSync(new URL('../../queries/highlights.scm', import.meta.url), 'utf8')
+  );
   const source = `int f(const int x)
     pre [[maybe_unused]] (x > 0)
     post [[maybe_unused]] (result [[maybe_unused]]: result > 0)
     post(true) { return x; }
-int following() { return 1; }`;
+int following() { int pre = 1, post = 2; return pre + post; }`;
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
@@ -28,7 +35,13 @@ int following() { return 1; }`;
     expect(captures.filter(({ name }) => name === 'binary').map(({ node }) => node.text)).toEqual([
       'x > 0',
       'result > 0',
+      'pre + post',
     ]);
+    const contractKeywords = highlights
+      .captures(tree.rootNode)
+      .filter(({ name, node }) => name === 'keyword' && ['pre', 'post'].includes(node.text));
+    expect(contractKeywords.map(({ node }) => node.text)).toEqual(['pre', 'post', 'post']);
+    expect(contractKeywords.every(({ node }) => !node.isNamed)).toBe(true);
     expect(tree.rootNode.namedChildren.map((node) => node.type)).toEqual([
       'function_definition',
       'function_definition',
@@ -37,13 +50,14 @@ int following() { return 1; }`;
   } finally {
     tree.delete();
     query.delete();
+    highlights.delete();
     parser.delete();
   }
 });
 
 test('rejects malformed result bindings, empty predicates and misplaced contract suffixes', async () => {
   await Parser.init();
-  const language = await Language.load('tree-sitter-cpp.wasm');
+  const language = await loadCurrentWasmBuild();
   const parser = new Parser();
   parser.setLanguage(language);
   try {
