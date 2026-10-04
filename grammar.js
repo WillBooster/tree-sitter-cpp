@@ -860,6 +860,9 @@ module.exports = grammar(C, {
     //   A b {};
     compound_statement: (_, /** @type {Rule} */ original) => prec(-1, original),
 
+    initializer_pair: ($, /** @type {Rule} */ original) =>
+      choice(original, seq(field('designator', $.field_designator), field('value', $.initializer_list))),
+
     field_initializer_list: ($) => seq(':', commaSep1($.field_initializer)),
 
     field_initializer: ($) =>
