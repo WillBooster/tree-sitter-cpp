@@ -860,6 +860,13 @@ module.exports = grammar(C, {
     //   A b {};
     compound_statement: (_, /** @type {Rule} */ original) => prec(-1, original),
 
+    enumerator: ($) =>
+      seq(
+        field('name', $.identifier),
+        repeat($.attribute_declaration),
+        optional(seq('=', field('value', $.expression)))
+      ),
+
     field_initializer_list: ($) => seq(':', commaSep1($.field_initializer)),
 
     field_initializer: ($) =>

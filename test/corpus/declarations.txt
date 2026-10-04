@@ -3684,3 +3684,48 @@ template <typename... Ts> void index_comment(Ts... args) { args... [ /* index */
             pack: (identifier)
             (comment)
             index: (number_literal)))))))
+
+================================================================================
+Enumerator attributes
+================================================================================
+
+enum class Color { red [[deprecated("use blue")]], blue = 2 };
+enum Flags { old [[deprecated]] [[maybe_unused]] = 1, current = 2, last [[maybe_unused]] };
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (enum_specifier
+    (type_identifier)
+    (enumerator_list
+      (enumerator
+        (identifier)
+        (attribute_declaration
+          (attribute
+            (identifier)
+            (argument_list
+              (string_literal
+                (string_content))))))
+      (enumerator
+        (identifier)
+        (number_literal))))
+  (enum_specifier
+    (type_identifier)
+    (enumerator_list
+      (enumerator
+        (identifier)
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (attribute_declaration
+          (attribute
+            (identifier)))
+        (number_literal))
+      (enumerator
+        (identifier)
+        (number_literal))
+      (enumerator
+        (identifier)
+        (attribute_declaration
+          (attribute
+            (identifier)))))))
