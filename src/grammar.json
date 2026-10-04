@@ -7675,6 +7675,36 @@
           ]
         },
         {
+          "type": "PREC_DYNAMIC",
+          "value": -2,
+          "content": {
+            "type": "ALIAS",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "unsigned"
+                },
+                {
+                  "type": "STRING",
+                  "value": "signed"
+                },
+                {
+                  "type": "STRING",
+                  "value": "long"
+                },
+                {
+                  "type": "STRING",
+                  "value": "short"
+                }
+              ]
+            },
+            "named": true,
+            "value": "identifier"
+          }
+        },
+        {
           "type": "SYMBOL",
           "name": "co_await_expression"
         },
@@ -21855,6 +21885,19 @@
     ],
     [
       "sized_type_specifier",
+      "expression",
+      "call_expression"
+    ],
+    [
+      "sized_type_specifier",
+      "expression"
+    ],
+    [
+      "sized_type_specifier",
+      "_top_level_expression_statement"
+    ],
+    [
+      "expression",
       "call_expression"
     ],
     [

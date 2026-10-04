@@ -67,3 +67,19 @@ test('keeps queries/c/ identical to the queries of @willbooster/tree-sitter-c', 
     ).toBe(fs.readFileSync(path.join(CQueries, file), 'utf8'));
   }
 });
+
+test('matches sized keywords in macro arguments through the expression supertype', async () => {
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  parser.setLanguage(language);
+  const tree = parser.parse('#define DECLARE(type, name) type name\nvoid f() { DECLARE(long, value); }')!;
+  const query = new Query(language, '(call_expression arguments: (argument_list (expression) @argument))');
+  try {
+    expect(tree.rootNode.hasError).toBe(false);
+    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['long', 'value']);
+  } finally {
+    query.delete();
+    tree.delete();
+    parser.delete();
+  }
+});
