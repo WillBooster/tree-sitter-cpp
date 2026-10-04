@@ -3991,3 +3991,78 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
             (number_literal))
           (number_literal)
           (number_literal))))))
+
+==================
+Attributed friend boundaries retain following members
+==================
+
+struct A {
+  [[nodiscard]] friend void f();
+  [[nodiscard]] friend void g();
+  friend class D;
+  friend int h();
+};
+struct B {
+  [[nodiscard]] friend void f();
+  [[maybe_unused]] friend struct S;
+  friend class D;
+  friend int g();
+};
+
+---
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))
+      (friend_declaration
+        (type_identifier))
+      (friend_declaration
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list))))
+      (friend_declaration
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (type_identifier))
+      (friend_declaration
+        (type_identifier))
+      (friend_declaration
+        (declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (identifier)
+            parameters: (parameter_list)))))))

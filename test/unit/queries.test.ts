@@ -147,6 +147,48 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
         highlights.captures(tree.rootNode).filter(({ name, node }) => name === 'keyword' && node.text === 'friend')
       ).toHaveLength(3);
 
+      const recoveryInputs = [
+        `struct A {
+  [[nodiscard]] friend void f();
+  [[nodiscard]] friend void g();
+  friend class D;
+  friend int h();
+};`,
+        `struct A {
+  [[nodiscard]] friend void f();
+  [[maybe_unused]] friend struct S;
+  friend class D;
+  friend int h();
+};`,
+      ];
+      for (const input of recoveryInputs) {
+        const recovery = parser.parse(input)!;
+        try {
+          expect(recovery.rootNode.hasError).toBe(false);
+          const declarations = recovery.rootNode.descendantsOfType('friend_declaration');
+          expect(declarations).toHaveLength(4);
+          const following = declarations.slice(-2);
+          expect(following.map((node) => node.text)).toEqual(['friend class D;', 'friend int h();']);
+          expect(following[0]?.namedChildren[0]?.type).toBe('type_identifier');
+          expect(following[0]?.namedChildren[0]?.text).toBe('D');
+          const declaration = following[1]?.namedChildren[0];
+          expect(declaration?.type).toBe('declaration');
+          expect(declaration?.childForFieldName('declarator')?.childForFieldName('declarator')?.text).toBe('h');
+          expect(
+            tags.captures(recovery.rootNode).find(({ name, node }) => name === 'name' && node.text === 'h')?.node
+              .startIndex
+          ).toBe(input.indexOf('h();'));
+          expect(
+            highlights
+              .captures(recovery.rootNode)
+              .filter(({ name, node }) => name === 'keyword' && node.text === 'friend')
+              .map(({ node }) => input.slice(node.startIndex, node.endIndex))
+          ).toEqual(['friend', 'friend', 'friend', 'friend']);
+        } finally {
+          recovery.delete();
+        }
+      }
+
       const prefix = '[[nodiscard]] ';
       const startIndex = source.indexOf(prefix);
       const withoutAttribute = source.slice(0, startIndex) + source.slice(startIndex + prefix.length);

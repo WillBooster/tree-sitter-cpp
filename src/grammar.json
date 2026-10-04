@@ -15949,121 +15949,91 @@
       ]
     },
     "friend_declaration": {
-      "type": "CHOICE",
+      "type": "SEQ",
       "members": [
         {
-          "type": "SEQ",
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_declaration"
+          }
+        },
+        {
+          "type": "CHOICE",
           "members": [
             {
-              "type": "REPEAT1",
-              "content": {
-                "type": "SYMBOL",
-                "name": "attribute_declaration"
-              }
-            },
-            {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "STRING",
-                  "value": "constexpr"
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
-            },
-            {
               "type": "STRING",
-              "value": "friend"
+              "value": "constexpr"
             },
             {
-              "type": "SYMBOL",
-              "name": "function_definition"
+              "type": "BLANK"
             }
           ]
         },
         {
-          "type": "SEQ",
+          "type": "STRING",
+          "value": "friend"
+        },
+        {
+          "type": "CHOICE",
           "members": [
             {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "STRING",
-                  "value": "constexpr"
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
+              "type": "SYMBOL",
+              "name": "declaration"
             },
             {
-              "type": "STRING",
-              "value": "friend"
+              "type": "SYMBOL",
+              "name": "function_definition"
             },
             {
-              "type": "CHOICE",
+              "type": "SEQ",
               "members": [
                 {
-                  "type": "SYMBOL",
-                  "name": "declaration"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "function_definition"
-                },
-                {
-                  "type": "SEQ",
+                  "type": "CHOICE",
                   "members": [
                     {
-                      "type": "CHOICE",
+                      "type": "SEQ",
                       "members": [
                         {
-                          "type": "SEQ",
+                          "type": "CHOICE",
                           "members": [
                             {
                               "type": "CHOICE",
                               "members": [
                                 {
-                                  "type": "CHOICE",
-                                  "members": [
-                                    {
-                                      "type": "STRING",
-                                      "value": "class"
-                                    },
-                                    {
-                                      "type": "STRING",
-                                      "value": "struct"
-                                    },
-                                    {
-                                      "type": "STRING",
-                                      "value": "union"
-                                    }
-                                  ]
+                                  "type": "STRING",
+                                  "value": "class"
                                 },
                                 {
-                                  "type": "BLANK"
+                                  "type": "STRING",
+                                  "value": "struct"
+                                },
+                                {
+                                  "type": "STRING",
+                                  "value": "union"
                                 }
                               ]
                             },
                             {
-                              "type": "SYMBOL",
-                              "name": "_class_name"
+                              "type": "BLANK"
                             }
                           ]
                         },
                         {
                           "type": "SYMBOL",
-                          "name": "pack_index_type"
+                          "name": "_class_name"
                         }
                       ]
                     },
                     {
-                      "type": "STRING",
-                      "value": ";"
+                      "type": "SYMBOL",
+                      "name": "pack_index_type"
                     }
                   ]
+                },
+                {
+                  "type": "STRING",
+                  "value": ";"
                 }
               ]
             }

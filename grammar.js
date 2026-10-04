@@ -1003,16 +1003,14 @@ module.exports = grammar(C, {
     pure_virtual_clause: () => seq('=', /0/, ';'),
 
     friend_declaration: ($) =>
-      choice(
-        seq(repeat1($.attribute_declaration), optional('constexpr'), 'friend', $.function_definition),
-        seq(
-          optional('constexpr'),
-          'friend',
-          choice(
-            $.declaration,
-            $.function_definition,
-            seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
-          )
+      seq(
+        repeat($.attribute_declaration),
+        optional('constexpr'),
+        'friend',
+        choice(
+          $.declaration,
+          $.function_definition,
+          seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
         )
       ),
 
