@@ -1446,21 +1446,20 @@ module.exports = grammar(C, {
     subscript_argument_list: ($) => seq('[', commaSep(choice($.expression, $.initializer_list)), ']'),
 
     call_expression: ($, /** @type {Rule} */ original) =>
-      prec.dynamic(
-        1,
-        choice(
-          original,
-          seq(
-            field(
-              'function',
-              choice(
-                $.primitive_type,
-                alias(choice('unsigned', 'signed', 'long', 'short'), $.sized_type_specifier),
-                seq(optional('typename'), $.splice_type_specifier)
-              )
-            ),
-            field('arguments', $.argument_list)
+      choice(
+        prec.dynamic(
+          1,
+          choice(
+            original,
+            seq(
+              field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
+              field('arguments', $.argument_list)
+            )
           )
+        ),
+        seq(
+          field('function', alias(choice('unsigned', 'signed', 'long', 'short'), $.sized_type_specifier)),
+          field('arguments', $.argument_list)
         )
       ),
 
