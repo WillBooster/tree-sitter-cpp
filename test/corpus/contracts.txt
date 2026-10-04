@@ -1172,3 +1172,70 @@ auto closure = [](int& r) -> int& post(result: true) { return r; };
         (compound_statement
           (return_statement
             (identifier)))))))
+
+================================================================================
+Bare trailing array syntax preserves return descriptors
+================================================================================
+
+auto array() -> int[3];
+auto matrix() -> int[3][4];
+auto array_definition() -> int[3] { return {}; }
+auto matrix_definition() -> int[3][4] { return {}; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (number_literal))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_array_declarator
+              (number_literal))
+            (number_literal))))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (number_literal)))))
+    (compound_statement
+      (return_statement
+        (initializer_list))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_array_declarator
+              (number_literal))
+            (number_literal)))))
+    (compound_statement
+      (return_statement
+        (initializer_list)))))

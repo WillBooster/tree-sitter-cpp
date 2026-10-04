@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
@@ -199,6 +199,45 @@ test('keeps contract fields outside pointer and reference trailing returns', asy
   } finally {
     tree.delete();
     query.delete();
+    parser.delete();
+  }
+});
+
+test('keeps bare trailing arrays in public return descriptors and function tags', async () => {
+  await Parser.init();
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser();
+  let returns: Query | undefined;
+  let tags: Query | undefined;
+  let tree: Tree | undefined;
+  try {
+    parser.setLanguage(language);
+    returns = new Query(
+      language,
+      '(trailing_return_type (type_descriptor declarator: (abstract_array_declarator) @return))'
+    );
+    tags = new Query(language, readFileSync(new URL('../../queries/tags.scm', import.meta.url), 'utf8'));
+    tree = parser.parse(`auto array() -> int[3];
+      auto matrix() -> int[3][4];
+      auto array_definition() -> int[3] { return {}; }
+      auto matrix_definition() -> int[3][4] { return {}; }`)!;
+    expect(tree.rootNode.hasError).toBe(false);
+    expect(returns.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['[3]', '[3][4]', '[3]', '[3][4]']);
+    expect(
+      tags
+        .captures(tree.rootNode)
+        .filter(({ name }) => name === 'definition.function')
+        .map(({ node }) => node.text)
+    ).toEqual([
+      'array() -> int[3]',
+      'matrix() -> int[3][4]',
+      'array_definition() -> int[3]',
+      'matrix_definition() -> int[3][4]',
+    ]);
+  } finally {
+    tree?.delete();
+    returns?.delete();
+    tags?.delete();
     parser.delete();
   }
 });

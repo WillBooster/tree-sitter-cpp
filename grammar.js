@@ -1290,9 +1290,12 @@ module.exports = grammar(C, {
     _trailing_abstract_function_declarator: ($) =>
       prec(1, seq(field('declarator', optional($._trailing_abstract_declarator)), $._function_declarator_seq)),
     _trailing_abstract_array_declarator: ($) =>
-      withDeclarator(
-        C.grammar.rules.abstract_array_declarator,
-        optional(prec.right(1, $._trailing_abstract_declarator))
+      prec.dynamic(
+        1,
+        withDeclarator(
+          C.grammar.rules.abstract_array_declarator,
+          optional(prec.right(1, $._trailing_abstract_declarator))
+        )
       ),
     _trailing_abstract_parenthesized_declarator: ($) =>
       prec(1, seq('(', optional($.ms_call_modifier), $._trailing_abstract_declarator, ')')),
