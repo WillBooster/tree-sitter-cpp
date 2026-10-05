@@ -1,12 +1,17 @@
 import { readFileSync } from 'node:fs';
-import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
-import { expect, test } from 'vitest';
+import { type Language, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { beforeAll, expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
-test('exposes contract predicates as canonical expressions and postcondition result bindings', async () => {
+let language: Language;
+
+beforeAll(async () => {
   await Parser.init();
-  const language = await loadCurrentWasmBuild();
+  language = await loadCurrentWasmBuild();
+}, 60_000);
+
+test('exposes contract predicates as canonical expressions and postcondition result bindings', () => {
   const parser = new Parser();
   parser.setLanguage(language);
   const query = new Query(
@@ -73,9 +78,7 @@ void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }`;
   }
 });
 
-test('rejects malformed result bindings, empty predicates and misplaced contract suffixes', async () => {
-  await Parser.init();
-  const language = await loadCurrentWasmBuild();
+test('rejects malformed result bindings, empty predicates and misplaced contract suffixes', () => {
   const parser = new Parser();
   parser.setLanguage(language);
   try {
@@ -100,9 +103,7 @@ test('rejects malformed result bindings, empty predicates and misplaced contract
   }
 });
 
-test('preserves contextual type names and pointer-to-member trailing return queries', async () => {
-  await Parser.init();
-  const language = await loadCurrentWasmBuild();
+test('preserves contextual type names and pointer-to-member trailing return queries', () => {
   const parser = new Parser();
   parser.setLanguage(language);
   const query = new Query(
@@ -160,9 +161,7 @@ test('preserves contextual type names and pointer-to-member trailing return quer
   }
 });
 
-test('keeps contract fields outside pointer, reference and function trailing returns', async () => {
-  await Parser.init();
-  const language = await loadCurrentWasmBuild();
+test('keeps contract fields outside pointer, reference and function trailing returns', () => {
   const parser = new Parser();
   let query: Query | undefined;
   let tree: Tree | undefined;
@@ -255,9 +254,7 @@ test('keeps contract fields outside pointer, reference and function trailing ret
   }
 });
 
-test('keeps trailing array and pointer nesting in public return descriptors and function tags', async () => {
-  await Parser.init();
-  const language = await loadCurrentWasmBuild();
+test('keeps trailing array and pointer nesting in public return descriptors and function tags', () => {
   const parser = new Parser();
   let returns: Query | undefined;
   let tags: Query | undefined;
