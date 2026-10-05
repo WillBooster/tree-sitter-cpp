@@ -87,3 +87,21 @@ void f() { int ${name} = 1; ${name}++; goto ${name}; ${name}:; }
     parser.delete();
   }
 });
+
+test('retains declaration fields for keyword-led typed va_arg initializers', () => {
+  const parser = new Parser().setLanguage(language);
+  const source = 'using Flag = const bool; void f(__builtin_va_list ap) { Flag &p(not __builtin_va_arg(ap, int)); }';
+  const tree = parser.parse(source)!;
+  try {
+    expect(tree.rootNode.hasError).toBe(false);
+    const declaration = tree.rootNode
+      .descendantsOfType('function_definition')[0]
+      ?.childForFieldName('body')?.firstNamedChild;
+    expect(declaration?.type).toBe('declaration');
+    expect(declaration?.childForFieldName('declarator')?.text).toBe('&p(not __builtin_va_arg(ap, int))');
+    expect(declaration?.descendantsOfType('va_arg_expression')[0]?.childForFieldName('type')?.text).toBe('int');
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});

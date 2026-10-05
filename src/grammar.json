@@ -17232,6 +17232,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "va_arg_expression"
+        },
+        {
+          "type": "SYMBOL",
           "name": "lambda_expression"
         },
         {

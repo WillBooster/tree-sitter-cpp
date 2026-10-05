@@ -873,6 +873,7 @@ module.exports = grammar(C, {
         $.parenthesized_expression,
         $.fold_expression,
         $.compound_literal_expression,
+        $.va_arg_expression,
         $.lambda_expression,
         $.splice_expression,
         $.call_expression,
