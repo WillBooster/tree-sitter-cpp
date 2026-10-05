@@ -1,0 +1,464 @@
+================================================================================
+GNU typeof canonical type consumers
+================================================================================
+
+int source = 3;
+__typeof__(int*) pointer = nullptr;
+__typeof__(source) value = 4;
+using Number = __typeof__(1 + 2);
+typedef __typeof__(int) Integer;
+template<class T> struct Holder { T value; };
+Holder<__typeof__(source)> holder{3};
+struct Box { __typeof__(source) member; };
+__typeof__(int) echo(__typeof__(int) argument) { return argument; }
+auto other() -> __typeof__(source) { return source; }
+int main() {
+  Number copy = (__typeof__(value))value;
+  Box box{source};
+  return echo(copy) + other() + box.member + holder.value - 13
+    + (pointer != nullptr) + (sizeof(__typeof__(source)) != sizeof(int));
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (number_literal)))
+  (declaration
+    (typeof_specifier
+      (type_descriptor
+        (primitive_type)
+        (abstract_pointer_declarator)))
+    (init_declarator
+      (identifier)
+      (null)))
+  (declaration
+    (typeof_specifier
+      (identifier))
+    (init_declarator
+      (identifier)
+      (number_literal)))
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (typeof_specifier
+        (binary_expression
+          (number_literal)
+          (number_literal)))))
+  (type_definition
+    (typeof_specifier
+      (type_descriptor
+        (primitive_type)))
+    (type_identifier))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list
+        (field_declaration
+          (type_identifier)
+          (field_identifier)))))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (type_descriptor
+          (typeof_specifier
+            (identifier)))))
+    (init_declarator
+      (identifier)
+      (initializer_list
+        (number_literal))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (typeof_specifier
+          (identifier))
+        (field_identifier))))
+  (function_definition
+    (typeof_specifier
+      (type_descriptor
+        (primitive_type)))
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (typeof_specifier
+            (type_descriptor
+              (primitive_type)))
+          (identifier))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (typeof_specifier
+            (identifier)))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (cast_expression
+            (type_descriptor
+              (typeof_specifier
+                (identifier)))
+            (identifier))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (identifier))))
+      (return_statement
+        (binary_expression
+          (binary_expression
+            (binary_expression
+              (binary_expression
+                (binary_expression
+                  (binary_expression
+                    (call_expression
+                      (identifier)
+                      (argument_list
+                        (identifier)))
+                    (call_expression
+                      (identifier)
+                      (argument_list)))
+                  (field_expression
+                    (identifier)
+                    (field_identifier)))
+                (field_expression
+                  (identifier)
+                  (field_identifier)))
+              (number_literal))
+            (parenthesized_expression
+              (binary_expression
+                (identifier)
+                (null))))
+          (parenthesized_expression
+            (binary_expression
+              (sizeof_expression
+                (type_descriptor
+                  (typeof_specifier
+                    (identifier))))
+              (sizeof_expression
+                (type_descriptor
+                  (primitive_type))))))))))
+
+================================================================================
+Ordinary typeof names in ISO C++ type and expression positions
+================================================================================
+
+using typeof = int;
+using typeof_unqual = int;
+struct Box { typeof member; };
+typeof echo(typeof argument) { return argument; }
+auto other() -> typeof_unqual { return 1; }
+template<class T> struct Holder { T value; };
+Holder<typeof> holder{1};
+int main() {
+  Box box{1};
+  typeof values[2]{1,2};
+  typeof* pointer = values;
+  return echo((typeof)box.member) + other() + holder.value + pointer[0] - 4;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)))
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (type_identifier)
+        (field_identifier))))
+  (function_definition
+    (type_identifier)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (type_identifier))))
+    (compound_statement
+      (return_statement
+        (number_literal))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list
+        (field_declaration
+          (type_identifier)
+          (field_identifier)))))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (type_descriptor
+          (type_identifier))))
+    (init_declarator
+      (identifier)
+      (initializer_list
+        (number_literal))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (number_literal))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (array_declarator
+            (identifier)
+            (number_literal))
+          (initializer_list
+            (number_literal)
+            (number_literal))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (identifier)))
+      (return_statement
+        (binary_expression
+          (binary_expression
+            (binary_expression
+              (binary_expression
+                (call_expression
+                  (identifier)
+                  (argument_list
+                    (cast_expression
+                      (type_descriptor
+                        (type_identifier))
+                      (field_expression
+                        (identifier)
+                        (field_identifier)))))
+                (call_expression
+                  (identifier)
+                  (argument_list)))
+              (field_expression
+                (identifier)
+                (field_identifier)))
+            (subscript_expression
+              (identifier)
+              (subscript_argument_list
+                (number_literal))))
+          (number_literal))))))
+
+
+================================================================================
+GCC ordinary unqualified-type operator names
+================================================================================
+
+using __typeof_unqual = int;
+using __typeof_unqual__ = int;
+struct Box { __typeof_unqual member; };
+__typeof_unqual echo(__typeof_unqual argument) { return argument; }
+auto other() -> __typeof_unqual__ { return 1; }
+template<class T> struct Holder { T value; };
+Holder<__typeof_unqual> holder{1};
+int main() {
+  Box box{1};
+  __typeof_unqual values[2]{1,2};
+  __typeof_unqual* pointer = values;
+  {
+    int __typeof_unqual = 1;
+    __typeof_unqual += 1;
+    goto __typeof_unqual;
+    __typeof_unqual: pointer[0] += __typeof_unqual;
+    pointer[0] -= __typeof_unqual;
+  }
+  return echo((__typeof_unqual)box.member) + other() + holder.value + pointer[0] - 4;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)))
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (type_identifier)
+        (field_identifier))))
+  (function_definition
+    (type_identifier)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (type_identifier))))
+    (compound_statement
+      (return_statement
+        (number_literal))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list
+        (field_declaration
+          (type_identifier)
+          (field_identifier)))))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (type_descriptor
+          (type_identifier))))
+    (init_declarator
+      (identifier)
+      (initializer_list
+        (number_literal))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (number_literal))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (array_declarator
+            (identifier)
+            (number_literal))
+          (initializer_list
+            (number_literal)
+            (number_literal))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (identifier)))
+      (compound_statement
+        (declaration
+          (primitive_type)
+          (init_declarator
+            (identifier)
+            (number_literal)))
+        (expression_statement
+          (assignment_expression
+            (identifier)
+            (number_literal)))
+        (goto_statement
+          (statement_identifier))
+        (labeled_statement
+          (statement_identifier)
+          (expression_statement
+            (assignment_expression
+              (subscript_expression
+                (identifier)
+                (subscript_argument_list
+                  (number_literal)))
+              (identifier))))
+        (expression_statement
+          (assignment_expression
+            (subscript_expression
+              (identifier)
+              (subscript_argument_list
+                (number_literal)))
+            (identifier))))
+      (return_statement
+        (binary_expression
+          (binary_expression
+            (binary_expression
+              (binary_expression
+                (call_expression
+                  (identifier)
+                  (argument_list
+                    (cast_expression
+                      (type_descriptor
+                        (type_identifier))
+                      (field_expression
+                        (identifier)
+                        (field_identifier)))))
+                (call_expression
+                  (identifier)
+                  (argument_list)))
+              (field_expression
+                (identifier)
+                (field_identifier)))
+            (subscript_expression
+              (identifier)
+              (subscript_argument_list
+                (number_literal))))
+          (number_literal))))))

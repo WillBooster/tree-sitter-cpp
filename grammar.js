@@ -96,6 +96,14 @@ const ASSIGNMENT_OPERATORS = [
   'xor_eq',
 ];
 
+const CONTEXTUAL_IDENTIFIER_NAMES = ['pre', 'post', 'typeof', 'typeof_unqual', '__typeof_unqual', '__typeof_unqual__'];
+const VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES = [
+  ...CONTEXTUAL_IDENTIFIER_NAMES.slice(0, 2),
+  'va_arg',
+  '__builtin_va_arg',
+  ...CONTEXTUAL_IDENTIFIER_NAMES.slice(2),
+];
+
 const commaSep = C.commaSep;
 const commaSep1 = C.commaSep1;
 const preprocIf = C.preprocIf;
@@ -283,6 +291,7 @@ module.exports = grammar(C, {
         $.splice_type_specifier,
         $.placeholder_type_specifier,
         $.decltype,
+        $.typeof_specifier,
         prec.right(choice(alias($.qualified_type_identifier, $.qualified_identifier), $._type_identifier))
       ),
 
@@ -1039,7 +1048,7 @@ module.exports = grammar(C, {
     _declarator: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.identifier),
+        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
         $.reference_declarator,
         alias($.qualified_pointer_declarator, $.qualified_identifier),
         $.qualified_identifier,
@@ -1539,7 +1548,7 @@ module.exports = grammar(C, {
       choice(
         original,
         prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
-        alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.identifier),
+        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
         $.co_await_expression,
         $.requires_expression,
         $.requires_clause,
@@ -2005,7 +2014,7 @@ module.exports = grammar(C, {
     _assignment_left_expression: ($, /** @type {Rule} */ original) =>
       choice(
         original,
-        alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.identifier),
+        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
         $.pack_index_expression,
         $.qualified_identifier,
         $.user_defined_literal,
@@ -2248,24 +2257,21 @@ module.exports = grammar(C, {
     user_defined_literal: ($) => seq(choice($.number_literal, $.char_literal, $._string), $.literal_suffix),
 
     _type_identifier: ($, /** @type {Rule} */ original) =>
-      choice(original, alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.type_identifier)),
+      choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.type_identifier)),
 
     _contextual_identifier: ($) =>
-      choice(
-        $.identifier,
-        alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg', 'typeof', 'typeof_unqual'), $.identifier)
-      ),
+      choice($.identifier, alias(choice(...VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES), $.identifier)),
 
     _field_identifier: ($, /** @type {Rule} */ original) =>
-      choice(original, alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.field_identifier)),
+      choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.field_identifier)),
 
     _statement_identifier: ($, /** @type {Rule} */ original) =>
-      choice(original, alias(choice('pre', 'post', 'typeof', 'typeof_unqual'), $.statement_identifier)),
+      choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.statement_identifier)),
 
     _namespace_identifier: ($) =>
       choice(
         alias($.identifier, $.namespace_identifier),
-        alias(choice('pre', 'post', 'va_arg', '__builtin_va_arg', 'typeof', 'typeof_unqual'), $.namespace_identifier)
+        alias(choice(...VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES), $.namespace_identifier)
       ),
   },
 });
