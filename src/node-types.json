@@ -504,6 +504,10 @@
         "named": true
       },
       {
+        "type": "typeof_specifier",
+        "named": true
+      },
+      {
         "type": "union_specifier",
         "named": true
       }
@@ -7964,10 +7968,6 @@
           },
           {
             "type": "type_specifier",
-            "named": true
-          },
-          {
-            "type": "typeof_specifier",
             "named": true
           }
         ]
