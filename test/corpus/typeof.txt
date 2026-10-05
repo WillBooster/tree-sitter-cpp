@@ -170,12 +170,26 @@ Ordinary typeof names in ISO C++ type and expression positions
 ================================================================================
 
 using typeof = int;
-using typeof_unqual = int;
+using typeof_unqual = long;
 struct Box { typeof member; };
 typeof echo(typeof argument) { return argument; }
 auto other() -> typeof_unqual { return 1; }
 template<class T> struct Holder { T value; };
 Holder<typeof> holder{1};
+struct Conversion {
+  operator typeof() const noexcept { return 1; }
+  explicit operator typeof_unqual() const { return 2; }
+};
+namespace Calls {
+int typeof(int x) { return x; }
+int typeof_unqual(int x) { return x; }
+void operations(int x, int y) {
+  typeof(x) * y;
+  typeof(x) & y;
+  typeof_unqual(x) * y;
+  typeof_unqual(x) & y;
+}
+}
 int main() {
   Box box{1};
   typeof values[2]{1,2};
@@ -193,7 +207,7 @@ int main() {
   (alias_declaration
     (type_identifier)
     (type_descriptor
-      (primitive_type)))
+      (sized_type_specifier)))
   (struct_specifier
     (type_identifier)
     (field_declaration_list
@@ -243,6 +257,94 @@ int main() {
       (identifier)
       (initializer_list
         (number_literal))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (operator_cast
+          (type_identifier)
+          (abstract_function_declarator
+            (parameter_list)
+            (type_qualifier)
+            (noexcept)))
+        (compound_statement
+          (return_statement
+            (number_literal))))
+      (function_definition
+        (explicit_function_specifier)
+        (operator_cast
+          (type_identifier)
+          (abstract_function_declarator
+            (parameter_list)
+            (type_qualifier)))
+        (compound_statement
+          (return_statement
+            (number_literal))))))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (compound_statement
+          (return_statement
+            (identifier))))
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (compound_statement
+          (return_statement
+            (identifier))))
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (compound_statement
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))))))
   (function_definition
     (primitive_type)
     (function_declarator
@@ -302,12 +404,26 @@ GCC ordinary unqualified-type operator names
 ================================================================================
 
 using __typeof_unqual = int;
-using __typeof_unqual__ = int;
+using __typeof_unqual__ = long;
 struct Box { __typeof_unqual member; };
 __typeof_unqual echo(__typeof_unqual argument) { return argument; }
 auto other() -> __typeof_unqual__ { return 1; }
 template<class T> struct Holder { T value; };
 Holder<__typeof_unqual> holder{1};
+struct Conversion {
+  operator __typeof_unqual() const noexcept { return 1; }
+  explicit operator __typeof_unqual__() const { return 2; }
+};
+namespace Calls {
+int __typeof_unqual(int x) { return x; }
+int __typeof_unqual__(int x) { return x; }
+void operations(int x, int y) {
+  __typeof_unqual(x) * y;
+  __typeof_unqual(x) & y;
+  __typeof_unqual__(x) * y;
+  __typeof_unqual__(x) & y;
+}
+}
 int main() {
   Box box{1};
   __typeof_unqual values[2]{1,2};
@@ -332,7 +448,7 @@ int main() {
   (alias_declaration
     (type_identifier)
     (type_descriptor
-      (primitive_type)))
+      (sized_type_specifier)))
   (struct_specifier
     (type_identifier)
     (field_declaration_list
@@ -382,6 +498,94 @@ int main() {
       (identifier)
       (initializer_list
         (number_literal))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (operator_cast
+          (type_identifier)
+          (abstract_function_declarator
+            (parameter_list)
+            (type_qualifier)
+            (noexcept)))
+        (compound_statement
+          (return_statement
+            (number_literal))))
+      (function_definition
+        (explicit_function_specifier)
+        (operator_cast
+          (type_identifier)
+          (abstract_function_declarator
+            (parameter_list)
+            (type_qualifier)))
+        (compound_statement
+          (return_statement
+            (number_literal))))))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (compound_statement
+          (return_statement
+            (identifier))))
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (compound_statement
+          (return_statement
+            (identifier))))
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (compound_statement
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))
+          (expression_statement
+            (binary_expression
+              (call_expression
+                (identifier)
+                (argument_list
+                  (identifier)))
+              (identifier)))))))
   (function_definition
     (primitive_type)
     (function_declarator

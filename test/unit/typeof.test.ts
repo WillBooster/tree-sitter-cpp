@@ -111,6 +111,45 @@ test('preserves typeof type fields, configured captures and contextual names aft
             declaration?.childForFieldName('type')?.text,
             file === 'typeofGccNames.cpp' ? '__typeof_unqual' : 'typeof'
           );
+          const typeNames =
+            file === 'typeofGccNames.cpp' ? ['__typeof_unqual', '__typeof_unqual__'] : ['typeof', 'typeof_unqual'];
+          const conversions = tree.rootNode.descendantsOfType('operator_cast');
+          assert.deepEqual(
+            conversions.map((node) => node.childForFieldName('type')?.text),
+            typeNames
+          );
+          assert.ok(
+            conversions.every(
+              (node) =>
+                node.childForFieldName('type')?.type === 'type_identifier' &&
+                node.childForFieldName('declarator')?.type === 'abstract_function_declarator'
+            )
+          );
+          const operations = tree.rootNode
+            .descendantsOfType('function_definition')
+            .find(
+              (node) => node.childForFieldName('declarator')?.childForFieldName('declarator')?.text === 'operations'
+            );
+          assert.ok(operations);
+          const binaries = operations.descendantsOfType('binary_expression');
+          assert.deepEqual(
+            binaries.map((node) => node.childForFieldName('operator')?.text),
+            ['*', '&', '*', '&']
+          );
+          assert.deepEqual(
+            binaries.map((node) => node.childForFieldName('left')?.childForFieldName('function')?.text),
+            [typeNames[0], typeNames[0], typeNames[1], typeNames[1]]
+          );
+          assert.ok(
+            binaries.every(
+              (node) =>
+                node.parent?.type === 'expression_statement' &&
+                node.childForFieldName('left')?.type === 'call_expression' &&
+                node.childForFieldName('right')?.text === 'y' &&
+                source.slice(node.startIndex, node.endIndex) === node.text
+            )
+          );
+          assert.ok(typeNames.every((name) => names.has(name)) && names.has('operations'));
           if (file === 'typeofGccNames.cpp') {
             assert.deepEqual(
               tree.rootNode.descendantsOfType('statement_identifier').map((n) => n.text),
@@ -124,16 +163,21 @@ test('preserves typeof type fields, configured captures and contextual names aft
           }
         }
         const original = snapshot(tree.rootNode);
-        const name = file === 'typeofGccNames.cpp' ? '__typeof_unqual' : 'typeof';
-        const marker = file === 'typeofCpp.cpp' ? '__typeof__(source) value' : `${name}* pointer`;
-        const start = source.indexOf(marker) + (file === 'typeofCpp.cpp' ? '__typeof__('.length : 0);
-        const old = file === 'typeofCpp.cpp' ? 'source' : name;
-        const replacement =
+        const marker =
           file === 'typeofCpp.cpp'
-            ? 'source + 1'
-            : file === 'typeofGccNames.cpp'
-              ? '__typeof_unqual__'
-              : 'typeof_unqual';
+            ? '__typeof__(source) value'
+            : file === 'typeofNames.cpp'
+              ? 'operator typeof() const noexcept'
+              : '__typeof_unqual(x) * y';
+        const prefix =
+          file === 'typeofCpp.cpp'
+            ? '__typeof__('
+            : file === 'typeofNames.cpp'
+              ? 'operator typeof() const'
+              : '__typeof_unqual(x) ';
+        const start = source.indexOf(marker) + prefix.length;
+        const old = file === 'typeofCpp.cpp' ? 'source' : file === 'typeofNames.cpp' ? ' noexcept' : '*';
+        const replacement = file === 'typeofCpp.cpp' ? 'source + 1' : file === 'typeofNames.cpp' ? '' : '&';
         const changed = source.slice(0, start) + replacement + source.slice(start + old.length);
         const position = (i: number): { row: number; column: number } => {
           const lines = source.slice(0, i).split('\n');

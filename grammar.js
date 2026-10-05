@@ -127,6 +127,9 @@ module.exports = grammar(C, {
     [$.type_specifier, $.expression, $.va_arg_expression],
     [$._declarator, $.type_specifier, $.typeof_specifier, $.expression],
     [$.typeof_specifier, $.expression],
+    [$.typeof_specifier, $.type_specifier],
+    [$.type_specifier, $.template_type],
+    [$.type_specifier, $.optional_type_parameter_declaration],
     [$.type_specifier, $.typeof_specifier, $.expression],
     [$._type_declarator, $.typeof_specifier],
     [$._declarator, $.type_specifier, $.typeof_specifier],
@@ -292,8 +295,17 @@ module.exports = grammar(C, {
         $.placeholder_type_specifier,
         $.decltype,
         $.typeof_specifier,
-        prec.right(choice(alias($.qualified_type_identifier, $.qualified_identifier), $._type_identifier))
+        prec.right(
+          choice(
+            alias($.qualified_type_identifier, $.qualified_identifier),
+            C.grammar.rules._type_identifier,
+            alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(0, 2)), $.type_identifier)
+          )
+        ),
+        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(2)), $.type_identifier)
       ),
+
+    typeof_specifier: (_, /** @type {Rule} */ original) => prec.dynamic(-1, original),
 
     type_qualifier: (_, /** @type {Rule} */ original) => choice(original, 'mutable', 'constinit', 'consteval'),
 
