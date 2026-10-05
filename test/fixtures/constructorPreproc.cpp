@@ -15,10 +15,12 @@ struct Trailing {
   explicit Trailing(int n) :
 #if SELECT == 0
     a(n),
-#elif SELECT == 1
+#elifdef FEATURE
     a{n + 1},
-#else
+#elifndef FEATURE
     a(n + 2),
+#else
+    a(n + 3),
 #endif
     b(n + 3), c(n + 4) {}
 };
@@ -35,7 +37,7 @@ struct AllGuarded {
 struct Nested {
   int a, b, c;
   explicit Nested(int n) : a(n)
-#ifdef FEATURE
+#ifndef FEATURE
 #if SELECT == 0
     , b(n + 1)
 #else

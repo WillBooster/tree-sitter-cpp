@@ -33,7 +33,7 @@ test('keeps conditional constructor initializers, following tags and edits in th
       expect(list.descendantsOfType(['preproc_if', 'preproc_ifdef']).length).toBeGreaterThan(0);
       for (const condition of list.descendantsOfType('preproc_if')) {
         expect(condition.childForFieldName('condition')?.type).toBe('binary_expression');
-        expect(condition.childForFieldName('alternative')?.type).toMatch(/^preproc_(else|elif)$/);
+        expect(condition.childForFieldName('alternative')?.type).toMatch(/^preproc_(else|elif|elifdef)$/);
       }
     }
     expect(lists[0]!.descendantsOfType('field_initializer').map((node) => node.namedChild(0)?.text)).toEqual([
@@ -42,6 +42,33 @@ test('keeps conditional constructor initializers, following tags and edits in th
       'b',
       'b',
       'c',
+    ]);
+    const definitionArms = lists[1]!.descendantsOfType('preproc_elifdef');
+    expect(
+      definitionArms.map((node) => ({
+        parent: node.parent?.type,
+        nameType: node.childForFieldName('name')?.type,
+        name: node.childForFieldName('name')?.text,
+        initializers: node.namedChildren
+          .filter((child) => child.type === 'field_initializer')
+          .map((child) => child.text),
+        alternative: node.childForFieldName('alternative')?.type,
+      }))
+    ).toEqual([
+      {
+        parent: 'preproc_if',
+        nameType: 'identifier',
+        name: 'FEATURE',
+        initializers: ['a{n + 1}'],
+        alternative: 'preproc_elifdef',
+      },
+      {
+        parent: 'preproc_elifdef',
+        nameType: 'identifier',
+        name: 'FEATURE',
+        initializers: ['a(n + 2)'],
+        alternative: 'preproc_else',
+      },
     ]);
     expect(lists[4]!.parent?.childForFieldName('body')?.type).toBe('compound_statement');
     const after = tree.rootNode.namedChildren.find(
@@ -73,6 +100,7 @@ test('keeps conditional constructor initializers, following tags and edits in th
     const directives = queries[0]!.captures(tree.rootNode).filter(({ name }) => name === 'keyword');
     expect(directives.map(({ node }) => node.text)).toContain('#elif');
     expect(directives.map(({ node }) => node.text)).toContain('#ifdef');
+    expect(directives.map(({ node }) => node.text)).toContain('#ifndef');
 
     const conditional = Source.slice(Source.indexOf('#if SELECT'), Source.indexOf('#endif') + '#endif'.length);
     const plain = '    , b(n + 1)';
