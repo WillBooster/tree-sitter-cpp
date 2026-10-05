@@ -116,6 +116,8 @@ module.exports = grammar(C, {
 
   conflicts: ($, original) => [
     ...original,
+    [$._field_initializer_sequence],
+    [$._field_initializer_conditionals],
     [$.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_block],
     [$.preproc_if_in_initializer_list, $.preproc_if_in_block],
     [$.preproc_elif_in_initializer_list, $.preproc_elif_in_block],
@@ -923,7 +925,41 @@ module.exports = grammar(C, {
     initializer_pair: ($, /** @type {Rule} */ original) =>
       choice(original, seq(field('designator', $.field_designator), field('value', $.initializer_list))),
 
-    field_initializer_list: ($) => seq(':', commaSep1($.field_initializer)),
+    field_initializer_list: ($) => seq(':', $._field_initializer_sequence),
+
+    _field_initializer_sequence: ($) =>
+      choice(
+        seq(
+          $.field_initializer,
+          optional(choice(seq(',', $._field_initializer_sequence), $._field_initializer_conditionals))
+        ),
+        $._field_initializer_conditionals
+      ),
+
+    _field_initializer_conditionals: ($) =>
+      seq(
+        $._field_initializer_conditional,
+        optional(choice($._field_initializer_sequence, seq(',', $._field_initializer_sequence)))
+      ),
+
+    _field_initializer_conditional: ($) =>
+      choice(
+        alias($.preproc_if_in_field_initializer_list, $.preproc_if),
+        alias($.preproc_ifdef_in_field_initializer_list, $.preproc_ifdef)
+      ),
+
+    _field_initializer_branch: ($) =>
+      choice(
+        seq($._field_initializer_sequence, optional(',')),
+        seq(',', optional(seq($._field_initializer_sequence, optional(','))))
+      ),
+
+    ...preprocIf(
+      '_in_field_initializer_list',
+      (/** @type {GrammarSymbols<string>} */ $) => $._field_initializer_branch,
+      0,
+      false
+    ),
 
     field_initializer: ($) =>
       prec(
