@@ -119,7 +119,9 @@ that runs here. Run other CLI commands through it as well (e.g. `script/tree-sit
   a parameter only when a declaration follows it;
 - a check (`test/unit/queries.test.ts`) that the queries `tree-sitter.json` lists compile against the grammar, are
   published in the npm package and the crate, and that `queries/c/` matches the queries of the installed
-  @willbooster/tree-sitter-c; after updating that dependency, `script/copy-c-queries` refreshes the copy;
+  @willbooster/tree-sitter-c. After updating that dependency, run `script/copy-c-queries` and `script/copy-c-scanner`.
+  The scanner headers are verbatim copies from that package; their generator paths refer to the C repository.
+  Review the C scanner dispatch and external-token order against `src/scanner.c` when updating the dependency;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and
   `willbooster-tree-sitter` in `Cargo.lock` are the same version, since the Wasm tests run on the former and the Rust
   tests, the fuzzer, and the CLI on the latter;

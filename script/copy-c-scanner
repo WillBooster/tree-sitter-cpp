@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+cp node_modules/@willbooster/tree-sitter-c/src/pragma.h src/
+cp node_modules/@willbooster/tree-sitter-c/src/identifier.h src/

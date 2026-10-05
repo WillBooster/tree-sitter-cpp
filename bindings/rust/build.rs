@@ -27,5 +27,9 @@ fn main() {
         println!("cargo:rerun-if-changed={}", scanner_path.to_str().unwrap());
     }
 
+    for header in ["pragma.h", "identifier.h"] {
+        println!("cargo:rerun-if-changed={}", src_dir.join(header).display());
+    }
+
     c_config.compile("tree-sitter-cpp");
 }

@@ -10,7 +10,7 @@ const Root = path.join(import.meta.dirname, '../..');
 export async function loadCurrentWasmBuild(): Promise<Language> {
   const wasmPath = path.join(Root, 'tree-sitter-cpp.wasm');
   // src/parser.c is generated from grammar.js, so an edit to the grammar alone also makes the Wasm build stale.
-  const sources = ['grammar.js', 'src/parser.c', 'src/scanner.c'].map(
+  const sources = ['grammar.js', 'src/parser.c', 'src/scanner.c', 'src/pragma.h', 'src/identifier.h'].map(
     (name) => fs.statSync(path.join(Root, name)).mtimeMs
   );
   if (Math.max(...sources) > fs.statSync(wasmPath).mtimeMs) {

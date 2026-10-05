@@ -50,6 +50,10 @@ for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
   test(`publishes every query file that tree-sitter.json references in the ${packageKind} package`, testOptions, () => {
     const published = new Set(listFiles());
     expect(published).toContain('tree-sitter.json');
+    if (packageKind === 'crate') {
+      expect(published).toContain('src/pragma.h');
+      expect(published).toContain('src/identifier.h');
+    }
     for (const kind of QueryKinds) {
       for (const file of queryPaths(kind)) {
         expect(published, file).toContain(file);
@@ -58,13 +62,17 @@ for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
   });
 }
 
-// queries/c/ copies the C grammar's queries, which this grammar extends.
-test('keeps queries/c/ identical to the queries of @willbooster/tree-sitter-c', () => {
-  for (const file of fs.readdirSync(path.join(Root, 'queries/c'))) {
-    expect(
-      fs.readFileSync(path.join(Root, 'queries/c', file), 'utf8'),
-      `queries/c/${file} differs; run script/copy-c-queries`
-    ).toBe(fs.readFileSync(path.join(CQueries, file), 'utf8'));
+test('keeps vendored C queries and scanner headers synchronized with the installed dependency', () => {
+  for (const [directory, files, command] of [
+    ['queries/c', fs.readdirSync(path.join(Root, 'queries/c')), 'script/copy-c-queries'],
+    ['src', ['pragma.h', 'identifier.h'], 'script/copy-c-scanner'],
+  ] as const) {
+    for (const file of files) {
+      const source = directory === 'queries/c' ? path.join(CQueries, file) : path.join(CQueries, '../src', file);
+      expect(fs.readFileSync(path.join(Root, directory, file)), `${directory}/${file} differs; run ${command}`).toEqual(
+        fs.readFileSync(source)
+      );
+    }
   }
 });
 

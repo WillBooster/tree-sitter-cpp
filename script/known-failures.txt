@@ -52,7 +52,6 @@ examples/json/docs/mkdocs/docs/examples/nlohmann_json_serialize_enum_strict_2.cp
 examples/json/docs/mkdocs/docs/examples/nlohmann_json_serialize_enum_strict_err.cpp
 examples/json/include/nlohmann/adl_serializer.hpp
 examples/json/include/nlohmann/byte_container_with_subtype.hpp
-examples/json/include/nlohmann/detail/abi_macros.hpp
 examples/json/include/nlohmann/detail/conversions/from_json.hpp
 examples/json/include/nlohmann/detail/conversions/to_chars.hpp
 examples/json/include/nlohmann/detail/conversions/to_json.hpp
@@ -75,7 +74,6 @@ examples/json/include/nlohmann/detail/iterators/primitive_iterator.hpp
 examples/json/include/nlohmann/detail/json_custom_base_class.hpp
 examples/json/include/nlohmann/detail/json_pointer.hpp
 examples/json/include/nlohmann/detail/json_ref.hpp
-examples/json/include/nlohmann/detail/macro_scope.hpp
 examples/json/include/nlohmann/detail/meta/call_std/begin.hpp
 examples/json/include/nlohmann/detail/meta/call_std/end.hpp
 examples/json/include/nlohmann/detail/meta/cpp_future.hpp
