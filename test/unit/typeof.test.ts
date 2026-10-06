@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { Parser, Query, Edit, type Node, type Tree } from '@willbooster/web-tree-sitter';
-import { test } from 'vitest';
+import { type Language, Parser, Query, Edit, type Node, type Tree } from '@willbooster/web-tree-sitter';
+import { afterAll, beforeAll, test } from 'vitest';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 const root = path.resolve(import.meta.dirname, '../..');
 const snapshot = (node: Node): unknown => ({
@@ -17,22 +17,36 @@ const snapshot = (node: Node): unknown => ({
   endPosition: node.endPosition,
   children: node.children.map((n, i) => ({ field: node.fieldNameForChild(i), node: snapshot(n) })),
 });
-await Parser.init();
-test('preserves typeof type fields, configured captures and contextual names after edits', async () => {
-  const language = await loadCurrentWasmBuild();
-  const parser = new Parser();
-  let types: Query | undefined, highlights: Query | undefined, tags: Query | undefined;
-  try {
-    parser.setLanguage(language);
-    types = new Query(language, '(type_specifier/typeof_specifier) @type');
-    highlights = new Query(
+let language: Language;
+const queries: Query[] = [];
+
+beforeAll(async () => {
+  await Parser.init();
+  language = await loadCurrentWasmBuild();
+  queries.push(new Query(language, '(type_specifier/typeof_specifier) @type'));
+  queries.push(
+    new Query(
       language,
       ['queries/c/highlights.scm', 'queries/highlights.scm']
         .map((f) => fs.readFileSync(path.join(root, f), 'utf8'))
         .join('\n')
-    );
-    tags = new Query(language, fs.readFileSync(path.join(root, 'queries/tags.scm'), 'utf8'));
-    for (const file of ['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp']) {
+    )
+  );
+  queries.push(new Query(language, fs.readFileSync(path.join(root, 'queries/tags.scm'), 'utf8')));
+}, 30_000);
+
+afterAll(() => {
+  for (const query of queries) query.delete();
+});
+
+test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
+  'preserves typeof type fields, configured captures and contextual names after edits (%s)',
+  (file) => {
+    const [types, highlights, tags] = queries;
+    assert.ok(types && highlights && tags);
+    const parser = new Parser();
+    try {
+      parser.setLanguage(language);
       const source = fs.readFileSync(path.join(root, 'test/fixtures', file), 'utf8');
       let tree: Tree | undefined,
         edited: Tree | undefined,
@@ -225,11 +239,8 @@ test('preserves typeof type fields, configured captures and contextual names aft
         restored?.delete();
         restoredFresh?.delete();
       }
+    } finally {
+      parser.delete();
     }
-  } finally {
-    types?.delete();
-    highlights?.delete();
-    tags?.delete();
-    parser.delete();
   }
-});
+);
