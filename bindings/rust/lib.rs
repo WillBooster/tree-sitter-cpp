@@ -36,11 +36,36 @@ pub const TAGS_QUERY: &str = include_str!("../../queries/tags.scm");
 
 #[cfg(test)]
 mod tests {
+    use tree_sitter::StreamingIterator;
+
     #[test]
     fn test_can_load_grammar() {
         let mut parser = tree_sitter::Parser::new();
         parser
             .set_language(&super::LANGUAGE.into())
             .expect("Error loading C++ parser");
+    }
+
+    #[test]
+    fn extracts_symbol_definitions() {
+        let source = "struct Example { void method() {} };\nvoid function() {}\n";
+        let language = super::LANGUAGE.into();
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&language).unwrap();
+        let tree = parser.parse(source, None).unwrap();
+        assert!(!tree.root_node().has_error());
+
+        let query = tree_sitter::Query::new(&language, super::TAGS_QUERY).unwrap();
+        let name_index = query.capture_index_for_name("name").unwrap();
+        let mut cursor = tree_sitter::QueryCursor::new();
+        let mut captures = cursor.captures(&query, tree.root_node(), source.as_bytes());
+        let mut names = Vec::new();
+        while let Some((query_match, capture_index)) = captures.next() {
+            let capture = query_match.captures()[*capture_index];
+            if capture.index == name_index {
+                names.push(capture.node.utf8_text(source.as_bytes()).unwrap());
+            }
+        }
+        assert_eq!(names, ["Example", "method", "function"]);
     }
 }
