@@ -4,7 +4,10 @@
 #include "tree_sitter/parser.h"
 #include "identifier.h"
 
+static const char pragma_word[] = "_Pragma";
+
 static bool scan_pragma_spacing(TSLexer *lexer);
+static bool scan_pragma_suffix(TSLexer *lexer);
 static bool pragma_space(int32_t c);
 static bool scan_pragma_word(TSLexer *lexer);
 static bool scan_preproc_newline(TSLexer *lexer, bool skip);
@@ -18,6 +21,10 @@ static bool scan_pragma(TSLexer *lexer) {
         lexer->advance(lexer, true);
     }
     if (!scan_pragma_word(lexer)) return false;
+    return scan_pragma_suffix(lexer);
+}
+
+static bool scan_pragma_suffix(TSLexer *lexer) {
     if (!scan_pragma_spacing(lexer) || lexer->lookahead != '(') return false;
     lexer->advance(lexer, false);
     if (!scan_pragma_spacing(lexer)) return false;
@@ -33,10 +40,7 @@ static bool scan_pragma(TSLexer *lexer) {
         if (lexer->lookahead == '\\') {
             lexer->advance(lexer, false);
             if (lexer->eof(lexer)) return false;
-            if (lexer->lookahead == '\r') {
-                lexer->advance(lexer, false);
-                if (lexer->lookahead != '\n') return false;
-            }
+            if (scan_preproc_newline(lexer, false)) continue;
         }
         lexer->advance(lexer, false);
     }
@@ -53,9 +57,7 @@ static bool scan_pragma_spacing(TSLexer *lexer) {
             lexer->advance(lexer, false);
         } else if (lexer->lookahead == '\\') {
             lexer->advance(lexer, false);
-            if (lexer->lookahead == '\r') lexer->advance(lexer, false);
-            if (lexer->lookahead != '\n') return false;
-            lexer->advance(lexer, false);
+            if (!scan_preproc_newline(lexer, false)) return false;
         } else if (lexer->lookahead == '/') {
             lexer->advance(lexer, false);
             if (lexer->lookahead == '/') {
@@ -298,7 +300,7 @@ static bool preproc_word(int32_t c, bool continuation) {
 }
 
 static bool scan_pragma_word(TSLexer *lexer) {
-    const char *word = "_Pragma";
+    const char *word = pragma_word;
     for (; *word; word++) {
         if (lexer->lookahead != *word) return false;
         lexer->advance(lexer, false);
@@ -329,6 +331,51 @@ static bool pragma_space(int32_t c) {
     return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == '\v' ||
            c == 0x85 || c == 0xA0 || c == 0x1680 || (c >= 0x2000 && c <= 0x200A) ||
            c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F || c == 0x3000;
+}
+
+static bool scan_function_macro_name(TSLexer *lexer, bool allow_pragma, TSSymbol pragma_symbol) {
+    bool has_name = false;
+    bool is_pragma = true;
+    unsigned pragma_length = 0;
+    for (;;) {
+        while (!has_name && pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
+        int32_t c = lexer->lookahead;
+        if (c == '\\') {
+            lexer->advance(lexer, false);
+            if (scan_preproc_newline(lexer, !has_name)) {
+                if (!has_name) continue;
+                if (!scan_preproc_splices(lexer)) return false;
+                break;
+            }
+            is_pragma = false;
+            unsigned digits = lexer->lookahead == 'u' ? 4 : lexer->lookahead == 'U' ? 8 : 0;
+            if (!digits) return false;
+            lexer->advance(lexer, false);
+            for (unsigned i = 0; i < digits; i++) {
+                c = lexer->lookahead;
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return false;
+                lexer->advance(lexer, false);
+            }
+        } else {
+            bool identifier = has_name
+                ? set_contains(preproc_identifier_continue, sizeof(preproc_identifier_continue) / sizeof(TSCharacterRange), c)
+                : set_contains(preproc_identifier_start, sizeof(preproc_identifier_start) / sizeof(TSCharacterRange), c);
+            if (!identifier) break;
+            if (is_pragma) {
+                if (pragma_length < sizeof(pragma_word) - 1 && c == pragma_word[pragma_length]) pragma_length++;
+                else is_pragma = false;
+            }
+            lexer->advance(lexer, false);
+        }
+        has_name = true;
+        lexer->mark_end(lexer);
+    }
+    bool adjacent = has_name && lexer->lookahead == '(';
+    if (allow_pragma && is_pragma && pragma_length == sizeof(pragma_word) - 1 && scan_pragma_suffix(lexer)) {
+        lexer->result_symbol = pragma_symbol;
+        return true;
+    }
+    return adjacent;
 }
 
 #endif

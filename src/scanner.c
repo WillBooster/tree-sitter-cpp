@@ -6,7 +6,7 @@
 #include <string.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
@@ -122,7 +122,7 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
         return scan_raw_string_content(scanner, lexer);
     }
 
-    if (valid_symbols[PREPROC_ARG] || valid_symbols[PREPROC_NEWLINE] || valid_symbols[PREPROC_LPAREN] || valid_symbols[PREPROC_DIRECTIVE_ARG]) {
+    if (valid_symbols[PREPROC_ARG] || valid_symbols[PREPROC_NEWLINE] || valid_symbols[PREPROC_LPAREN] || valid_symbols[PREPROC_DIRECTIVE_ARG] || valid_symbols[PREPROC_FUNCTION_NAME]) {
         return scan_preprocessor(lexer, valid_symbols);
     }
     if (!skip_pack_index_whitespace(lexer, true)) return false;
@@ -238,13 +238,23 @@ static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip) {
 }
 
 static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols) {
+    if (valid_symbols[PREPROC_FUNCTION_NAME] && !valid_symbols[PREPROC_LPAREN]) {
+        lexer->result_symbol = PREPROC_FUNCTION_NAME;
+        return scan_function_macro_name(lexer, valid_symbols[PRAGMA_OPERATOR], PRAGMA_OPERATOR);
+    }
     bool directive_text = !valid_symbols[PREPROC_ARG] && valid_symbols[PREPROC_DIRECTIVE_ARG];
     TSSymbol argument_symbol = directive_text ? PREPROC_DIRECTIVE_ARG : PREPROC_ARG;
-    if (valid_symbols[PREPROC_LPAREN] && lexer->lookahead == '(') {
-        lexer->advance(lexer, false);
-        lexer->mark_end(lexer);
-        lexer->result_symbol = PREPROC_LPAREN;
-        return true;
+    if (valid_symbols[PREPROC_LPAREN]) {
+        while (lexer->lookahead == '\\') {
+            lexer->advance(lexer, true);
+            if (!scan_preproc_newline(lexer, true)) return false;
+        }
+        if (lexer->lookahead == '(') {
+            lexer->advance(lexer, false);
+            lexer->mark_end(lexer);
+            lexer->result_symbol = PREPROC_LPAREN;
+            return true;
+        }
     }
     if (valid_symbols[PREPROC_NEWLINE]) {
         for (;;) {
