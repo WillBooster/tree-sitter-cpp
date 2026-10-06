@@ -78,6 +78,9 @@
  "module"
 ] @keyword
 
+[(operator_name "operator" @keyword)
+ (operator_cast "operator" @keyword)]
+
 ; Strings
 
 (raw_string_literal) @string
