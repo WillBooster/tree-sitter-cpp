@@ -41,6 +41,8 @@
 ; Keywords
 
 [
+ "#elifdef"
+ "#elifndef"
  "catch"
  "class"
  "co_await"
