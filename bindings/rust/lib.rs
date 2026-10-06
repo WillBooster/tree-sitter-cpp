@@ -31,6 +31,9 @@ pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_cpp) 
 /// [`node-types.json`]: https://tree-sitter.github.io/tree-sitter/using-parsers/6-static-node-types
 pub const NODE_TYPES: &str = include_str!("../../src/node-types.json");
 
+/// The query for extracting symbol definitions from C++ source.
+pub const TAGS_QUERY: &str = include_str!("../../queries/tags.scm");
+
 #[cfg(test)]
 mod tests {
     #[test]
