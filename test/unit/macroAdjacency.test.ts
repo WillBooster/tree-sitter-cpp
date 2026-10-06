@@ -4,10 +4,15 @@ import path from 'node:path';
 import { Edit, Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 await Parser.init();
 const language = await loadCurrentWasmBuild();
+const highlights = [treeSitterJson.grammars[0]!.highlights]
+  .flat()
+  .map((file) => fs.readFileSync(path.join(import.meta.dirname, '../..', file), 'utf8'))
+  .join('\n');
 
 test('preserves macro name adjacency across comments and line splices', () => {
   const parser = new Parser().setLanguage(language);
@@ -83,12 +88,7 @@ test('retains function-like names after leading splices and comments', () => {
 
 test('updates macro classification and query captures after adjacency edits', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    fs.readFileSync(path.join(import.meta.dirname, '../../queries/c/highlights.scm'), 'utf8') +
-      '\n' +
-      fs.readFileSync(path.join(import.meta.dirname, '../../queries/highlights.scm'), 'utf8')
-  );
+  const query = new Query(language, highlights);
   const prefix = '#define M';
   const suffix = '(x) x\nint after;\n';
   let gap = '';
@@ -149,12 +149,7 @@ test('updates macro classification and query captures after adjacency edits', ()
 
 test('retains ordinary call expressions while recovering outside macro definitions', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    fs.readFileSync(path.join(import.meta.dirname, '../../queries/c/highlights.scm'), 'utf8') +
-      '\n' +
-      fs.readFileSync(path.join(import.meta.dirname, '../../queries/highlights.scm'), 'utf8')
-  );
+  const query = new Query(language, highlights);
   try {
     for (const source of ['int x = @ foo(1) + 2;', 'void f(void) { if (@ foo(1)) return; }']) {
       const tree = parser.parse(source)!;
