@@ -1,0 +1,415 @@
+==================
+Preprocessor conditions in constructor initializer lists
+==================
+
+struct Leading {
+  int a, b, c;
+  explicit Leading(int n) : a(n)
+#if SELECT == 0
+    , b(n + 1)
+#elif SELECT == 1
+    , b{n + 2}
+#else
+    , b(n + 3)
+#endif
+    , c(n + 4) {}
+};
+struct Trailing {
+  int a, b, c;
+  explicit Trailing(int n) :
+#if SELECT == 0
+    a(n),
+#elifdef FEATURE
+    a{n + 1},
+#elifndef FEATURE
+    a(n + 2),
+#else
+    a(n + 3),
+#endif
+    b(n + 3), c(n + 4) {}
+};
+struct AllGuarded {
+  int a;
+  AllGuarded() :
+#if SELECT == 0
+    a(1)
+#else
+    a{2}
+#endif
+  {}
+};
+struct Nested {
+  int a, b, c;
+  explicit Nested(int n) : a(n)
+#ifndef FEATURE
+#if SELECT == 0
+    , b(n + 1)
+#else
+    , b{n + 2}
+#endif
+#else
+    , b(n + 3)
+#endif
+    , c(n + 4) {}
+};
+struct Base { explicit Base(int) {} };
+struct Out : Base {
+  int a, b;
+  explicit Out(int);
+};
+Out::Out(int n) try :
+#ifdef FEATURE
+  Base(n),
+#else
+  Base{n + 1},
+#endif
+  a(n),
+#if SELECT == 0
+  b(n + 1)
+#else
+  b{n + 2}
+#endif
+{} catch (...) { throw; }
+int after() { Leading l(1); Trailing t(2); AllGuarded a; Nested n(3); Out o(4); return l.a + t.a + a.a + n.a + o.a; }
+int main() { return after() < 0; }
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (field_identifier)
+        (field_identifier))
+      (function_definition
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (field_initializer_list
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (identifier)))
+          (preproc_if
+            (binary_expression
+              (identifier)
+              (number_literal))
+            (field_initializer
+              (field_identifier)
+              (argument_list
+                (binary_expression
+                  (identifier)
+                  (number_literal))))
+            (preproc_elif
+              (binary_expression
+                (identifier)
+                (number_literal))
+              (field_initializer
+                (field_identifier)
+                (initializer_list
+                  (binary_expression
+                    (identifier)
+                    (number_literal))))
+              (preproc_else
+                (field_initializer
+                  (field_identifier)
+                  (argument_list
+                    (binary_expression
+                      (identifier)
+                      (number_literal)))))))
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (binary_expression
+                (identifier)
+                (number_literal)))))
+        (compound_statement))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (field_identifier)
+        (field_identifier))
+      (function_definition
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (field_initializer_list
+          (preproc_if
+            (binary_expression
+              (identifier)
+              (number_literal))
+            (field_initializer
+              (field_identifier)
+              (argument_list
+                (identifier)))
+            (preproc_elifdef
+              (identifier)
+              (field_initializer
+                (field_identifier)
+                (initializer_list
+                  (binary_expression
+                    (identifier)
+                    (number_literal))))
+              (preproc_elifdef
+                (identifier)
+                (field_initializer
+                  (field_identifier)
+                  (argument_list
+                    (binary_expression
+                      (identifier)
+                      (number_literal))))
+                (preproc_else
+                  (field_initializer
+                    (field_identifier)
+                    (argument_list
+                      (binary_expression
+                        (identifier)
+                        (number_literal))))))))
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (binary_expression
+                (identifier)
+                (number_literal))))
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (binary_expression
+                (identifier)
+                (number_literal)))))
+        (compound_statement))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))
+      (function_definition
+        (function_declarator
+          (identifier)
+          (parameter_list))
+        (field_initializer_list
+          (preproc_if
+            (binary_expression
+              (identifier)
+              (number_literal))
+            (field_initializer
+              (field_identifier)
+              (argument_list
+                (number_literal)))
+            (preproc_else
+              (field_initializer
+                (field_identifier)
+                (initializer_list
+                  (number_literal))))))
+        (compound_statement))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (field_identifier)
+        (field_identifier))
+      (function_definition
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier))))
+        (field_initializer_list
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (identifier)))
+          (preproc_ifdef
+            (identifier)
+            (preproc_if
+              (binary_expression
+                (identifier)
+                (number_literal))
+              (field_initializer
+                (field_identifier)
+                (argument_list
+                  (binary_expression
+                    (identifier)
+                    (number_literal))))
+              (preproc_else
+                (field_initializer
+                  (field_identifier)
+                  (initializer_list
+                    (binary_expression
+                      (identifier)
+                      (number_literal))))))
+            (preproc_else
+              (field_initializer
+                (field_identifier)
+                (argument_list
+                  (binary_expression
+                    (identifier)
+                    (number_literal))))))
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (binary_expression
+                (identifier)
+                (number_literal)))))
+        (compound_statement))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type))))
+        (compound_statement))))
+  (struct_specifier
+    (type_identifier)
+    (base_class_clause
+      (type_identifier))
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (field_identifier))
+      (declaration
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)))))))
+  (function_definition
+    (function_declarator
+      (qualified_identifier
+        (namespace_identifier)
+        (identifier))
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (try_statement
+      (field_initializer_list
+        (preproc_ifdef
+          (identifier)
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (identifier)))
+          (preproc_else
+            (field_initializer
+              (field_identifier)
+              (initializer_list
+                (binary_expression
+                  (identifier)
+                  (number_literal))))))
+        (field_initializer
+          (field_identifier)
+          (argument_list
+            (identifier)))
+        (preproc_if
+          (binary_expression
+            (identifier)
+            (number_literal))
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (binary_expression
+                (identifier)
+                (number_literal))))
+          (preproc_else
+            (field_initializer
+              (field_identifier)
+              (initializer_list
+                (binary_expression
+                  (identifier)
+                  (number_literal)))))))
+      (compound_statement)
+      (catch_clause
+        (parameter_list)
+        (compound_statement
+          (throw_statement)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (number_literal))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (number_literal))))
+      (declaration
+        (type_identifier)
+        (identifier))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (number_literal))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (number_literal))))
+      (return_statement
+        (binary_expression
+          (binary_expression
+            (binary_expression
+              (binary_expression
+                (field_expression
+                  (identifier)
+                  (field_identifier))
+                (field_expression
+                  (identifier)
+                  (field_identifier)))
+              (field_expression
+                (identifier)
+                (field_identifier)))
+            (field_expression
+              (identifier)
+              (field_identifier)))
+          (field_expression
+            (identifier)
+            (field_identifier))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (binary_expression
+          (call_expression
+            (identifier)
+            (argument_list))
+          (number_literal))))))
