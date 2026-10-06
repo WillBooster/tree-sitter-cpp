@@ -242,3 +242,29 @@ test('preserves pragma extras before macro names without reserving identifier pr
     parser.delete();
   }
 });
+
+test('preserves pack indexing across every inherited newline splice', () => {
+  const parser = new Parser().setLanguage(language);
+  try {
+    for (const newline of ['\n', '\r\n', '\n\r', '\r']) {
+      const splice = `\\${newline}`;
+      for (const [source, type, pack] of [
+        [`auto value = Ts...${splice}[0];`, 'pack_index_expression', 'Ts'],
+        [`using T = Pack...${splice}[0];`, 'pack_index_type', 'Pack'],
+      ] as const) {
+        const tree = parser.parse(source)!;
+        try {
+          expect(tree.rootNode.hasError, JSON.stringify(source)).toBe(false);
+          const nodes = tree.rootNode.descendantsOfType(type);
+          expect(nodes, JSON.stringify(source)).toHaveLength(1);
+          expect(nodes[0]!.childForFieldName('pack')?.text).toBe(pack);
+          expect(nodes[0]!.childForFieldName('index')?.text).toBe('0');
+        } finally {
+          tree.delete();
+        }
+      }
+    }
+  } finally {
+    parser.delete();
+  }
+});

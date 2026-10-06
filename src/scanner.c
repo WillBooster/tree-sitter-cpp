@@ -224,13 +224,7 @@ static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip) {
             lexer->advance(lexer, skip);
         } else if (lexer->lookahead == '\\') {
             lexer->advance(lexer, skip);
-            if (lexer->lookahead == '\r') {
-                lexer->advance(lexer, skip);
-            }
-            if (lexer->lookahead != '\n') {
-                return false;
-            }
-            lexer->advance(lexer, skip);
+            if (!scan_preproc_newline(lexer, skip)) return false;
         } else {
             return true;
         }
