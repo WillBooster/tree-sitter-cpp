@@ -1,11 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, Language, Parser, Query } from '@willbooster/web-tree-sitter';
+import { Edit, Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { loadCurrentWasmBuild } from './wasmBuild.js';
+
 await Parser.init();
-const language = await Language.load(path.join(import.meta.dirname, '../../tree-sitter-cpp.wasm'));
+const language = await loadCurrentWasmBuild();
 
 test('preserves macro name adjacency across comments and line splices', () => {
   const parser = new Parser().setLanguage(language);
@@ -22,7 +24,7 @@ test('preserves macro name adjacency across comments and line splices', () => {
       String.raw`\u00e9`,
       String.raw`\U000000e9`,
     ]) {
-      for (const splice of ['', '\\\n', '\\\r\n', '\\\r', '\\\n\r']) {
+      for (const splice of ['', '\\\n', '\\\r\n', '\\\r', '\\\n\r', '\\\n\\\n', '\\\r\n\\\n']) {
         for (const separator of ['', ' ', '/**/', '/*one\ntwo*/', '/**/\t/**/']) {
           const source = `#define ${name}${splice}${separator}(x) x\nint after;\n`;
           const tree = parser.parse(source)!;
@@ -83,7 +85,9 @@ test('updates macro classification and query captures after adjacency edits', ()
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,
-    fs.readFileSync('queries/c/highlights.scm', 'utf8') + '\n' + fs.readFileSync('queries/highlights.scm', 'utf8')
+    fs.readFileSync(path.join(import.meta.dirname, '../../queries/c/highlights.scm'), 'utf8') +
+      '\n' +
+      fs.readFileSync(path.join(import.meta.dirname, '../../queries/highlights.scm'), 'utf8')
   );
   const prefix = '#define M';
   const suffix = '(x) x\nint after;\n';
@@ -147,7 +151,9 @@ test('retains ordinary call expressions while recovering outside macro definitio
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,
-    fs.readFileSync('queries/c/highlights.scm', 'utf8') + '\n' + fs.readFileSync('queries/highlights.scm', 'utf8')
+    fs.readFileSync(path.join(import.meta.dirname, '../../queries/c/highlights.scm'), 'utf8') +
+      '\n' +
+      fs.readFileSync(path.join(import.meta.dirname, '../../queries/highlights.scm'), 'utf8')
   );
   try {
     for (const source of ['int x = @ foo(1) + 2;', 'void f(void) { if (@ foo(1)) return; }']) {

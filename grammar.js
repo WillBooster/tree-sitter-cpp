@@ -906,7 +906,10 @@ module.exports = grammar(C, {
       ),
 
     operator_cast: ($) =>
-      prec.right(1, seq('operator', $._declaration_specifiers, field('declarator', $._abstract_declarator))),
+      prec.dynamic(
+        3,
+        prec.right(1, seq('operator', $._declaration_specifiers, field('declarator', $._abstract_declarator)))
+      ),
 
     // Avoid ambiguity between compound statement and initializer list in a construct like:
     //   A b {};
@@ -1087,6 +1090,7 @@ module.exports = grammar(C, {
         choice(
           $.declaration,
           $.function_definition,
+          alias($.operator_cast_declaration, $.declaration),
           seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
         )
       ),
