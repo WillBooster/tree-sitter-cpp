@@ -14,7 +14,7 @@ export async function loadCurrentWasmBuild(): Promise<Language> {
     (name) => fs.statSync(path.join(Root, name)).mtimeMs
   );
   if (Math.max(generationInputMtime(Root), ...sources) > fs.statSync(wasmPath).mtimeMs) {
-    throw new Error('grammar.js or src/ changed after the Wasm build was built; run `bun run build/ci`');
+    throw new Error('generation inputs or src/ changed after the Wasm build was built; run `bun run build/ci`');
   }
   return Language.load(wasmPath);
 }
