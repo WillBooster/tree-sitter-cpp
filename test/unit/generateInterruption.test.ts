@@ -8,7 +8,7 @@ import { expect, test } from 'vitest';
 
 const repository = join(import.meta.dirname, '../..');
 
-for (const signal of ['SIGTERM', 'SIGHUP', 'SIGQUIT'] as const) {
+for (const signal of ['SIGTERM', 'SIGHUP', 'SIGQUIT', 'SIGINT'] as const) {
   test(`generation waits for its child before restoring sources after ${signal}`, async () => {
     await mkdir(join(repository, '.tmp'), { recursive: true });
     const directory = await mkdtemp(join(repository, '.tmp/generation-interruption-'));
