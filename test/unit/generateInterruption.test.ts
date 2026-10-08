@@ -1,13 +1,14 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { constants } from 'node:os';
 import { join } from 'node:path';
 
 import { expect, test } from 'vitest';
 
 const repository = join(import.meta.dirname, '../..');
 
-for (const signal of ['SIGTERM', 'SIGHUP'] as const) {
+for (const signal of ['SIGTERM', 'SIGHUP', 'SIGQUIT'] as const) {
   test(`generation waits for its child before restoring sources after ${signal}`, async () => {
     await mkdir(join(repository, '.tmp'), { recursive: true });
     const directory = await mkdtemp(join(repository, '.tmp/generation-interruption-'));
@@ -51,7 +52,7 @@ const timer = setInterval(() => {
       const [code, exitSignal] = await exited;
       expect(exitSignal).toBeNull();
       expect({ code, output }).toEqual({
-        code: signal === 'SIGHUP' ? 129 : 143,
+        code: 128 + constants.signals[signal],
         output: 'ready\n',
       });
       expect(await readFile(join(directory, 'src/scanner.c'), 'utf8')).toBe('local scanner edit\n');
