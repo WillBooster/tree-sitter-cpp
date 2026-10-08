@@ -19,7 +19,7 @@ This fork fixes parsing bugs and raises conformance with the ISO C++ standard
 
 The npm package ships `tree-sitter-cpp.wasm` for
 [@willbooster/web-tree-sitter](https://www.npmjs.com/package/@willbooster/web-tree-sitter), which runs in Node.js, Bun,
-browsers, and Cloudflare Workers. Install both:
+browsers, and Cloudflare Workers. The compact ABI 16 parser requires runtime 1.3.0 or later. Install both:
 
 ```sh
 npm install @willbooster/tree-sitter-cpp @willbooster/web-tree-sitter
@@ -67,13 +67,12 @@ grammar's in `queries/` and, in `queries/c/`, the highlights of the C grammar it
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
-fuzzed with (the grammar also loads in the upstream `tree-sitter` crate 0.27, whose error recovery never ends on some
-malformed input):
+fuzzed with. The compact ABI 16 parser requires runtime 1.3.0 or later:
 
 ```toml
 [dependencies]
-tree-sitter = { package = "willbooster-tree-sitter", version = "1" }
-tree-sitter-cpp = { package = "willbooster-tree-sitter-cpp", version = "1" }
+tree-sitter = { package = "willbooster-tree-sitter", version = "1.3.0" }
+tree-sitter-cpp = { package = "willbooster-tree-sitter-cpp", version = "2" }
 ```
 
 ```rust
@@ -99,6 +98,13 @@ WillBooster/tree-sitter runtime version locked in `Cargo.lock`, since the genera
 not the ones this package ships with. Its first run downloads that CLI from the runtime's GitHub Release, or builds it
 with `cargo` (whose build runs the CMake that `mise.toml` pins) when the download fails or the release has no binary
 that runs here. Run other CLI commands through it as well (e.g. `script/tree-sitter parse file.cpp`).
+
+`bun run generate` records a fresh ABI 16 generation profile from the applicable `test/corpus` cases and Git-tracked
+files in `examples/`, then generates compact parser tables. The parser also embeds metadata from `tree-sitter.json`. After changing a grammar, the pinned `@willbooster/tree-sitter-c` dependency,
+`tree-sitter.json`, a corpus case, or a tracked example,
+regenerate and commit `src/`. Stage added or removed examples with `git add -A examples` before generation so the profile uses the intended file list.
+Profiles in `.tmp/generation-profiles/` are temporary and must not be committed. `bun run build-wasm`, `bun run build/ci`,
+and the release build regenerate the parsers before compiling them.
 
 `bun run test` runs:
 

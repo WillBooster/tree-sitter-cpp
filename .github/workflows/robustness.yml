@@ -29,9 +29,8 @@ jobs:
       - uses: jdx/mise-action@v4.3.0
       - run: bun install --frozen-lockfile
       - run: bun run build/ci
-      # The packages ship the committed src/, so it must be what script/tree-sitter generates from grammar.js and the
-      # pinned @willbooster/tree-sitter-c, which the tests below exercise. `git add -N` makes files that generation adds
-      # but nobody committed show up in the diff too.
+      # Release builds regenerate src/ from all script/generate inputs. Detect committed output drift here,
+      # including new untracked generated files, which git diff would otherwise miss.
       - run: git add --intent-to-add -- src/ && git diff --exit-code -- src/
       - run: bun run test/ci-setup
       - run: bun run test/ci
