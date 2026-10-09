@@ -47,7 +47,7 @@
     "@willbooster/oxlint-config": "1.4.8",
     "@willbooster/tree-sitter-c": "2.0.0",
     "@willbooster/wb": "22.13.2",
-    "@willbooster/web-tree-sitter": "1.4.3",
+    "@willbooster/web-tree-sitter": "1.4.4",
     "conventional-changelog-conventionalcommits": "10.4.0",
     "lefthook": "2.1.14",
     "oxfmt": "0.70.0",
