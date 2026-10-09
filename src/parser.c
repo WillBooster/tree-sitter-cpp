@@ -25590,36 +25590,6 @@ static const uint16_t ts_lex_advance_map_0[] = {
 };
 
 static const uint16_t ts_lex_advance_map_1[] = {
-  '!', 183,
-  '#', 308,
-  '%', 572,
-  '&', 584,
-  '(', 548,
-  ')', 420,
-  '*', 568,
-  '+', 562,
-  ',', 419,
-  '-', 558,
-  '.', 646,
-  '/', 570,
-  '0', 760,
-  ':', 605,
-  ';', 603,
-  '<', 597,
-  '=', 622,
-  '>', 589,
-  '?', 623,
-  '[', 615,
-  '\\', 205,
-  ']', 620,
-  '^', 579,
-  '_', 736,
-  '{', 611,
-  '|', 578,
-  '~', 551,
-};
-
-static const uint16_t ts_lex_advance_map_2[] = {
   '!', 549,
   '"', 685,
   '#', 311,
@@ -25652,6 +25622,36 @@ static const uint16_t ts_lex_advance_map_2[] = {
   '{', 611,
   '|', 371,
   '}', 612,
+  '~', 551,
+};
+
+static const uint16_t ts_lex_advance_map_2[] = {
+  '!', 183,
+  '#', 308,
+  '%', 572,
+  '&', 584,
+  '(', 548,
+  ')', 420,
+  '*', 568,
+  '+', 562,
+  ',', 419,
+  '-', 558,
+  '.', 646,
+  '/', 570,
+  '0', 760,
+  ':', 605,
+  ';', 603,
+  '<', 597,
+  '=', 622,
+  '>', 589,
+  '?', 623,
+  '[', 615,
+  '\\', 205,
+  ']', 620,
+  '^', 579,
+  '_', 736,
+  '{', 611,
+  '|', 578,
   '~', 551,
 };
 
@@ -29467,18 +29467,18 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
       END_STATE();
     case 1:
       ts_lex_state_1:
+      if (eof) ADVANCE(413);
       TS_LEX_ADVANCE_MAP_SORTED(ts_lex_advance_map_1);
       if (('\t' <= lookahead && lookahead <= '\r') ||
           lookahead == ' ') TS_LEX_REPEAT(true, ts_lex_state_1);
+      if (('1' <= lookahead && lookahead <= '9')) ADVANCE(659);
       if (ts_lex_pages8_contains(ts_lex_sym_identifier_character_set_1_ascii, ts_lex_sym_identifier_character_set_1_page_ids, ts_lex_sym_identifier_character_set_1_pages, 0, 804, lookahead)) ADVANCE(742);
       END_STATE();
     case 2:
       ts_lex_state_2:
-      if (eof) ADVANCE(413);
       TS_LEX_ADVANCE_MAP_SORTED(ts_lex_advance_map_2);
       if (('\t' <= lookahead && lookahead <= '\r') ||
           lookahead == ' ') TS_LEX_REPEAT(true, ts_lex_state_2);
-      if (('1' <= lookahead && lookahead <= '9')) ADVANCE(659);
       if (ts_lex_pages8_contains(ts_lex_sym_identifier_character_set_1_ascii, ts_lex_sym_identifier_character_set_1_page_ids, ts_lex_sym_identifier_character_set_1_pages, 0, 804, lookahead)) ADVANCE(742);
       END_STATE();
     case 3:
@@ -30049,7 +30049,7 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
       END_STATE();
     case 79:
       ts_lex_state_79:
-      TS_LEX_ADVANCE_MAP_SORTED(ts_lex_advance_map_2);
+      TS_LEX_ADVANCE_MAP_SORTED(ts_lex_advance_map_1);
       if (('\t' <= lookahead && lookahead <= '\r') ||
           lookahead == ' ') TS_LEX_REPEAT(true, ts_lex_state_79);
       if (('1' <= lookahead && lookahead <= '9')) ADVANCE(659);
@@ -30831,7 +30831,7 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
       if (lookahead == 'U') ADVANCE(407);
       if (lookahead == 'u') ADVANCE(399);
       if (lookahead == '\n' ||
-          lookahead == '\r') SKIP(1);
+          lookahead == '\r') SKIP(2);
       END_STATE();
     case 206:
       if (lookahead == 'U') ADVANCE(407);
@@ -35797,7 +35797,7 @@ static uint32_t ts_keyword_lookup(const char *text, uint32_t length) {
 }
 static const TSLexerMode ts_lex_modes[] = {
   [0] = {.lex_state = 0, .external_lex_state = 1, .reserved_word_set_id = 0},
-  [1] = {.lex_state = 2, .external_lex_state = 2, .reserved_word_set_id = 0},
+  [1] = {.lex_state = 1, .external_lex_state = 2, .reserved_word_set_id = 0},
   [2] = {.lex_state = 10, .external_lex_state = 2, .reserved_word_set_id = 0},
   [3] = {.lex_state = 8, .external_lex_state = 2, .reserved_word_set_id = 0},
   [4] = {.lex_state = 7, .external_lex_state = 3, .reserved_word_set_id = 0},
@@ -35805,7 +35805,7 @@ static const TSLexerMode ts_lex_modes[] = {
   [6] = {.lex_state = 6, .external_lex_state = 2, .reserved_word_set_id = 0},
   [7] = {.lex_state = 4, .external_lex_state = 2, .reserved_word_set_id = 0},
   [8] = {.lex_state = 21, .external_lex_state = 2, .reserved_word_set_id = 0},
-  [9] = {.lex_state = 1, .external_lex_state = 2, .reserved_word_set_id = 0},
+  [9] = {.lex_state = 2, .external_lex_state = 2, .reserved_word_set_id = 0},
   [10] = {.lex_state = 11, .external_lex_state = 2, .reserved_word_set_id = 0},
   [11] = {.lex_state = 13, .external_lex_state = 2, .reserved_word_set_id = 0},
   [12] = {.lex_state = 3, .external_lex_state = 2, .reserved_word_set_id = 0},
@@ -35829,7 +35829,7 @@ static const TSLexerMode ts_lex_modes[] = {
   [30] = {.lex_state = 30, .external_lex_state = 3, .reserved_word_set_id = 0},
   [31] = {.lex_state = 39, .external_lex_state = 2, .reserved_word_set_id = 0},
   [32] = {.lex_state = 23, .external_lex_state = 2, .reserved_word_set_id = 0},
-  [33] = {.lex_state = 2, .external_lex_state = 3, .reserved_word_set_id = 0},
+  [33] = {.lex_state = 1, .external_lex_state = 3, .reserved_word_set_id = 0},
   [34] = {.lex_state = 29, .external_lex_state = 2, .reserved_word_set_id = 0},
   [35] = {.lex_state = 31, .external_lex_state = 2, .reserved_word_set_id = 0},
   [36] = {.lex_state = 29, .external_lex_state = 3, .reserved_word_set_id = 0},
@@ -35842,7 +35842,7 @@ static const TSLexerMode ts_lex_modes[] = {
   [43] = {.lex_state = 35, .external_lex_state = 2, .reserved_word_set_id = 0},
   [44] = {.lex_state = 34, .external_lex_state = 2, .reserved_word_set_id = 0},
   [45] = {.lex_state = 5, .external_lex_state = 2, .reserved_word_set_id = 0},
-  [46] = {.lex_state = 1, .external_lex_state = 9, .reserved_word_set_id = 0},
+  [46] = {.lex_state = 2, .external_lex_state = 9, .reserved_word_set_id = 0},
   [47] = {.lex_state = 63, .external_lex_state = 6, .reserved_word_set_id = 0},
   [48] = {.lex_state = 14, .external_lex_state = 2, .reserved_word_set_id = 0},
   [49] = {.lex_state = 42, .external_lex_state = 2, .reserved_word_set_id = 0},
@@ -35859,7 +35859,7 @@ static const TSLexerMode ts_lex_modes[] = {
   [60] = {.lex_state = 32, .external_lex_state = 2, .reserved_word_set_id = 0},
   [61] = {.lex_state = 46, .external_lex_state = 2, .reserved_word_set_id = 0},
   [62] = {.lex_state = 51, .external_lex_state = 2, .reserved_word_set_id = 0},
-  [63] = {.lex_state = 2, .external_lex_state = 5, .reserved_word_set_id = 0},
+  [63] = {.lex_state = 1, .external_lex_state = 5, .reserved_word_set_id = 0},
   [64] = {.lex_state = 0, .external_lex_state = 10, .reserved_word_set_id = 0},
   [65] = {.lex_state = 0, .external_lex_state = 5, .reserved_word_set_id = 0},
   [66] = {.lex_state = 50, .external_lex_state = 2, .reserved_word_set_id = 0},
