@@ -2720,6 +2720,7 @@ void f() {
   APPLY(a, +, b);
   ACCESS(->);
   LOGICAL(AND, &&);
+  SCOPE(::);
   int x = g(-a, *b, &c, !d, ~e, a < b, c > d);
   jump(1, &&label);
 }
@@ -2763,6 +2764,11 @@ void f() {
           (argument_list
             (identifier)
             (operator_argument))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (operator_argument))))
       (declaration
         (primitive_type)
         (init_declarator
@@ -2794,3 +2800,64 @@ void f() {
             (pointer_expression
               (pointer_expression
                 (identifier)))))))))
+
+================================================================================
+Parenthesized abstract declarators that could be operator arguments
+================================================================================
+
+void g(T (&)());
+void h(T (&&)());
+int y = sizeof(int (*)[3]);
+template <class R> struct S<R (&)()> {};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_reference_declarator))
+            (parameter_list))))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_reference_declarator))
+            (parameter_list))))))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (sizeof_expression
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator))
+            (number_literal))))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (type_identifier)
+            (abstract_function_declarator
+              (abstract_parenthesized_declarator
+                (abstract_reference_declarator))
+              (parameter_list)))))
+      (field_declaration_list))))
