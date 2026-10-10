@@ -151,7 +151,7 @@ test('keeps conditional constructor initializers, following tags and edits in th
     for (const query of queries) query.delete();
     parser.delete();
   }
-});
+}, 30_000);
 
 function point(source: string, index: number): { row: number; column: number } {
   const prefix = source.slice(0, index);

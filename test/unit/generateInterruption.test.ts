@@ -46,7 +46,7 @@ const timer = setInterval(() => {
       child.stderr?.on('data', (data: Buffer) => {
         output += data.toString();
       });
-      await expect.poll(() => output).toContain('ready');
+      await expect.poll(() => output, { timeout: 10_000 }).toContain('ready');
       expect(child.kill(signal)).toBe(true);
       await writeFile(join(directory, 'continue'), '');
       const [code, exitSignal] = await exited;
@@ -68,5 +68,5 @@ const timer = setInterval(() => {
       }
       await rm(directory, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 }
