@@ -817,6 +817,10 @@
           "named": true
         },
         {
+          "type": "operator_argument",
+          "named": true
+        },
+        {
           "type": "preproc_defined",
           "named": true
         },
@@ -5048,6 +5052,11 @@
         ]
       }
     }
+  },
+  {
+    "type": "operator_argument",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "operator_cast",
