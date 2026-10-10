@@ -22,6 +22,20 @@ test('keeps the definitions after consecutive macro calls that take operators', 
   expect(parse(`${calls}\n${Definitions}`).functions).toEqual(['f', 'g']);
 });
 
+// Alone in parentheses, `*` and `&` are abstract declarators, so a type passed to a macro must not become a call.
+test('leaves a parenthesized abstract declarator in a macro argument as it is', () => {
+  for (const source of ['BAZ(T(&)[3]);', 'QUX(std::vector<int>(*)());', 'CHECK(void(&&)(int), U(*));']) {
+    const parser = new Parser().setLanguage(language);
+    const tree = parser.parse(`void m() {\n  ${source}\n}\n`)!;
+    try {
+      expect(tree.rootNode.descendantsOfType('operator_argument'), source).toEqual([]);
+    } finally {
+      tree.delete();
+      parser.delete();
+    }
+  }
+});
+
 function parse(source: string): { functions: (string | undefined)[]; errors: string[] } {
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(source)!;

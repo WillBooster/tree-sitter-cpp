@@ -34,9 +34,6 @@ const PREC = Object.assign(C.PREC, {
   POINTER_ARGUMENT_INITIALIZATION: -100,
   // Loses to any reading without such a parameter, the last-resort pointer initialization included.
   EXPRESSION_KEYWORD_PARAMETER: -1000,
-  // Loses to every reading without an operator argument, so that a lone `*` or `&` in parentheses stays an abstract
-  // declarator wherever a type can stand, as in `void g(T (&)());` and `sizeof(int (*)[3])`.
-  OPERATOR_ARGUMENT: -10_000,
   STRUCTURED_BINDING: -1,
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
@@ -1964,55 +1961,60 @@ module.exports = grammar(C, {
     cast_expression: (_, /** @type {Rule} */ original) => prec.left(PREC.CAST, original),
 
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
-    // The operator_argument is added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
-    argument_list: ($) =>
-      seq('(', commaSep(choice($.expression, $.initializer_list, $.compound_statement, $.operator_argument)), ')'),
+    // The operator arguments are added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
+    argument_list: ($) => {
+      const argument = choice($.expression, $.initializer_list, $.compound_statement, $.operator_argument);
+      const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
+      return seq('(', optional(choice(argument, seq(anyArgument, repeat1(seq(',', anyArgument))))), ')');
+    },
 
     operator_argument: () =>
-      prec.dynamic(
-        PREC.OPERATOR_ARGUMENT,
-        choice(
-          '+',
-          '-',
-          '*',
-          '/',
-          '%',
-          '^',
-          '&',
-          '|',
-          '~',
-          '!',
-          '=',
-          '<',
-          '>',
-          '+=',
-          '-=',
-          '*=',
-          '/=',
-          '%=',
-          '^=',
-          '&=',
-          '|=',
-          '<<',
-          '>>',
-          '>>=',
-          '<<=',
-          '==',
-          '!=',
-          '<=',
-          '>=',
-          '<=>',
-          // Not the `&&` token: accepting it here would make `&&label` in `f(&&label)` lex as one token.
-          seq('&', '&'),
-          '||',
-          '++',
-          '--',
-          '.',
-          '.*',
-          '->',
-          '->*',
-          '::'
-        )
+      choice(
+        '+',
+        '-',
+        '/',
+        '%',
+        '^',
+        '|',
+        '~',
+        '!',
+        '=',
+        '<',
+        '>',
+        '+=',
+        '-=',
+        '*=',
+        '/=',
+        '%=',
+        '^=',
+        '&=',
+        '|=',
+        '<<',
+        '>>',
+        '>>=',
+        '<<=',
+        '==',
+        '!=',
+        '<=',
+        '>=',
+        '<=>',
+        '||',
+        '++',
+        '--',
+        '.',
+        '.*',
+        '->',
+        '->*',
+        '::'
+      ),
+
+    // Accepted only among several arguments: alone in parentheses, these are abstract declarators, as in `T (&)[3]`.
+    _declarator_operator_argument: () =>
+      choice(
+        '*',
+        '&',
+        // Not the `&&` token: accepting it here would make `&&label` in `f(1, &&label)` lex as one token.
+        seq('&', '&')
       ),
 
     destructor_name: ($) => prec(1, seq('~', choice($._contextual_identifier, $.pack_index_type))),
