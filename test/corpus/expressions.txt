@@ -2719,7 +2719,9 @@ DEFINE_COMPARISON(LT, < );
 void f() {
   APPLY(a, +, b);
   ACCESS(->);
+  LOGICAL(AND, &&);
   int x = g(-a, *b, &c, !d, ~e, a < b, c > d);
+  jump(1, &&label);
 }
 
 --------------------------------------------------------------------------------
@@ -2755,6 +2757,12 @@ void f() {
           (identifier)
           (argument_list
             (operator_argument))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (operator_argument))))
       (declaration
         (primitive_type)
         (init_declarator
@@ -2777,4 +2785,12 @@ void f() {
                 (identifier))
               (binary_expression
                 (identifier)
+                (identifier))))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (number_literal)
+            (pointer_expression
+              (pointer_expression
                 (identifier)))))))))

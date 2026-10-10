@@ -1997,7 +1997,8 @@ module.exports = grammar(C, {
         '<=',
         '>=',
         '<=>',
-        '&&',
+        // Not the `&&` token: accepting it here would make `&&label` in `f(&&label)` lex as one token.
+        seq('&', '&'),
         '||',
         '++',
         '--',
