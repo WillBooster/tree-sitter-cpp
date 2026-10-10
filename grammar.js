@@ -1961,7 +1961,61 @@ module.exports = grammar(C, {
     cast_expression: (_, /** @type {Rule} */ original) => prec.left(PREC.CAST, original),
 
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
-    argument_list: ($) => seq('(', commaSep(choice($.expression, $.initializer_list, $.compound_statement)), ')'),
+    // The operator arguments are added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
+    argument_list: ($) => {
+      const argument = choice($.expression, $.initializer_list, $.compound_statement, $.operator_argument);
+      const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
+      return seq('(', optional(choice(argument, seq(anyArgument, repeat1(seq(',', anyArgument))))), ')');
+    },
+
+    operator_argument: () =>
+      choice(
+        '+',
+        '-',
+        '/',
+        '%',
+        '^',
+        '|',
+        '~',
+        '!',
+        '=',
+        '<',
+        '>',
+        '+=',
+        '-=',
+        '*=',
+        '/=',
+        '%=',
+        '^=',
+        '&=',
+        '|=',
+        '<<',
+        '>>',
+        '>>=',
+        '<<=',
+        '==',
+        '!=',
+        '<=',
+        '>=',
+        '<=>',
+        '||',
+        '++',
+        '--',
+        '.',
+        '.*',
+        '->',
+        '->*',
+        '::'
+      ),
+
+    // Accepted only among several arguments: alone in parentheses, these are abstract declarators, as in `T (&)[3]`.
+    _declarator_operator_argument: () =>
+      choice(
+        '*',
+        '&',
+        // Not the `&&` token: accepting it here would make `&&label` in `f(1, &&label)` lex as one token.
+        seq('&', '&')
+      ),
 
     destructor_name: ($) => prec(1, seq('~', choice($._contextual_identifier, $.pack_index_type))),
 
