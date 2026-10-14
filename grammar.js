@@ -224,7 +224,7 @@ module.exports = grammar(C, {
   ],
 
   rules: {
-    _top_level_item: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _top_level_item: ($, original = missingOriginalRule()) =>
       choice(
         ...ruleMembers(original, 'CHOICE').filter((member) => !isOldStyleFunctionDefinition(member)),
         $.namespace_definition,
@@ -246,7 +246,7 @@ module.exports = grammar(C, {
         alias($.operator_cast_declaration, $.declaration)
       ),
 
-    _block_item: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _block_item: ($, original = missingOriginalRule()) =>
       choice(
         ...ruleMembers(original, 'CHOICE').filter(
           (member) =>
@@ -316,19 +316,18 @@ module.exports = grammar(C, {
         alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(2)), sym('type_identifier'))
       ),
 
-    typeof_specifier: (_, /** @type {Rule} */ original = missingOriginalRule()) => prec.dynamic(-1, original),
+    typeof_specifier: (_, original = missingOriginalRule()) => prec.dynamic(-1, original),
 
-    type_qualifier: (_, /** @type {Rule} */ original = missingOriginalRule()) =>
-      choice(original, 'mutable', 'constinit', 'consteval'),
+    type_qualifier: (_, original = missingOriginalRule()) => choice(original, 'mutable', 'constinit', 'consteval'),
 
-    type_descriptor: (_, /** @type {Rule} */ original = missingOriginalRule()) => prec.right(original),
+    type_descriptor: (_, original = missingOriginalRule()) => prec.right(original),
 
-    attribute: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    attribute: ($, original = missingOriginalRule()) =>
       seq(optional(seq('using', field('namespace', $._contextual_identifier), ':')), ...ruleMembers(original, 'SEQ')),
 
     annotation: ($) => seq('=', $.expression),
 
-    attribute_declaration: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    attribute_declaration: ($, original = missingOriginalRule()) =>
       choice(original, seq('[[', commaSep1($.annotation), ']]')),
 
     // When used in a trailing return type, these specifiers can now occur immediately before
@@ -373,7 +372,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    function_definition: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    function_definition: ($, original = missingOriginalRule()) =>
       choice(
         {
           type: 'SEQ',
@@ -493,7 +492,7 @@ module.exports = grammar(C, {
 
     virtual_specifier: () => choice('final', 'override'),
 
-    _declaration_modifiers: ($, /** @type {Rule} */ original = missingOriginalRule()) => choice(original, 'virtual'),
+    _declaration_modifiers: ($, original = missingOriginalRule()) => choice(original, 'virtual'),
 
     explicit_function_specifier: ($) => choice('explicit', prec(PREC.CALL, seq('explicit', '(', $.expression, ')'))),
 
@@ -552,7 +551,7 @@ module.exports = grammar(C, {
       ),
 
     // The `auto` storage class is removed in C++0x in order to allow for the `auto` type.
-    storage_class_specifier: (_, /** @type {Rule} */ original = missingOriginalRule()) =>
+    storage_class_specifier: (_, original = missingOriginalRule()) =>
       choice(
         ...ruleMembers(original, 'CHOICE').filter((member) => !(member.type === 'STRING' && member.value === 'auto')),
         'thread_local'
@@ -687,7 +686,7 @@ module.exports = grammar(C, {
     // `int (*p)` is a cast that [dcl.ambig.res] reads as a parameter; with any other type, `name(*obj)()` in
     // `std::string s(name(*obj)());` is commonly a call, so the parameter reading with parentheses
     // (PREC.PAREN_DECLARATOR) keeps losing to it there.
-    parameter_declaration: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    parameter_declaration: ($, original = missingOriginalRule()) =>
       choice(
         original,
         prec.dynamic(
@@ -739,7 +738,7 @@ module.exports = grammar(C, {
 
     variadic_reference_declarator: ($) => seq(choice('&&', '&'), $._variadic_declarator),
 
-    init_declarator: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    init_declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
@@ -923,7 +922,7 @@ module.exports = grammar(C, {
 
     // Avoid ambiguity between compound statement and initializer list in a construct like:
     //   A b {};
-    compound_statement: (_, /** @type {Rule} */ original = missingOriginalRule()) => prec(-1, original),
+    compound_statement: (_, original = missingOriginalRule()) => prec(-1, original),
 
     enumerator: ($) =>
       seq(
@@ -935,7 +934,7 @@ module.exports = grammar(C, {
         repeat($.attribute_declaration),
         optional(seq('=', field('value', $.expression)))
       ),
-    initializer_pair: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    initializer_pair: ($, original = missingOriginalRule()) =>
       choice(original, seq(field('designator', $.field_designator), field('value', $.initializer_list))),
 
     field_initializer_list: ($) => seq(':', $._field_initializer_sequence),
@@ -984,7 +983,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    _field_declaration_list_item: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _field_declaration_list_item: ($, original = missingOriginalRule()) =>
       choice(
         original,
         $.template_declaration,
@@ -1102,7 +1101,7 @@ module.exports = grammar(C, {
 
     access_specifier: () => choice('public', 'private', 'protected'),
 
-    _declarator: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
@@ -1115,7 +1114,7 @@ module.exports = grammar(C, {
         $.structured_binding_declarator
       ),
 
-    _field_declarator: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _field_declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias($.reference_field_declarator, $.reference_declarator),
@@ -1124,14 +1123,14 @@ module.exports = grammar(C, {
         $.operator_name
       ),
 
-    _type_declarator: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _type_declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias($.reference_type_declarator, $.reference_declarator),
         alias($.qualified_pointer_type_declarator, $.qualified_identifier)
       ),
 
-    _abstract_declarator: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _abstract_declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         $.abstract_reference_declarator,
@@ -1502,7 +1501,7 @@ module.exports = grammar(C, {
 
     concept_definition: ($) => seq('concept', field('name', $._contextual_identifier), '=', $.expression, ';'),
 
-    _top_level_statement: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _top_level_statement: ($, original = missingOriginalRule()) =>
       choice(
         original,
         $.co_return_statement,
@@ -1513,7 +1512,7 @@ module.exports = grammar(C, {
         $.throw_statement
       ),
 
-    _non_case_statement: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _non_case_statement: ($, original = missingOriginalRule()) =>
       choice(
         original,
         $.co_return_statement,
@@ -1554,7 +1553,7 @@ module.exports = grammar(C, {
     // Using prec(1) instead of prec.dynamic(1) causes issues with the
     // range loop's declaration specifiers if `int` is passed in, it'll
     // always prefer the standard for loop and give us a parse error.
-    _for_statement_body: ($, /** @type {Rule} */ original = missingOriginalRule()) => prec.dynamic(1, original),
+    _for_statement_body: ($, original = missingOriginalRule()) => prec.dynamic(1, original),
     for_range_loop: ($) => seq('for', '(', $._for_range_loop_body, ')', field('body', $.statement)),
     _for_range_loop_body: ($) =>
       seq(
@@ -1593,7 +1592,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    return_statement: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    return_statement: ($, original = missingOriginalRule()) =>
       seq(choice(original, seq('return', $.initializer_list, ';'))),
 
     co_return_statement: ($) => seq('co_return', optional($.expression), ';'),
@@ -1606,7 +1605,7 @@ module.exports = grammar(C, {
 
     catch_clause: ($) => seq('catch', field('parameters', $.parameter_list), field('body', $.compound_statement)),
 
-    _expression_not_binary: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _expression_not_binary: ($, original = missingOriginalRule()) =>
       choice(
         original,
         prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
@@ -1651,7 +1650,7 @@ module.exports = grammar(C, {
 
     subscript_argument_list: ($) => seq('[', commaSep(choice($.expression, $.initializer_list)), ']'),
 
-    call_expression: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    call_expression: ($, original = missingOriginalRule()) =>
       choice(
         prec.dynamic(
           1,
@@ -1863,7 +1862,7 @@ module.exports = grammar(C, {
 
     parameter_pack_expansion: ($) => prec(-1, seq(field('pattern', $.expression), '...')),
 
-    expression_statement: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    expression_statement: ($, original = missingOriginalRule()) =>
       choice(prec(1, prec.dynamic(1, seq($.pack_index_expression, ';'))), original),
 
     pack_index_expression: ($) => packIndex($, $._contextual_identifier),
@@ -1941,13 +1940,13 @@ module.exports = grammar(C, {
     qualified_type_descriptor: ($) =>
       prec(1, field('type', alias($.qualified_type_identifier, $.qualified_identifier))),
 
-    unary_expression: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    unary_expression: ($, original = missingOriginalRule()) =>
       choice(
         original,
         prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $.expression)))
       ),
 
-    binary_expression: ($, /** @type {Rule} */ original = missingOriginalRule()) => {
+    binary_expression: ($, original = missingOriginalRule()) => {
       /** @type {[string, number][]} */
       const table = [
         ['<=>', PREC.THREE_WAY],
@@ -1970,7 +1969,7 @@ module.exports = grammar(C, {
       );
     },
 
-    cast_expression: (_, /** @type {Rule} */ original = missingOriginalRule()) => prec.left(PREC.CAST, original),
+    cast_expression: (_, original = missingOriginalRule()) => prec.left(PREC.CAST, original),
 
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
     // The operator arguments are added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
@@ -2033,7 +2032,7 @@ module.exports = grammar(C, {
 
     _template_destructor_name: ($) => prec(1, seq('~', $._contextual_identifier, $.template_argument_list)),
 
-    compound_literal_expression: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    compound_literal_expression: ($, original = missingOriginalRule()) =>
       choice(
         original,
         seq(
@@ -2129,7 +2128,7 @@ module.exports = grammar(C, {
         field('name', choice(alias($.qualified_operator_cast_identifier, $.qualified_identifier), $.operator_cast))
       ),
 
-    _assignment_left_expression: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _assignment_left_expression: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
@@ -2140,7 +2139,7 @@ module.exports = grammar(C, {
         alias($.named_cast_expression, $.call_expression)
       ),
 
-    expression: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    expression: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias($.pointer_to_member_expression, $.binary_expression),
@@ -2212,7 +2211,7 @@ module.exports = grammar(C, {
 
     // This prevents an ambiguity between fold expressions
     // and assignment expressions within parentheses.
-    parenthesized_expression: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    parenthesized_expression: ($, original = missingOriginalRule()) =>
       choice(original, seq('(', alias($._assignment_expression_lhs, $.assignment_expression), ')')),
 
     reflect_expression: ($) =>
@@ -2374,16 +2373,16 @@ module.exports = grammar(C, {
 
     user_defined_literal: ($) => seq(choice($.number_literal, $.char_literal, $._string), $.literal_suffix),
 
-    _type_identifier: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _type_identifier: ($, original = missingOriginalRule()) =>
       choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('type_identifier'))),
 
     _contextual_identifier: ($) =>
       choice($.identifier, alias(choice(...VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES), $.identifier)),
 
-    _field_identifier: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _field_identifier: ($, original = missingOriginalRule()) =>
       choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('field_identifier'))),
 
-    _statement_identifier: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
+    _statement_identifier: ($, original = missingOriginalRule()) =>
       choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('statement_identifier'))),
 
     _namespace_identifier: ($) =>
