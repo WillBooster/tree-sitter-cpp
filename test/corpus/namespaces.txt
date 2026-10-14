@@ -9,6 +9,7 @@ inline namespace __attribute__((visibility("default"))) version __attribute__((v
 namespace __attribute__((visibility("hidden"))) {}
 namespace [[deprecated]] __attribute__((visibility("default"))) mixed {}
 namespace __attribute__((visibility("default"))) __attribute__((deprecated)) repeated {}
+namespace repeated_trailing __attribute__((visibility("default"))) __attribute__((deprecated)) { int z; }
 
 --------------------------------------------------------------------------------
 
@@ -90,4 +91,20 @@ namespace __attribute__((visibility("default"))) __attribute__((deprecated)) rep
       (argument_list
         (identifier)))
     (namespace_identifier)
-    (declaration_list)))
+    (declaration_list))
+  (namespace_definition
+    (namespace_identifier)
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (attribute_specifier
+      (argument_list
+        (identifier)))
+    (declaration_list
+      (declaration
+        (primitive_type)
+        (identifier)))))
