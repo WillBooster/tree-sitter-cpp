@@ -226,7 +226,7 @@ module.exports = grammar(C, {
   rules: {
     _top_level_item: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
       choice(
-        ...ruleMembers(original).filter((member) => !isOldStyleFunctionDefinition(member)),
+        ...ruleMembers(original, 'CHOICE').filter((member) => !isOldStyleFunctionDefinition(member)),
         $.namespace_definition,
         $.concept_definition,
         $.namespace_alias_definition,
@@ -248,7 +248,7 @@ module.exports = grammar(C, {
 
     _block_item: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
       choice(
-        ...ruleMembers(original).filter(
+        ...ruleMembers(original, 'CHOICE').filter(
           (member) =>
             !isOldStyleFunctionDefinition(member) && !(member.type === 'SYMBOL' && member.name.startsWith('preproc_if'))
         ),
@@ -324,7 +324,7 @@ module.exports = grammar(C, {
     type_descriptor: (_, /** @type {Rule} */ original = missingOriginalRule()) => prec.right(original),
 
     attribute: ($, /** @type {Rule} */ original = missingOriginalRule()) =>
-      seq(optional(seq('using', field('namespace', $._contextual_identifier), ':')), ...ruleMembers(original)),
+      seq(optional(seq('using', field('namespace', $._contextual_identifier), ':')), ...ruleMembers(original, 'SEQ')),
 
     annotation: ($) => seq('=', $.expression),
 
@@ -377,7 +377,7 @@ module.exports = grammar(C, {
       choice(
         {
           type: 'SEQ',
-          members: ruleMembers(original).map((e) =>
+          members: ruleMembers(original, 'SEQ').map((e) =>
             e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
           ),
         },
@@ -386,7 +386,7 @@ module.exports = grammar(C, {
         // is a macro.
         {
           type: 'SEQ',
-          members: ruleMembers(original).map((e) => {
+          members: ruleMembers(original, 'SEQ').map((e) => {
             if (e.type !== 'FIELD') return e;
             if (e.name === 'declarator') return field('declarator', $._function_definition_declarator);
             return e.name === 'body' ? choice($.default_method_clause, $.delete_method_clause) : e;
@@ -554,7 +554,7 @@ module.exports = grammar(C, {
     // The `auto` storage class is removed in C++0x in order to allow for the `auto` type.
     storage_class_specifier: (_, /** @type {Rule} */ original = missingOriginalRule()) =>
       choice(
-        ...ruleMembers(original).filter((member) => !(member.type === 'STRING' && member.value === 'auto')),
+        ...ruleMembers(original, 'CHOICE').filter((member) => !(member.type === 'STRING' && member.value === 'auto')),
         'thread_local'
       ),
 
@@ -2503,8 +2503,11 @@ function missingOriginalRule() {
   throw new Error('Expected an inherited C grammar rule.');
 }
 
-/** @param {Rule} rule */
-function ruleMembers(rule) {
-  if (rule.type !== 'CHOICE' && rule.type !== 'SEQ') throw new Error('Expected a choice or sequence rule.');
+/**
+ * @param {Rule} rule
+ * @param {'CHOICE' | 'SEQ'} expectedType
+ */
+function ruleMembers(rule, expectedType) {
+  if (rule.type !== expectedType) throw new Error(`Expected an inherited ${expectedType} rule.`);
   return rule.members;
 }
