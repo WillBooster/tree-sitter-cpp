@@ -11,9 +11,11 @@
     },
     "resolveJsonModule": true,
     "rootDir": ".",
-    "types": ["bun", "vitest/globals"]
+    "types": ["bun", "vitest/globals"],
+    "allowJs": true,
+    "maxNodeModuleJsDepth": 1
   },
   "exclude": ["test/fixtures"],
   "extends": "@tsconfig/bun/tsconfig.json",
-  "include": ["*.config.mts", "*.config.ts", "scripts/**/*", "src/**/*", "test/**/*"]
+  "include": ["*.config.mts", "*.config.ts", "scripts/**/*", "src/**/*", "test/**/*", "grammar.js"]
 }
