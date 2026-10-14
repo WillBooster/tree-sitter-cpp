@@ -1,0 +1,93 @@
+
+================================================================================
+GNU namespace attributes
+================================================================================
+
+namespace __attribute__((visibility("default"))) leading { int x; }
+namespace trailing __attribute__((visibility("hidden"))) { int y; }
+inline namespace __attribute__((visibility("default"))) version __attribute__((visibility("default"))) {}
+namespace __attribute__((visibility("hidden"))) {}
+namespace [[deprecated]] __attribute__((visibility("default"))) mixed {}
+namespace __attribute__((visibility("default"))) __attribute__((deprecated)) repeated {}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (namespace_definition
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (namespace_identifier)
+    (declaration_list
+      (declaration
+        (primitive_type)
+        (identifier))))
+  (namespace_definition
+    (namespace_identifier)
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (declaration_list
+      (declaration
+        (primitive_type)
+        (identifier))))
+  (namespace_definition
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (namespace_identifier)
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (declaration_list))
+  (namespace_definition
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (declaration_list))
+  (namespace_definition
+    (attribute_declaration
+      (attribute
+        (identifier)))
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (namespace_identifier)
+    (declaration_list))
+  (namespace_definition
+    (attribute_specifier
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content))))))
+    (attribute_specifier
+      (argument_list
+        (identifier)))
+    (namespace_identifier)
+    (declaration_list)))
