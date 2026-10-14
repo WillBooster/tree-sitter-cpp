@@ -1426,8 +1426,13 @@ module.exports = grammar(C, {
       seq(
         optional('inline'),
         'namespace',
-        optional($.attribute_declaration),
-        field('name', optional(choice($._namespace_identifier, $.nested_namespace_specifier))),
+        repeat(choice($.attribute_declaration, $.attribute_specifier)),
+        optional(
+          seq(
+            field('name', choice($._namespace_identifier, $.nested_namespace_specifier)),
+            repeat($.attribute_specifier)
+          )
+        ),
         field('body', $.declaration_list)
       ),
 
