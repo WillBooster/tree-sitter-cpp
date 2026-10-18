@@ -220,6 +220,10 @@
         "named": true
       },
       {
+        "type": "countof_expression",
+        "named": true
+      },
+      {
         "type": "delete_expression",
         "named": true
       },
@@ -1442,27 +1446,7 @@
       "required": false,
       "types": [
         {
-          "type": "attributed_statement",
-          "named": true
-        },
-        {
-          "type": "break_statement",
-          "named": true
-        },
-        {
-          "type": "co_return_statement",
-          "named": true
-        },
-        {
-          "type": "co_yield_statement",
-          "named": true
-        },
-        {
-          "type": "compound_statement",
-          "named": true
-        },
-        {
-          "type": "continue_statement",
+          "type": "attribute_declaration",
           "named": true
         },
         {
@@ -1470,67 +1454,19 @@
           "named": true
         },
         {
-          "type": "do_statement",
+          "type": "preproc_if",
           "named": true
         },
         {
-          "type": "expansion_statement",
+          "type": "preproc_ifdef",
           "named": true
         },
         {
-          "type": "expression_statement",
-          "named": true
-        },
-        {
-          "type": "for_range_loop",
-          "named": true
-        },
-        {
-          "type": "for_statement",
-          "named": true
-        },
-        {
-          "type": "goto_statement",
-          "named": true
-        },
-        {
-          "type": "if_statement",
-          "named": true
-        },
-        {
-          "type": "labeled_statement",
-          "named": true
-        },
-        {
-          "type": "return_statement",
-          "named": true
-        },
-        {
-          "type": "seh_leave_statement",
-          "named": true
-        },
-        {
-          "type": "seh_try_statement",
-          "named": true
-        },
-        {
-          "type": "switch_statement",
-          "named": true
-        },
-        {
-          "type": "throw_statement",
-          "named": true
-        },
-        {
-          "type": "try_statement",
+          "type": "statement",
           "named": true
         },
         {
           "type": "type_definition",
-          "named": true
-        },
-        {
-          "type": "while_statement",
           "named": true
         }
       ]
@@ -1602,6 +1538,10 @@
         },
         {
           "type": "escape_sequence",
+          "named": true
+        },
+        {
+          "type": "invalid_escape_sequence",
           "named": true
         }
       ]
@@ -2321,6 +2261,32 @@
           "named": true
         }
       ]
+    }
+  },
+  {
+    "type": "countof_expression",
+    "named": true,
+    "fields": {
+      "type": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "type_descriptor",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
@@ -5678,6 +5644,20 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "comment",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -5704,6 +5684,20 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "comment",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -6306,6 +6300,20 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "comment",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -6730,6 +6738,20 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "comment",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -7314,6 +7336,10 @@
       "types": [
         {
           "type": "escape_sequence",
+          "named": true
+        },
+        {
+          "type": "invalid_escape_sequence",
           "named": true
         },
         {
@@ -8997,6 +9023,10 @@
     "named": false
   },
   {
+    "type": "_Countof",
+    "named": false
+  },
+  {
     "type": "_Generic",
     "named": false
   },
@@ -9352,6 +9382,10 @@
   {
     "type": "inline",
     "named": false
+  },
+  {
+    "type": "invalid_escape_sequence",
+    "named": true
   },
   {
     "type": "literal_suffix",

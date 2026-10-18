@@ -157,7 +157,9 @@ module.exports = grammar(C, {
     [$._declaration_modifiers, $.friend_declaration],
     [$.type_qualifier, $.friend_declaration],
     [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
-    [$._declaration_modifiers, $.attributed_statement, $.using_declaration],
+    [$._declaration_modifiers, $.attributed_statement, $.case_statement, $.using_declaration],
+    [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement],
+    [$._declaration_modifiers, $._case_body_attributed_statement],
 
     [$.template_function, $.template_type],
     [$.template_function, $.template_type, $.expression],
@@ -1528,31 +1530,15 @@ module.exports = grammar(C, {
 
     concept_definition: ($) => seq('concept', field('name', $._contextual_identifier), '=', $.expression, ';'),
 
-    _top_level_statement: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        $.co_return_statement,
-        $.co_yield_statement,
-        $.for_range_loop,
-        $.expansion_statement,
-        $.try_statement,
-        $.throw_statement
-      ),
+    _top_level_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
-    _non_case_statement: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        $.co_return_statement,
-        $.co_yield_statement,
-        $.for_range_loop,
-        $.expansion_statement,
-        $.try_statement,
-        $.throw_statement
-      ),
+    _unlabeled_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
+
+    _single_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
     switch_statement: ($) => seq('switch', field('condition', $.condition_clause), field('body', $.compound_statement)),
 
-    while_statement: ($) => seq('while', field('condition', $.condition_clause), field('body', $.statement)),
+    while_statement: ($) => seq('while', field('condition', $.condition_clause), field('body', $._single_statement)),
 
     if_statement: ($) =>
       prec.right(
@@ -1562,7 +1548,7 @@ module.exports = grammar(C, {
             seq(
               optional('constexpr'),
               field('condition', $.condition_clause),
-              field('consequence', $.statement),
+              field('consequence', $._single_statement),
               optional(field('alternative', $.else_clause))
             ),
             seq(
@@ -1581,7 +1567,7 @@ module.exports = grammar(C, {
     // range loop's declaration specifiers if `int` is passed in, it'll
     // always prefer the standard for loop and give us a parse error.
     _for_statement_body: ($, original = missingOriginalRule()) => prec.dynamic(1, original),
-    for_range_loop: ($) => seq('for', '(', $._for_range_loop_body, ')', field('body', $.statement)),
+    for_range_loop: ($) => seq('for', '(', $._for_range_loop_body, ')', field('body', $._single_statement)),
     _for_range_loop_body: ($) =>
       seq(
         field('initializer', optional($.init_statement)),
@@ -2269,7 +2255,8 @@ module.exports = grammar(C, {
     splice_expression: ($) =>
       prec.right(choice($.splice_specifier, seq('template', $._splice_specialization_specifier))),
 
-    expansion_statement: ($) => seq('template', 'for', '(', $._for_range_loop_body, ')', field('body', $.statement)),
+    expansion_statement: ($) =>
+      seq('template', 'for', '(', $._for_range_loop_body, ')', field('body', $._single_statement)),
 
     operator_name: ($) =>
       prec(
@@ -2520,6 +2507,22 @@ function isOldStyleFunctionDefinition(rule) {
  */
 function packIndex($, pack) {
   return seq(field('pack', pack), alias(sym('_pack_index_operator'), '...'), '[', field('index', $.expression), ']');
+}
+
+/**
+ * @param {NoInfer<GrammarSymbols<'co_return_statement' | 'co_yield_statement' | 'for_range_loop' | 'expansion_statement' | 'try_statement' | 'throw_statement'>>} $
+ * @param {Rule} original
+ */
+function withCppStatements($, original) {
+  return choice(
+    original,
+    $.co_return_statement,
+    $.co_yield_statement,
+    $.for_range_loop,
+    $.expansion_statement,
+    $.try_statement,
+    $.throw_statement
+  );
 }
 
 /** @returns {never} */

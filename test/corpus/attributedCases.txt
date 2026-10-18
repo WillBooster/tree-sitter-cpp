@@ -1,0 +1,325 @@
+==================
+Attributed case labels retain separate bodies
+==================
+void f(int x) {
+  switch (x) {
+    [[likely]] case 1: first(); break;
+    [[unlikely]] case 2: { second(); }
+    [[likely]] default: last();
+  }
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (number_literal)
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (break_statement))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (number_literal)
+            (compound_statement
+              (expression_statement
+                (call_expression
+                  (identifier)
+                  (argument_list)))))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))))))))
+
+==================
+C++ statements remain inside attributed cases
+==================
+void f(int x) {
+  switch (x) {
+    [[likely]] case 1:
+      for (auto item : items) consume(item);
+      try { work(); } catch (...) { throw; }
+      co_yield x;
+      co_return;
+    [[unlikely]] default: throw x;
+  }
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (number_literal)
+            (for_range_loop
+              (placeholder_type_specifier
+                (auto))
+              (identifier)
+              (identifier)
+              (expression_statement
+                (call_expression
+                  (identifier)
+                  (argument_list
+                    (identifier)))))
+            (try_statement
+              (compound_statement
+                (expression_statement
+                  (call_expression
+                    (identifier)
+                    (argument_list))))
+              (catch_clause
+                (parameter_list)
+                (compound_statement
+                  (throw_statement))))
+            (co_yield_statement
+              (identifier))
+            (co_return_statement))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (throw_statement
+              (identifier))))))))
+
+==================
+Attributes distinguish case labels from body statements
+==================
+void f(int x) {
+  switch (x) {
+    case 1: [[likely]] work(); [[fallthrough]];
+    [[unlikely]] case 2: next();
+    [[likely]] default: final();
+  }
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (case_statement
+            (number_literal)
+            (attributed_statement
+              (attribute_declaration
+                (attribute
+                  (identifier)))
+              (expression_statement
+                (call_expression
+                  (identifier)
+                  (argument_list))))
+            (attributed_statement
+              (attribute_declaration
+                (attribute
+                  (identifier)))
+              (expression_statement)))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (number_literal)
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))))))))
+
+==================
+C++ single control-flow bodies
+==================
+void f(int x) {
+  if (x) work(); else throw x;
+  do co_yield x; while (x);
+  do for (auto y : values) use(y); while (x);
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (expression_statement
+          (call_expression
+            (identifier)
+            (argument_list)))
+        (else_clause
+          (throw_statement
+            (identifier))))
+      (do_statement
+        (co_yield_statement
+          (identifier))
+        (parenthesized_expression
+          (identifier)))
+      (do_statement
+        (for_range_loop
+          (placeholder_type_specifier
+            (auto))
+          (identifier)
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list
+                (identifier)))))
+        (parenthesized_expression
+          (identifier))))))
+
+==================
+Attributed labels inside unbraced C++ control bodies
+==================
+void f(int x) {
+  switch (x) {
+    if (ready) [[likely]] case 1: first();
+    [[unlikely]] case 2: second();
+    while (ready) [[likely]] case 3: third();
+    [[unlikely]] case 4: fourth();
+    for (auto item : items) [[likely]] case 5: fifth();
+    [[unlikely]] default: last();
+  }
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (if_statement
+            (condition_clause
+              (identifier))
+            (case_statement
+              (attribute_declaration
+                (attribute
+                  (identifier)))
+              (number_literal)
+              (expression_statement
+                (call_expression
+                  (identifier)
+                  (argument_list)))))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (number_literal)
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (while_statement
+              (condition_clause
+                (identifier))
+              (case_statement
+                (attribute_declaration
+                  (attribute
+                    (identifier)))
+                (number_literal)
+                (expression_statement
+                  (call_expression
+                    (identifier)
+                    (argument_list))))))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (number_literal)
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (for_range_loop
+              (placeholder_type_specifier
+                (auto))
+              (identifier)
+              (identifier)
+              (case_statement
+                (attribute_declaration
+                  (attribute
+                    (identifier)))
+                (number_literal)
+                (expression_statement
+                  (call_expression
+                    (identifier)
+                    (argument_list))))))
+          (case_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))))))))

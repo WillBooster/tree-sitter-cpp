@@ -5,6 +5,8 @@
 
 ((storage_class_specifier) @keyword
  (#eq? @keyword "auto"))
+"_Countof" @keyword
+"_Generic" @keyword
 "_Thread_local" @keyword
 "break" @keyword
 "case" @keyword
@@ -16,6 +18,7 @@
 "enum" @keyword
 "extern" @keyword
 "for" @keyword
+"goto" @keyword
 "if" @keyword
 "inline" @keyword
 "return" @keyword
@@ -30,6 +33,8 @@
 
 "#define" @keyword
 "#elif" @keyword
+"#elifdef" @keyword
+"#elifndef" @keyword
 "#else" @keyword
 "#endif" @keyword
 "#if" @keyword
@@ -54,6 +59,27 @@
 "==" @operator
 ">" @operator
 "||" @operator
+"*=" @operator
+"/=" @operator
+"%=" @operator
+"<<=" @operator
+">>=" @operator
+"&=" @operator
+"|=" @operator
+"^=" @operator
+"/" @operator
+"%" @operator
+"<=" @operator
+">=" @operator
+"<<" @operator
+">>" @operator
+"|" @operator
+"^" @operator
+"~" @operator
+"!" @operator
+
+(conditional_expression
+  ["?" ":"] @operator)
 
 "." @delimiter
 ";" @delimiter
