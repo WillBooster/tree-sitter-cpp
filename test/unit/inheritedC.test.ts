@@ -105,3 +105,33 @@ test('retains declaration fields for keyword-led typed va_arg initializers', () 
     parser.delete();
   }
 });
+
+test('keeps attributed statements and rvalue-reference declarations after C grammar upgrades', () => {
+  const parser = new Parser().setLanguage(language);
+  const source = `using T = int; using U = int;
+void f(int x) {
+  T&& t(U());
+  [[likely]] [[vendor::tag]] throw x;
+  [[a]] [[b]] co_yield x;
+  long(n)(_Countof(b));
+}
+Foo* p(_Countof(b));`;
+  const tree = parser.parse(source)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(tree.rootNode.descendantsOfType('throw_statement').map((node) => node.text)).toEqual(['throw x;']);
+    expect(tree.rootNode.descendantsOfType('co_yield_statement').map((node) => node.text)).toEqual(['co_yield x;']);
+    expect(tree.rootNode.descendantsOfType('reference_declarator').map((node) => node.text)).toEqual(['&& t(U())']);
+    expect(tree.rootNode.descendantsOfType('countof_expression').map((node) => node.text)).toEqual([
+      '_Countof(b)',
+      '_Countof(b)',
+    ]);
+    expect(tree.rootNode.descendantsOfType('attributed_statement').map((node) => node.text)).toEqual([
+      '[[likely]] [[vendor::tag]] throw x;',
+      '[[a]] [[b]] co_yield x;',
+    ]);
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});

@@ -867,6 +867,7 @@ module.exports = grammar(C, {
         $.false,
         $.this,
         $.alignof_expression,
+        $.countof_expression,
         $.offsetof_expression,
         $.generic_expression,
         $.new_expression,
@@ -1218,6 +1219,7 @@ module.exports = grammar(C, {
                 $.true,
                 $.false,
                 'sizeof',
+                '_Countof',
                 'alignof',
                 '_Alignof',
                 '__alignof__',
@@ -1610,9 +1612,9 @@ module.exports = grammar(C, {
 
     co_return_statement: ($) => seq('co_return', optional($.expression), ';'),
 
-    co_yield_statement: ($) => seq('co_yield', $.expression, ';'),
+    co_yield_statement: ($) => prec.dynamic(1, seq('co_yield', $.expression, ';')),
 
-    throw_statement: ($) => seq('throw', optional($.expression), ';'),
+    throw_statement: ($) => prec.dynamic(1, seq('throw', optional($.expression), ';')),
 
     try_statement: ($) => seq('try', field('body', $.compound_statement), repeat1($.catch_clause)),
 
@@ -1971,8 +1973,14 @@ module.exports = grammar(C, {
         ['not_eq', PREC.EQUAL],
       ];
 
+      const inherited = ruleMembers(original, 'CHOICE').map((rule) => {
+        if (rule.type === 'PREC_LEFT' && rule.content.type === 'PREC_DYNAMIC') {
+          return { ...rule, content: rule.content.content };
+        }
+        return rule;
+      });
       return choice(
-        original,
+        ...inherited,
         ...table.map(([operator, precedence]) => {
           return prec.left(
             precedence,
