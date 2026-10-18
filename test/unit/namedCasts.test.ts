@@ -141,3 +141,30 @@ template<int... N> struct U { alignas(N...) char storage[8]; };`)!;
     parser.delete();
   }
 });
+
+test('retains pack expansions in designated initializer values', () => {
+  const parser = new Parser().setLanguage(language);
+  const tree = parser.parse(`struct P { int x; };
+struct Outer { P p; };
+template<class... T> P f(T... values) {
+  P local = {.x = values...};
+  auto pointer = new P{.x = values...};
+  consume(P{.x = values...});
+  Outer nested{.p{.x = values...}};
+  return {.x = values...};
+}`)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    const pairs = tree.rootNode
+      .descendantsOfType('initializer_pair')
+      .filter((node) => node.childForFieldName('designator')?.text === '.x');
+    expect(pairs).toHaveLength(5);
+    for (const pair of pairs) {
+      expect(pair.childForFieldName('value')!.type).toBe('parameter_pack_expansion');
+      expect(pair.childForFieldName('value')!.text).toBe('values...');
+    }
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});

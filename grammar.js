@@ -951,7 +951,18 @@ module.exports = grammar(C, {
     _initializer_element: ($, original = missingOriginalRule()) => choice(original, $.parameter_pack_expansion),
 
     initializer_pair: ($, original = missingOriginalRule()) =>
-      choice(original, seq(field('designator', $.field_designator), field('value', $.initializer_list))),
+      choice(
+        ...ruleMembers(original, 'CHOICE').map((alternative) =>
+          seq(
+            ...ruleMembers(alternative, 'SEQ').map((member) =>
+              member.type === 'FIELD' && member.name === 'value'
+                ? field('value', choice(member.content, $.parameter_pack_expansion))
+                : member
+            )
+          )
+        ),
+        seq(field('designator', $.field_designator), field('value', $.initializer_list))
+      ),
 
     field_initializer_list: ($) => seq(':', $._field_initializer_sequence),
 

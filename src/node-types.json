@@ -4462,6 +4462,10 @@
           {
             "type": "initializer_list",
             "named": true
+          },
+          {
+            "type": "parameter_pack_expansion",
+            "named": true
           }
         ]
       }
