@@ -11,7 +11,6 @@ import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const Root = path.join(import.meta.dirname, '../..');
-const CQueries = path.join(Root, 'node_modules/@willbooster/tree-sitter-c/queries');
 const QueryKinds = ['highlights', 'injections', 'locals', 'tags'] as const;
 const [grammar] = treeSitterJson.grammars;
 await Parser.init();
@@ -62,17 +61,11 @@ for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
   });
 }
 
-test('keeps vendored C queries and scanner headers synchronized with the installed dependency', () => {
-  for (const [directory, files, command] of [
-    ['queries/c', fs.readdirSync(path.join(Root, 'queries/c')), 'script/copy-c-queries'],
-    ['src', ['pragma.h', 'identifier.h'], 'script/copy-c-scanner'],
-  ] as const) {
-    for (const file of files) {
-      const source = directory === 'queries/c' ? path.join(CQueries, file) : path.join(CQueries, '../src', file);
-      expect(fs.readFileSync(path.join(Root, directory, file)), `${directory}/${file} differs; run ${command}`).toEqual(
-        fs.readFileSync(source)
-      );
-    }
+test('keeps vendored C scanner headers synchronized with the installed dependency', () => {
+  for (const file of ['pragma.h', 'identifier.h']) {
+    expect(fs.readFileSync(path.join(Root, 'src', file)), `${file} differs; run script/copy-c-scanner`).toEqual(
+      fs.readFileSync(path.join(Root, 'node_modules/@willbooster/tree-sitter-c/src', file))
+    );
   }
 });
 

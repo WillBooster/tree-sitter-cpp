@@ -113,19 +113,22 @@ void f(int x) {
   T&& t(U());
   [[likely]] [[vendor::tag]] throw x;
   [[a]] [[b]] co_yield x;
-  long(n)(_Countof(b));
+  int _Countof = 1;
+  (void)_Countof;
 }
-Foo* p(_Countof(b));`;
+int n = _Countof;
+int read(int *a) { return _Countof(a); }`;
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(tree.rootNode.descendantsOfType('throw_statement').map((node) => node.text)).toEqual(['throw x;']);
     expect(tree.rootNode.descendantsOfType('co_yield_statement').map((node) => node.text)).toEqual(['co_yield x;']);
     expect(tree.rootNode.descendantsOfType('reference_declarator').map((node) => node.text)).toEqual(['&& t(U())']);
-    expect(tree.rootNode.descendantsOfType('countof_expression').map((node) => node.text)).toEqual([
-      '_Countof(b)',
-      '_Countof(b)',
-    ]);
+    expect(tree.rootNode.descendantsOfType('call_expression').map((node) => node.text)).toContain('_Countof(a)');
+    expect(tree.rootNode.descendantsOfType('cast_expression').map((node) => node.text)).toEqual(['(void)_Countof']);
+    expect(
+      tree.rootNode.descendantsOfType('init_declarator').map((node) => node.childForFieldName('value')?.text)
+    ).toContain('_Countof');
     expect(tree.rootNode.descendantsOfType('attributed_statement').map((node) => node.text)).toEqual([
       '[[likely]] [[vendor::tag]] throw x;',
       '[[a]] [[b]] co_yield x;',

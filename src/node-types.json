@@ -220,10 +220,6 @@
         "named": true
       },
       {
-        "type": "countof_expression",
-        "named": true
-      },
-      {
         "type": "delete_expression",
         "named": true
       },
@@ -2261,32 +2257,6 @@
           "named": true
         }
       ]
-    }
-  },
-  {
-    "type": "countof_expression",
-    "named": true,
-    "fields": {
-      "type": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "type_descriptor",
-            "named": true
-          }
-        ]
-      },
-      "value": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "expression",
-            "named": true
-          }
-        ]
-      }
     }
   },
   {
@@ -9020,10 +8990,6 @@
   },
   {
     "type": "_Complex",
-    "named": false
-  },
-  {
-    "type": "_Countof",
     "named": false
   },
   {

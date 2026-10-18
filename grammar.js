@@ -867,7 +867,6 @@ module.exports = grammar(C, {
         $.false,
         $.this,
         $.alignof_expression,
-        $.countof_expression,
         $.offsetof_expression,
         $.generic_expression,
         $.new_expression,
@@ -1219,7 +1218,6 @@ module.exports = grammar(C, {
                 $.true,
                 $.false,
                 'sizeof',
-                '_Countof',
                 'alignof',
                 '_Alignof',
                 '__alignof__',
@@ -1622,7 +1620,9 @@ module.exports = grammar(C, {
 
     _expression_not_binary: ($, original = missingOriginalRule()) =>
       choice(
-        original,
+        ...ruleMembers(original, 'CHOICE').filter(
+          (rule) => rule.type !== 'SYMBOL' || rule.name !== 'countof_expression'
+        ),
         prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
         alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
         $.co_await_expression,
