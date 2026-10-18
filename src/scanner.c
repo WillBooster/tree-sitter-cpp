@@ -2,8 +2,8 @@
 #include "tree_sitter/parser.h"
 #include "pragma.h"
 
-#include <assert.h>
 #include <string.h>
+#include <wchar.h>
 #include <wctype.h>
 
 enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
@@ -134,8 +134,8 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
 }
 
 unsigned tree_sitter_cpp_external_scanner_serialize(void *payload, char *buffer) {
-    static_assert(MAX_DELIMITER_LENGTH * sizeof(wchar_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
-                  "Serialized delimiter is too long!");
+    _Static_assert(MAX_DELIMITER_LENGTH * sizeof(wchar_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
+                   "Serialized delimiter is too long!");
 
     Scanner *scanner = (Scanner *)payload;
     size_t size = scanner->delimiter_length * sizeof(wchar_t);
