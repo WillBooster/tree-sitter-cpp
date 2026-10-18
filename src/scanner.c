@@ -3,7 +3,7 @@
 #include "pragma.h"
 
 #include <string.h>
-#include <wchar.h>
+#include <stdint.h>
 #include <wctype.h>
 
 enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
@@ -13,7 +13,7 @@ enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, 
 
 typedef struct {
     uint8_t delimiter_length;
-    wchar_t delimiter[MAX_DELIMITER_LENGTH];
+    int32_t delimiter[MAX_DELIMITER_LENGTH];
 } Scanner;
 
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
@@ -134,22 +134,22 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
 }
 
 unsigned tree_sitter_cpp_external_scanner_serialize(void *payload, char *buffer) {
-    _Static_assert(MAX_DELIMITER_LENGTH * sizeof(wchar_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
+    _Static_assert(MAX_DELIMITER_LENGTH * sizeof(int32_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
                    "Serialized delimiter is too long!");
 
     Scanner *scanner = (Scanner *)payload;
-    size_t size = scanner->delimiter_length * sizeof(wchar_t);
+    size_t size = scanner->delimiter_length * sizeof(int32_t);
     memcpy(buffer, scanner->delimiter, size);
     return (unsigned)size;
 }
 
 void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
     Scanner *scanner = (Scanner *)payload;
-    if (length > sizeof(scanner->delimiter) || length % sizeof(wchar_t) != 0) {
+    if (length > sizeof(scanner->delimiter) || length % sizeof(int32_t) != 0) {
         reset(scanner);
         return;
     }
-    scanner->delimiter_length = length / sizeof(wchar_t);
+    scanner->delimiter_length = length / sizeof(int32_t);
     if (length > 0) {
         memcpy(&scanner->delimiter[0], buffer, length);
     }
