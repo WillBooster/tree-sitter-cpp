@@ -550,15 +550,11 @@ void f() {
             (pointer_declarator
               (identifier)))
           (argument_list
-            (call_expression
-              (template_function
-                (identifier)
-                (template_argument_list
-                  (type_descriptor
-                    (primitive_type)
-                    (abstract_pointer_declarator))))
-              (argument_list
-                (identifier)))))
+            (named_cast_expression
+              (type_descriptor
+                (primitive_type)
+                (abstract_pointer_declarator))
+              (identifier))))
         (init_declarator
           (parenthesized_declarator
             (pointer_declarator
@@ -573,14 +569,10 @@ void f() {
             (identifier))
           (argument_list
             (call_expression
-              (call_expression
-                (template_function
-                  (identifier)
-                  (template_argument_list
-                    (type_descriptor
-                      (type_identifier))))
-                (argument_list
-                  (identifier)))
+              (named_cast_expression
+                (type_descriptor
+                  (type_identifier))
+                (identifier))
               (argument_list
                 (identifier))))))
       (declaration
@@ -751,14 +743,10 @@ void f() {
         (init_declarator
           (identifier)
           (argument_list
-            (call_expression
-              (template_function
-                (identifier)
-                (template_argument_list
-                  (type_descriptor
-                    (primitive_type))))
-              (argument_list
-                (identifier))))))
+            (named_cast_expression
+              (type_descriptor
+                (primitive_type))
+              (identifier)))))
       (declaration
         (qualified_identifier
           (namespace_identifier)
@@ -989,15 +977,11 @@ void f() {
           (pointer_declarator
             (identifier))
           (argument_list
-            (call_expression
-              (template_function
-                (identifier)
-                (template_argument_list
-                  (type_descriptor
-                    (type_identifier)
-                    (abstract_pointer_declarator))))
-              (argument_list
-                (identifier))))))
+            (named_cast_expression
+              (type_descriptor
+                (type_identifier)
+                (abstract_pointer_declarator))
+              (identifier)))))
       (declaration
         (type_qualifier)
         (type_identifier)
@@ -1021,15 +1005,11 @@ void f() {
             (identifier))
           (argument_list
             (subscript_expression
-              (call_expression
-                (template_function
-                  (identifier)
-                  (template_argument_list
-                    (type_descriptor
-                      (type_identifier)
-                      (abstract_pointer_declarator))))
-                (argument_list
-                  (identifier)))
+              (named_cast_expression
+                (type_descriptor
+                  (type_identifier)
+                  (abstract_pointer_declarator))
+                (identifier))
               (subscript_argument_list
                 (number_literal))))))
       (declaration
@@ -1092,14 +1072,10 @@ void f() {
             (identifier))
           (argument_list
             (unary_expression
-              (call_expression
-                (template_function
-                  (identifier)
-                  (template_argument_list
-                    (type_descriptor
-                      (primitive_type))))
-                (argument_list
-                  (identifier))))))
+              (named_cast_expression
+                (type_descriptor
+                  (primitive_type))
+                (identifier)))))
         (init_declarator
           (pointer_declarator
             (identifier))
@@ -1204,14 +1180,10 @@ void f() {
           (call_expression
             (identifier)
             (argument_list
-              (call_expression
-                (template_function
-                  (identifier)
-                  (template_argument_list
-                    (type_descriptor
-                      (primitive_type))))
-                (argument_list
-                  (identifier)))))))
+              (named_cast_expression
+                (type_descriptor
+                  (primitive_type))
+                (identifier))))))
       (expression_statement
         (binary_expression
           (identifier)

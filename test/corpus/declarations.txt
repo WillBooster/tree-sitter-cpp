@@ -2519,17 +2519,13 @@ auto x = static_cast<int S::*>(p);
       (auto))
     (init_declarator
       (identifier)
-      (call_expression
-        (template_function
-          (identifier)
-          (template_argument_list
-            (type_descriptor
-              (primitive_type)
-              (qualified_identifier
-                (namespace_identifier)
-                (abstract_pointer_declarator)))))
-        (argument_list
-          (identifier))))))
+      (named_cast_expression
+        (type_descriptor
+          (primitive_type)
+          (qualified_identifier
+            (namespace_identifier)
+            (abstract_pointer_declarator)))
+        (identifier)))))
 
 
 ================================================================================
@@ -3119,16 +3115,12 @@ template <typename... Ts> void operations(Ts... args) {
             (auto))
           declarator: (init_declarator
             declarator: (identifier)
-            value: (call_expression
-              function: (template_function
-                name: (identifier)
-                arguments: (template_argument_list
-                  (type_descriptor
-                    type: (pack_index_type
-                      pack: (type_identifier)
-                      index: (number_literal)))))
-              arguments: (argument_list
-                (number_literal)))))
+            value: (named_cast_expression
+              type: (type_descriptor
+                type: (pack_index_type
+                  pack: (type_identifier)
+                  index: (number_literal)))
+              value: (number_literal))))
         (declaration
           type: (placeholder_type_specifier
             (auto))
@@ -3617,40 +3609,40 @@ template <typename... Ts> void index_comment(Ts... args) { args... [ /* index */
         (type_identifier)))
     (declaration
       type: (primitive_type)
-      declarator: (init_declarator
+      declarator: (function_declarator
         declarator: (identifier)
-        value: (argument_list
-          (subscript_expression
-            argument: (parameter_pack_expansion
-              pattern: (identifier))
-            indices: (subscript_argument_list))))))
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (array_declarator
+              declarator: (variadic_declarator)))))))
   (template_declaration
     parameters: (template_parameter_list
       (variadic_type_parameter_declaration
         (type_identifier)))
     (declaration
       type: (primitive_type)
-      declarator: (init_declarator
+      declarator: (function_declarator
         declarator: (identifier)
-        value: (argument_list
-          (subscript_expression
-            argument: (parameter_pack_expansion
-              pattern: (identifier))
-            indices: (subscript_argument_list))))))
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (array_declarator
+              declarator: (variadic_declarator)))))))
   (template_declaration
     parameters: (template_parameter_list
       (variadic_type_parameter_declaration
         (type_identifier)))
     (declaration
       type: (primitive_type)
-      declarator: (init_declarator
+      declarator: (function_declarator
         declarator: (identifier)
-        value: (argument_list
-          (subscript_expression
-            argument: (parameter_pack_expansion
-              pattern: (identifier))
-            (comment)
-            indices: (subscript_argument_list
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (array_declarator
+              declarator: (variadic_declarator)
+              (comment)
               (comment)))))))
   (template_declaration
     parameters: (template_parameter_list
@@ -3658,13 +3650,13 @@ template <typename... Ts> void index_comment(Ts... args) { args... [ /* index */
         (type_identifier)))
     (declaration
       type: (primitive_type)
-      declarator: (init_declarator
+      declarator: (function_declarator
         declarator: (identifier)
-        value: (argument_list
-          (subscript_expression
-            argument: (parameter_pack_expansion
-              pattern: (identifier))
-            indices: (subscript_argument_list))))))
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (array_declarator
+              declarator: (variadic_declarator)))))))
   (template_declaration
     parameters: (template_parameter_list
       (variadic_type_parameter_declaration
