@@ -256,6 +256,10 @@
         "named": true
       },
       {
+        "type": "named_cast_expression",
+        "named": true
+      },
+      {
         "type": "new_expression",
         "named": true
       },
@@ -273,10 +277,6 @@
       },
       {
         "type": "pack_index_expression",
-        "named": true
-      },
-      {
-        "type": "parameter_pack_expansion",
         "named": true
       },
       {
@@ -333,6 +333,10 @@
       },
       {
         "type": "true",
+        "named": true
+      },
+      {
+        "type": "typeid_expression",
         "named": true
       },
       {
@@ -759,6 +763,10 @@
           "named": true
         },
         {
+          "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
           "type": "type_descriptor",
           "named": true
         }
@@ -792,6 +800,10 @@
         {
           "type": "expression",
           "named": true
+        },
+        {
+          "type": "parameter_pack_expansion",
+          "named": true
         }
       ]
     }
@@ -821,15 +833,15 @@
           "named": true
         },
         {
+          "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
           "type": "preproc_defined",
           "named": true
         },
         {
           "type": "system_lib_string",
-          "named": true
-        },
-        {
-          "type": "type_descriptor",
           "named": true
         }
       ]
@@ -853,6 +865,10 @@
           },
           {
             "type": "_type_declarator",
+            "named": true
+          },
+          {
+            "type": "variadic_declarator",
             "named": true
           }
         ]
@@ -4383,6 +4399,10 @@
           "named": true
         },
         {
+          "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
           "type": "preproc_call",
           "named": true
         },
@@ -4441,6 +4461,10 @@
           },
           {
             "type": "initializer_list",
+            "named": true
+          },
+          {
+            "type": "parameter_pack_expansion",
             "named": true
           }
         ]
@@ -4833,6 +4857,58 @@
     "type": "ms_unaligned_ptr_modifier",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "named_cast_expression",
+    "named": true,
+    "fields": {
+      "operator": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "const_cast",
+            "named": false
+          },
+          {
+            "type": "dynamic_cast",
+            "named": false
+          },
+          {
+            "type": "reinterpret_cast",
+            "named": false
+          },
+          {
+            "type": "static_cast",
+            "named": false
+          }
+        ]
+      },
+      "type": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "type_descriptor",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "comma_expression",
+            "named": true
+          },
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
+    }
   },
   {
     "type": "namespace_alias_definition",
@@ -5795,6 +5871,10 @@
           "named": true
         },
         {
+          "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
           "type": "preproc_call",
           "named": true
         },
@@ -5975,6 +6055,10 @@
           "named": true
         },
         {
+          "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
           "type": "preproc_call",
           "named": true
         },
@@ -6123,6 +6207,10 @@
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "parameter_pack_expansion",
           "named": true
         },
         {
@@ -6370,6 +6458,10 @@
           "named": true
         },
         {
+          "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
           "type": "preproc_call",
           "named": true
         },
@@ -6547,6 +6639,10 @@
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "parameter_pack_expansion",
           "named": true
         },
         {
@@ -7329,6 +7425,10 @@
         {
           "type": "initializer_list",
           "named": true
+        },
+        {
+          "type": "parameter_pack_expansion",
+          "named": true
         }
       ]
     }
@@ -7436,6 +7536,10 @@
       "types": [
         {
           "type": "expression",
+          "named": true
+        },
+        {
+          "type": "parameter_pack_expansion",
           "named": true
         },
         {
@@ -8167,6 +8271,36 @@
     }
   },
   {
+    "type": "typeid_expression",
+    "named": true,
+    "fields": {
+      "type": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "type_descriptor",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "comma_expression",
+            "named": true
+          },
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "typeof_specifier",
     "named": true,
     "fields": {},
@@ -8448,6 +8582,10 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "array_declarator",
+            "named": true
+          },
           {
             "type": "pointer_declarator",
             "named": true
@@ -9108,6 +9246,10 @@
     "named": false
   },
   {
+    "type": "const_cast",
+    "named": false
+  },
+  {
     "type": "consteval",
     "named": false
   },
@@ -9141,6 +9283,10 @@
   },
   {
     "type": "do",
+    "named": false
+  },
+  {
+    "type": "dynamic_cast",
     "named": false
   },
   {
@@ -9341,6 +9487,10 @@
     "named": false
   },
   {
+    "type": "reinterpret_cast",
+    "named": false
+  },
+  {
     "type": "requires",
     "named": false
   },
@@ -9374,6 +9524,10 @@
   },
   {
     "type": "static_assert",
+    "named": false
+  },
+  {
+    "type": "static_cast",
     "named": false
   },
   {
@@ -9422,6 +9576,10 @@
   },
   {
     "type": "typedef",
+    "named": false
+  },
+  {
+    "type": "typeid",
     "named": false
   },
   {

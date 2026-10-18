@@ -85,12 +85,8 @@
 
 (raw_string_literal) @string
 
-; Keywords with the shape of a call
-
-((template_function
-  name: (identifier) @keyword)
- (#any-of? @keyword "static_cast" "dynamic_cast" "const_cast" "reinterpret_cast"))
+["static_cast" "dynamic_cast" "const_cast" "reinterpret_cast" "typeid"] @keyword
 
 ((call_expression
   function: (identifier) @keyword)
- (#any-of? @keyword "typeid" "noexcept"))
+ (#eq? @keyword "noexcept"))

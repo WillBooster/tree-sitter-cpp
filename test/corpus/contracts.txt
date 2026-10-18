@@ -707,14 +707,10 @@ auto function_pointer() -> int(*)(int);
           (auto))
         (init_declarator
           (identifier)
-          (call_expression
-            (template_function
-              (identifier)
-              (template_argument_list
-                (type_descriptor
-                  (type_identifier))))
-            (argument_list
-              (identifier)))))
+          (named_cast_expression
+            (type_descriptor
+              (type_identifier))
+            (identifier))))
       (declaration
         (placeholder_type_specifier
           (auto))

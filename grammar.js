@@ -322,10 +322,21 @@ module.exports = grammar(C, {
 
     type_descriptor: (_, original = missingOriginalRule()) => prec.right(original),
 
+    alignas_qualifier: ($, original = missingOriginalRule()) =>
+      choice(
+        original,
+        seq(
+          choice('alignas', '_Alignas'),
+          '(',
+          choice($.parameter_pack_expansion, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
+          ')'
+        )
+      ),
+
     attribute: ($, original = missingOriginalRule()) =>
       seq(optional(seq('using', field('namespace', $._contextual_identifier), ':')), ...ruleMembers(original, 'SEQ')),
 
-    annotation: ($) => seq('=', $.expression),
+    annotation: ($) => seq('=', choice($.expression, $.parameter_pack_expansion)),
 
     attribute_declaration: ($, original = missingOriginalRule()) =>
       choice(original, seq('[[', commaSep1($.annotation), ']]')),
@@ -730,9 +741,12 @@ module.exports = grammar(C, {
     _variadic_declarator: ($) =>
       choice(
         $.variadic_declarator,
+        alias($.variadic_array_declarator, $.array_declarator),
         alias($.variadic_pointer_declarator, $.pointer_declarator),
         alias($.variadic_reference_declarator, $.reference_declarator)
       ),
+
+    variadic_array_declarator: ($) => withDeclarator(C.grammar.rules.array_declarator, $._variadic_declarator),
 
     variadic_pointer_declarator: ($) => withDeclarator(C.grammar.rules.pointer_declarator, $._variadic_declarator),
 
@@ -856,8 +870,8 @@ module.exports = grammar(C, {
         $.new_expression,
         $.requires_expression,
         $.builtin_available_expression,
-        alias($.named_cast_expression, $.call_expression),
-        alias($.typeid_expression, $.call_expression)
+        $.named_cast_expression,
+        $.typeid_expression
       ),
 
     keyword_led_call_expression: ($) =>
@@ -934,8 +948,21 @@ module.exports = grammar(C, {
         repeat($.attribute_declaration),
         optional(seq('=', field('value', $.expression)))
       ),
+    _initializer_element: ($, original = missingOriginalRule()) => choice(original, $.parameter_pack_expansion),
+
     initializer_pair: ($, original = missingOriginalRule()) =>
-      choice(original, seq(field('designator', $.field_designator), field('value', $.initializer_list))),
+      choice(
+        ...ruleMembers(original, 'CHOICE').map((alternative) =>
+          seq(
+            ...ruleMembers(alternative, 'SEQ').map((member) =>
+              member.type === 'FIELD' && member.name === 'value'
+                ? field('value', choice(member.content, $.parameter_pack_expansion))
+                : member
+            )
+          )
+        ),
+        seq(field('designator', $.field_designator), field('value', $.initializer_list))
+      ),
 
     field_initializer_list: ($) => seq(':', $._field_initializer_sequence),
 
@@ -1414,7 +1441,7 @@ module.exports = grammar(C, {
             prec.dynamic(3, alias($._template_argument_type_identifier, $.type_descriptor)),
             prec.dynamic(3, $.type_descriptor),
             prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
-            prec.dynamic(1, $.expression)
+            prec.dynamic(1, choice($.expression, $.parameter_pack_expansion))
           )
         ),
         alias(token(prec(1, '>')), '>')
@@ -1618,7 +1645,6 @@ module.exports = grammar(C, {
         $.new_expression,
         $.delete_expression,
         $.lambda_expression,
-        $.parameter_pack_expansion,
         $.pack_index_expression,
         $.this,
         $.user_defined_literal,
@@ -1648,7 +1674,8 @@ module.exports = grammar(C, {
     subscript_expression: ($) =>
       prec(PREC.SUBSCRIPT, seq(field('argument', $.expression), field('indices', $.subscript_argument_list))),
 
-    subscript_argument_list: ($) => seq('[', commaSep(choice($.expression, $.initializer_list)), ']'),
+    subscript_argument_list: ($) =>
+      seq('[', commaSep(choice($.expression, $.parameter_pack_expansion, $.initializer_list)), ']'),
 
     call_expression: ($, original = missingOriginalRule()) =>
       choice(
@@ -1974,7 +2001,13 @@ module.exports = grammar(C, {
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
     // The operator arguments are added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
     argument_list: ($) => {
-      const argument = choice($.expression, $.initializer_list, $.compound_statement, $.operator_argument);
+      const argument = choice(
+        $.expression,
+        $.parameter_pack_expansion,
+        $.initializer_list,
+        $.compound_statement,
+        $.operator_argument
+      );
       const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
       return seq('(', optional(choice(argument, seq(anyArgument, repeat1(seq(',', anyArgument))))), ')');
     },
@@ -2136,55 +2169,47 @@ module.exports = grammar(C, {
         $.qualified_identifier,
         $.user_defined_literal,
         alias($.pointer_to_member_expression, $.binary_expression),
-        alias($.named_cast_expression, $.call_expression)
+        $.named_cast_expression
       ),
 
     expression: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias($.pointer_to_member_expression, $.binary_expression),
-        alias($.named_cast_expression, $.call_expression),
-        alias($.typeid_expression, $.call_expression)
+        $.named_cast_expression,
+        $.typeid_expression
       ),
 
-    // The named casts and `typeid` are keywords where an expression may start, so such a call never reads as a
-    // declaration or a type-id there; where only a type name fits, they still lex as one (`static_cast<T> f;` in a
-    // class). They keep the shapes of the calls that other names make, which queries already match.
     named_cast_expression: ($) =>
       prec.dynamic(
         1,
         prec(
           PREC.CALL,
-          seq(field('function', alias($.named_cast, $.template_function)), field('arguments', $.argument_list))
+          seq(
+            field('operator', choice('static_cast', 'dynamic_cast', 'const_cast', 'reinterpret_cast')),
+            '<',
+            field('type', $.type_descriptor),
+            '>',
+            '(',
+            field('value', choice($.expression, $.comma_expression)),
+            ')'
+          )
         )
       ),
-    named_cast: ($) =>
-      seq(
-        field(
-          'name',
-          choice(
-            alias('static_cast', $.identifier),
-            alias('dynamic_cast', $.identifier),
-            alias('const_cast', $.identifier),
-            alias('reinterpret_cast', $.identifier)
-          )
-        ),
-        field('arguments', $.template_argument_list)
-      ),
+
     typeid_expression: ($) =>
       prec.dynamic(
         1,
         prec(
           PREC.CALL,
           seq(
-            field('function', alias('typeid', $.identifier)),
-            field('arguments', choice($.argument_list, alias($.typeid_type_argument_list, $.argument_list)))
+            'typeid',
+            choice(seq('(', field('value', choice($.expression, $.comma_expression)), ')'), $._typeid_type_operand)
           )
         )
       ),
-    // Loses to the expression reading of the same tokens, so that `typeid(std::runtime_error)` keeps its tree and only a
-    // type that cannot be an expression, such as `typeid(int)`, reads as one.
-    typeid_type_argument_list: ($) => prec.dynamic(-1, seq('(', $.type_descriptor, ')')),
+
+    _typeid_type_operand: ($) => prec.dynamic(-1, seq('(', field('type', $.type_descriptor), ')')),
 
     pointer_to_member_expression: ($) =>
       prec.left(
