@@ -763,6 +763,10 @@
           "named": true
         },
         {
+          "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
           "type": "type_descriptor",
           "named": true
         }
@@ -795,6 +799,10 @@
       "types": [
         {
           "type": "expression",
+          "named": true
+        },
+        {
+          "type": "parameter_pack_expansion",
           "named": true
         }
       ]

@@ -1980,10 +1980,9 @@ auto g = noexcept(h());
       (reference_declarator
         (identifier))
       (typeid_expression
-        (type_descriptor
-          (qualified_identifier
-            (namespace_identifier)
-            (type_identifier))))))
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier)))))
   (declaration
     (placeholder_type_specifier
       (auto))

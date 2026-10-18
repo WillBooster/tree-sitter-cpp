@@ -322,10 +322,21 @@ module.exports = grammar(C, {
 
     type_descriptor: (_, original = missingOriginalRule()) => prec.right(original),
 
+    alignas_qualifier: ($, original = missingOriginalRule()) =>
+      choice(
+        original,
+        seq(
+          choice('alignas', '_Alignas'),
+          '(',
+          choice($.parameter_pack_expansion, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
+          ')'
+        )
+      ),
+
     attribute: ($, original = missingOriginalRule()) =>
       seq(optional(seq('using', field('namespace', $._contextual_identifier), ':')), ...ruleMembers(original, 'SEQ')),
 
-    annotation: ($) => seq('=', $.expression),
+    annotation: ($) => seq('=', choice($.expression, $.parameter_pack_expansion)),
 
     attribute_declaration: ($, original = missingOriginalRule()) =>
       choice(original, seq('[[', commaSep1($.annotation), ']]')),
@@ -2182,15 +2193,12 @@ module.exports = grammar(C, {
           PREC.CALL,
           seq(
             'typeid',
-            '(',
-            choice(
-              field('value', choice($.expression, $.comma_expression)),
-              field('type', prec.dynamic(-1, $.type_descriptor))
-            ),
-            ')'
+            choice(seq('(', field('value', choice($.expression, $.comma_expression)), ')'), $._typeid_type_operand)
           )
         )
       ),
+
+    _typeid_type_operand: ($) => prec.dynamic(-1, seq('(', field('type', $.type_descriptor), ')')),
 
     pointer_to_member_expression: ($) =>
       prec.left(

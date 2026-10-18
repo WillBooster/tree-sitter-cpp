@@ -99,3 +99,45 @@ template<class... T> void f(T... args) {
     parser.delete();
   }
 });
+
+test('keeps ambiguous typeid names as expressions regardless of qualification', () => {
+  const parser = new Parser().setLanguage(language);
+  try {
+    for (const operand of ['value', 'ns::value', '::value', 'a::b::value', 'std::runtime_error', 'ns::T<int>']) {
+      const tree = parser.parse(`auto &result = typeid(${operand});`)!;
+      try {
+        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+        const node = tree.rootNode.descendantsOfType('typeid_expression')[0]!;
+        expect(node.childForFieldName('value')?.text, operand).toBe(operand);
+        expect(node.childForFieldName('type'), operand).toBeNull();
+      } finally {
+        tree.delete();
+      }
+    }
+  } finally {
+    parser.delete();
+  }
+});
+
+test('retains alignment and annotation pack expansions', () => {
+  const parser = new Parser().setLanguage(language);
+  const tree = parser.parse(`template<class... T> struct alignas(sizeof(T)...) S {
+  alignas(T...) char storage[8];
+  alignas(T*...) char pointers[8];
+  [[=T...]] int annotated;
+};
+template<int... N> struct U { alignas(N...) char storage[8]; };`)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(tree.rootNode.descendantsOfType('alignas_qualifier').map((node) => node.text)).toEqual([
+      'alignas(sizeof(T)...)',
+      'alignas(T...)',
+      'alignas(T*...)',
+      'alignas(N...)',
+    ]);
+    expect(tree.rootNode.descendantsOfType('annotation')[0]!.firstNamedChild!.type).toBe('parameter_pack_expansion');
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});
