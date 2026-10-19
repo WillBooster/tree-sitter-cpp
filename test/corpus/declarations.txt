@@ -862,27 +862,27 @@ class A final : [[deprecated]] public B {};
       (identifier)
       (parameter_list)))
   (declaration
-        (attribute_declaration
-          (attribute
-            (identifier)
-            (identifier))
-          (attribute
-            (identifier))
-          (attribute
-            (identifier))
-          (attribute
-            (identifier)
-            (argument_list
-              (string_literal
-                (string_content)))))
-        (attribute_declaration
-          (attribute
-            (identifier)))
-        (storage_class_specifier)
-        (primitive_type)
-        (function_declarator
-          (identifier)
-          (parameter_list)))
+    (attribute_declaration
+      (attribute
+        (identifier)
+        (identifier))
+      (attribute
+        (identifier))
+      (attribute
+        (identifier))
+      (attribute
+        (identifier)
+        (argument_list
+          (string_literal
+            (string_content)))))
+    (attribute_declaration
+      (attribute
+        (identifier)))
+    (storage_class_specifier)
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list)))
   (function_definition
     (attribute_declaration
       (attribute

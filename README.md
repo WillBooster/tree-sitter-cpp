@@ -20,7 +20,7 @@ This fork fixes parsing bugs and raises conformance with the ISO C++ standard
 The npm package ships `tree-sitter-cpp.wasm` for
 [@willbooster/web-tree-sitter](https://www.npmjs.com/package/@willbooster/web-tree-sitter), which runs in Node.js, Bun,
 browsers, and Cloudflare Workers. The parser carries the ABI number of the WillBooster/tree-sitter fork, so it loads
-only with that runtime, version 2.0.0 or later; upstream's runtime rejects it. Install both:
+only with that runtime, version 4.0.2 or later within major version 4; upstream's runtime rejects it. Install both:
 
 ```sh
 npm install @willbooster/tree-sitter-cpp @willbooster/web-tree-sitter
@@ -68,12 +68,12 @@ grammar's in `queries/` and, in `queries/c/`, the highlights of the C grammar it
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
-fuzzed with. The parser loads only with that runtime, version 2.0.0 or later:
+fuzzed with. The parser loads only with that runtime, version 4.0.2 or later within major version 4:
 
 ```toml
 [dependencies]
-tree-sitter = { package = "willbooster-tree-sitter", version = "2.0.0" }
-tree-sitter-cpp = { package = "willbooster-tree-sitter-cpp", version = "3" }
+tree-sitter = { package = "willbooster-tree-sitter", version = "4.0.2" }
+tree-sitter-cpp = { package = "willbooster-tree-sitter-cpp", version = "5" }
 ```
 
 ```rust
@@ -125,8 +125,8 @@ and the release build regenerate the parsers before compiling them.
   keyword-led arguments that make `Foo* p(nullptr);` a variable start only with such keywords or `this`, which starts
   a parameter only when a declaration follows it;
 - a check (`test/unit/queries.test.ts`) that the queries `tree-sitter.json` lists compile against the grammar, are
-  published in the npm package and the crate, and that `queries/c/` matches the queries of the installed
-  @willbooster/tree-sitter-c. After updating that dependency, run `script/copy-c-queries` and `script/copy-c-scanner`.
+  published in the npm package and the crate, and that the vendored scanner headers match the installed
+  @willbooster/tree-sitter-c. The copied C highlight query excludes the C-only `_Countof` capture. After updating that dependency, run `script/copy-c-queries` and `script/copy-c-scanner`.
   The scanner headers are verbatim copies from that package; their generator paths refer to the C repository.
   Review the C scanner dispatch and external-token order against `src/scanner.c` when updating the dependency;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and
