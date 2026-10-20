@@ -27,7 +27,7 @@ test('terminates final C++ directives without inventing physical source characte
           expect(tree.rootNode.text).toBe(source);
           expect(tree.rootNode.endIndex).toBe(source.length);
           expect(tree.rootNode.namedChildren).toHaveLength(1);
-          expect(tree.rootNode.namedChildren[0]!.endIndex).toBeLessThanOrEqual(source.length);
+          expect(tree.rootNode.namedChildren[0]!.endIndex).toBe(source.length);
           if (directive === '#define X 1') {
             expect(tree.rootNode.namedChildren[0]!.childForFieldName('value')?.text).toBe('1' + ending);
           }
@@ -88,7 +88,7 @@ test('retains errors for unfinished directive syntax at EOF', () => {
       const tree = parser.parse(source)!;
       try {
         expect(tree.rootNode.hasError, source).toBe(true);
-        expect(tree.rootNode.endIndex).toBeLessThanOrEqual(source.length);
+        expect(tree.rootNode.endIndex).toBe(source.length);
       } finally {
         tree.delete();
       }
