@@ -10591,51 +10591,157 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "STRING",
-                    "value": "va_arg"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "__builtin_va_arg"
-                  }
-                ]
+          "type": "SYMBOL",
+          "name": "unary_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "update_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "cast_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "pointer_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sizeof_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "alignof_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "offsetof_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "va_arg_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "generic_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "subscript_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "call_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "field_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "compound_literal_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "STRING",
+            "value": "thread_local"
+          },
+          "named": true,
+          "value": "identifier"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "va_arg"
               },
-              "named": true,
-              "value": "identifier"
+              {
+                "type": "STRING",
+                "value": "__builtin_va_arg"
+              }
+            ]
+          },
+          "named": true,
+          "value": "identifier"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "number_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_string"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "true"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "false"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "null"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "char_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "parenthesized_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "gnu_asm_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "extension_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "builtin_available_expression"
+        },
+        {
+          "type": "PREC_DYNAMIC",
+          "value": -2,
+          "content": {
+            "type": "ALIAS",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "unsigned"
+                },
+                {
+                  "type": "STRING",
+                  "value": "signed"
+                },
+                {
+                  "type": "STRING",
+                  "value": "long"
+                },
+                {
+                  "type": "STRING",
+                  "value": "short"
+                }
+              ]
             },
-            {
-              "type": "SYMBOL",
-              "name": "identifier"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "call_expression"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "field_expression"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "pointer_expression"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "subscript_expression"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "parenthesized_expression"
-            }
-          ]
+            "named": true,
+            "value": "identifier"
+          }
         },
         {
           "type": "ALIAS",
@@ -10673,7 +10779,23 @@
         },
         {
           "type": "SYMBOL",
-          "name": "pack_index_expression"
+          "name": "co_await_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "requires_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "requires_clause"
+        },
+        {
+          "type": "PREC_DYNAMIC",
+          "value": -2,
+          "content": {
+            "type": "SYMBOL",
+            "name": "template_function"
+          }
         },
         {
           "type": "SYMBOL",
@@ -10681,7 +10803,43 @@
         },
         {
           "type": "SYMBOL",
+          "name": "new_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "delete_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "lambda_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "pack_index_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "this"
+        },
+        {
+          "type": "SYMBOL",
           "name": "user_defined_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "fold_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "reflect_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "splice_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "binary_expression"
         },
         {
           "type": "ALIAS",
@@ -10695,6 +10853,10 @@
         {
           "type": "SYMBOL",
           "name": "named_cast_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "typeid_expression"
         }
       ]
     },

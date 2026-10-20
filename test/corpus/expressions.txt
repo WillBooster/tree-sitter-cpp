@@ -2832,3 +2832,83 @@ template <class R> struct S<R (&)()> {};
                 (abstract_reference_declarator))
               (parameter_list)))))
       (field_declaration_list))))
+
+================================================================================
+Assignment operands with overloaded operators
+================================================================================
+
+void f(Box& a, Box& b, bool flag) {
+  a + b = 1;
+  -a = 2;
+  (Box&)a = 3;
+  ++a = 4;
+  Box{} = 5;
+  a = b = 6;
+  flag ? a : b = 7;
+  (flag ? a : b) = 8;
+  boxes<int> = 9;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (reference_declarator (identifier)))
+        (parameter_declaration
+          (type_identifier)
+          (reference_declarator (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (expression_statement
+        (assignment_expression
+          (binary_expression (identifier) (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (unary_expression (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (cast_expression
+            (type_descriptor (type_identifier) (abstract_reference_declarator))
+            (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (update_expression (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (compound_literal_expression
+            (type_identifier)
+            (initializer_list))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (assignment_expression (identifier) (number_literal))))
+      (expression_statement
+        (conditional_expression
+          (identifier)
+          (identifier)
+          (assignment_expression (identifier) (number_literal))))
+      (expression_statement
+        (assignment_expression
+          (parenthesized_expression
+            (conditional_expression (identifier) (identifier) (identifier)))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (template_function
+            (identifier)
+            (template_argument_list
+              (type_descriptor (primitive_type))))
+          (number_literal))))))

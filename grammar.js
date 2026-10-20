@@ -1643,28 +1643,7 @@ module.exports = grammar(C, {
 
     catch_clause: ($) => seq('catch', field('parameters', $.parameter_list), field('body', $.compound_statement)),
 
-    _expression_not_binary: ($, original = missingOriginalRule()) =>
-      choice(
-        ...ruleMembers(original, 'CHOICE').filter(
-          (rule) => rule.type !== 'SYMBOL' || rule.name !== 'countof_expression'
-        ),
-        prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
-        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
-        $.co_await_expression,
-        $.requires_expression,
-        $.requires_clause,
-        $.template_function,
-        $.qualified_identifier,
-        $.new_expression,
-        $.delete_expression,
-        $.lambda_expression,
-        $.pack_index_expression,
-        $.this,
-        $.user_defined_literal,
-        $.fold_expression,
-        $.reflect_expression,
-        $.splice_expression
-      ),
+    _expression_not_binary: ($, original = missingOriginalRule()) => choice(...nonBinaryExpressions($, original)),
 
     _string: ($) => choice($.string_literal, $.raw_string_literal, $.concatenated_string),
 
@@ -2180,15 +2159,17 @@ module.exports = grammar(C, {
         field('name', choice(alias($.qualified_operator_cast_identifier, $.qualified_identifier), $.operator_cast))
       ),
 
-    _assignment_left_expression: ($, original = missingOriginalRule()) =>
+    _assignment_left_expression: ($) =>
       choice(
-        original,
-        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
-        $.pack_index_expression,
-        $.qualified_identifier,
-        $.user_defined_literal,
+        ...nonBinaryExpressions($, C.grammar.rules._expression_not_binary)
+          .filter(
+            (rule) => rule.type !== 'SYMBOL' || !['conditional_expression', 'assignment_expression'].includes(rule.name)
+          )
+          .map((rule) => (rule.type === 'SYMBOL' && rule.name === 'template_function' ? prec.dynamic(-2, rule) : rule)),
+        $.binary_expression,
         alias($.pointer_to_member_expression, $.binary_expression),
-        $.named_cast_expression
+        $.named_cast_expression,
+        $.typeid_expression
       ),
 
     expression: ($, original = missingOriginalRule()) =>
@@ -2437,6 +2418,33 @@ module.exports = grammar(C, {
       ),
   },
 });
+
+/**
+ * @param {NoInfer<GrammarSymbols<'identifier' | 'co_await_expression' | 'requires_expression' | 'requires_clause' | 'template_function' | 'qualified_identifier' | 'new_expression' | 'delete_expression' | 'lambda_expression' | 'pack_index_expression' | 'this' | 'user_defined_literal' | 'fold_expression' | 'reflect_expression' | 'splice_expression'>>} $
+ * @param {Rule} original
+ * @returns {Rule[]}
+ */
+function nonBinaryExpressions($, original) {
+  return [
+    ...ruleMembers(original, 'CHOICE').filter((rule) => rule.type !== 'SYMBOL' || rule.name !== 'countof_expression'),
+    prec.dynamic(-2, alias(choice('unsigned', 'signed', 'long', 'short'), $.identifier)),
+    alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
+    $.co_await_expression,
+    $.requires_expression,
+    $.requires_clause,
+    $.template_function,
+    $.qualified_identifier,
+    $.new_expression,
+    $.delete_expression,
+    $.lambda_expression,
+    $.pack_index_expression,
+    $.this,
+    $.user_defined_literal,
+    $.fold_expression,
+    $.reflect_expression,
+    $.splice_expression,
+  ];
+}
 
 /**
  * @param {NoInfer<GrammarSymbols<'_field_identifier' | '_template_destructor_name' | 'dependent_field_identifier' | 'destructor_name' | 'operator_name' | 'qualified_field_identifier' | 'qualified_identifier' | 'splice_expression' | 'template_method'>>} $
