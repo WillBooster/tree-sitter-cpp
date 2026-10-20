@@ -135,7 +135,7 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
         return scan_pack_index_operator(lexer);
     }
-    if (valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE]) {
+    if ((valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE]) && lexer->lookahead == '>') {
         return scan_template_close(scanner, lexer, valid_symbols, pending_close);
     }
     lexer->result_symbol = PRAGMA_OPERATOR;

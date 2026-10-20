@@ -83,3 +83,25 @@ test('preserves split template closers before comparison tokens during edits', (
     parser.delete();
   }
 });
+
+test('preserves pragma extras beside template closers and expression operators', () => {
+  const parser = new Parser().setLanguage(language);
+  const tree = parser.parse(`template<class> struct Box {};
+Box<int _Pragma(/*spacing*/ "GCC diagnostic push")> box;
+bool compare(int a, int b, int c) {
+  return a _Pragma(/*spacing*/ "GCC diagnostic push") + b _Pragma(/*spacing*/ "GCC diagnostic push") > c;
+}
+int shift(int a, int b) { return a >> b; }`)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(tree.rootNode.descendantsOfType('pragma_operator')).toHaveLength(3);
+    const returns = tree.rootNode.descendantsOfType('return_statement');
+    expect(returns.map((node) => node.namedChildren[0]?.childForFieldName('operator')?.text)).toEqual(['>', '>>']);
+    expect(
+      tree.rootNode.descendantsOfType('template_type').map((node) => node.childForFieldName('name')?.text)
+    ).toEqual(['Box']);
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});
