@@ -1,4 +1,4 @@
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Edit, Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
@@ -107,6 +107,67 @@ test('keeps function varargs separate from exception declarations', () => {
   } finally {
     tree.delete();
     query.delete();
+    parser.delete();
+  }
+});
+
+test('recovers conditional parameter lists without consuming following definitions', () => {
+  const parser = new Parser().setLanguage(language);
+  const following = 'int after1(int value) { return value; }\nint after2(int value) { return value; }\n';
+  try {
+    for (const conditional of [
+      '#ifdef A\n int second\n#else\n long second\n#endif\n',
+      '#ifdef VARARGS\n ...\n#else\n int second\n#endif\n',
+    ]) {
+      const prefix = 'void conditional(int first,\n';
+      const suffix = ');\n' + following;
+      let previous = conditional;
+      let tree = parser.parse(prefix + previous + suffix)!;
+      try {
+        for (const parameters of [conditional, 'int second\n', conditional]) {
+          tree.edit(
+            new Edit({
+              startIndex: prefix.length,
+              oldEndIndex: prefix.length + previous.length,
+              newEndIndex: prefix.length + parameters.length,
+              startPosition: { row: 1, column: 0 },
+              oldEndPosition: { row: 1 + previous.split('\n').length - 1, column: 0 },
+              newEndPosition: { row: 1 + parameters.split('\n').length - 1, column: 0 },
+            })
+          );
+          const source = prefix + parameters + suffix;
+          const next = parser.parse(source, tree)!;
+          tree.delete();
+          tree = next;
+          const fresh = parser.parse(source)!;
+          try {
+            expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
+            expect(
+              tree.rootNode
+                .descendantsOfType('function_definition')
+                .map((node) => [node.text, node.startIndex, node.endIndex])
+            ).toEqual([
+              [
+                'int after1(int value) { return value; }',
+                source.indexOf('int after1'),
+                source.indexOf('int after1') + 'int after1(int value) { return value; }'.length,
+              ],
+              [
+                'int after2(int value) { return value; }',
+                source.indexOf('int after2'),
+                source.indexOf('int after2') + 'int after2(int value) { return value; }'.length,
+              ],
+            ]);
+          } finally {
+            fresh.delete();
+          }
+          previous = parameters;
+        }
+      } finally {
+        tree.delete();
+      }
+    }
+  } finally {
     parser.delete();
   }
 });

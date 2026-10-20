@@ -736,13 +736,14 @@ module.exports = grammar(C, {
         optional(
           choice(
             $.variadic_parameter,
-            seq(commaSep1(parameter), optional(seq(optional(','), $.variadic_parameter))),
-            prec.dynamic(
-              PREC.CERTAIN_DECLARATION,
-              seq(
-                repeat(seq(parameter, ',')),
-                alias($._non_pack_unnamed_parameter, $.parameter_declaration),
-                $.variadic_parameter
+            seq(
+              repeat(seq(parameter, ',')),
+              choice(
+                seq(parameter, optional(seq(optional(','), $.variadic_parameter))),
+                prec.dynamic(
+                  PREC.CERTAIN_DECLARATION,
+                  seq(alias($._non_pack_unnamed_parameter, $.parameter_declaration), $.variadic_parameter)
+                )
               )
             )
           )

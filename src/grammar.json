@@ -8329,122 +8329,51 @@
                   "type": "SEQ",
                   "members": [
                     {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "CHOICE",
-                          "members": [
-                            {
-                              "type": "SYMBOL",
-                              "name": "parameter_declaration"
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "explicit_object_parameter_declaration"
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "optional_parameter_declaration"
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "variadic_parameter_declaration"
-                            },
-                            {
-                              "type": "ALIAS",
-                              "content": {
-                                "type": "SYMBOL",
-                                "name": "expression_keyword_parameter"
-                              },
-                              "named": true,
-                              "value": "parameter_declaration"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "SEQ",
+                      "type": "REPEAT",
+                      "content": {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "CHOICE",
                             "members": [
                               {
-                                "type": "STRING",
-                                "value": ","
+                                "type": "SYMBOL",
+                                "name": "parameter_declaration"
                               },
                               {
-                                "type": "CHOICE",
-                                "members": [
-                                  {
-                                    "type": "SYMBOL",
-                                    "name": "parameter_declaration"
-                                  },
-                                  {
-                                    "type": "SYMBOL",
-                                    "name": "explicit_object_parameter_declaration"
-                                  },
-                                  {
-                                    "type": "SYMBOL",
-                                    "name": "optional_parameter_declaration"
-                                  },
-                                  {
-                                    "type": "SYMBOL",
-                                    "name": "variadic_parameter_declaration"
-                                  },
-                                  {
-                                    "type": "ALIAS",
-                                    "content": {
-                                      "type": "SYMBOL",
-                                      "name": "expression_keyword_parameter"
-                                    },
-                                    "named": true,
-                                    "value": "parameter_declaration"
-                                  }
-                                ]
+                                "type": "SYMBOL",
+                                "name": "explicit_object_parameter_declaration"
+                              },
+                              {
+                                "type": "SYMBOL",
+                                "name": "optional_parameter_declaration"
+                              },
+                              {
+                                "type": "SYMBOL",
+                                "name": "variadic_parameter_declaration"
+                              },
+                              {
+                                "type": "ALIAS",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "expression_keyword_parameter"
+                                },
+                                "named": true,
+                                "value": "parameter_declaration"
                               }
                             ]
+                          },
+                          {
+                            "type": "STRING",
+                            "value": ","
                           }
-                        }
-                      ]
+                        ]
+                      }
                     },
                     {
                       "type": "CHOICE",
                       "members": [
                         {
-                          "type": "SEQ",
-                          "members": [
-                            {
-                              "type": "CHOICE",
-                              "members": [
-                                {
-                                  "type": "STRING",
-                                  "value": ","
-                                },
-                                {
-                                  "type": "BLANK"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "variadic_parameter"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "BLANK"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "PREC_DYNAMIC",
-                  "value": 10,
-                  "content": {
-                    "type": "SEQ",
-                    "members": [
-                      {
-                        "type": "REPEAT",
-                        "content": {
                           "type": "SEQ",
                           "members": [
                             {
@@ -8478,27 +8407,61 @@
                               ]
                             },
                             {
-                              "type": "STRING",
-                              "value": ","
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "SEQ",
+                                  "members": [
+                                    {
+                                      "type": "CHOICE",
+                                      "members": [
+                                        {
+                                          "type": "STRING",
+                                          "value": ","
+                                        },
+                                        {
+                                          "type": "BLANK"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "SYMBOL",
+                                      "name": "variadic_parameter"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "BLANK"
+                                }
+                              ]
                             }
                           ]
-                        }
-                      },
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "_non_pack_unnamed_parameter"
                         },
-                        "named": true,
-                        "value": "parameter_declaration"
-                      },
-                      {
-                        "type": "SYMBOL",
-                        "name": "variadic_parameter"
-                      }
-                    ]
-                  }
+                        {
+                          "type": "PREC_DYNAMIC",
+                          "value": 10,
+                          "content": {
+                            "type": "SEQ",
+                            "members": [
+                              {
+                                "type": "ALIAS",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "_non_pack_unnamed_parameter"
+                                },
+                                "named": true,
+                                "value": "parameter_declaration"
+                              },
+                              {
+                                "type": "SYMBOL",
+                                "name": "variadic_parameter"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
