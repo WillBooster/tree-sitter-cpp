@@ -125,6 +125,7 @@ module.exports = grammar(C, {
 
   conflicts: ($, original) => [
     ...original,
+    [$._class_declaration, $._instantiated_class_name],
     [$._field_initializer_sequence],
     [$._field_initializer_conditionals],
     [sym('preproc_elifdef_in_initializer_list'), sym('preproc_elifdef_in_block')],
@@ -654,12 +655,11 @@ module.exports = grammar(C, {
 
     _instantiated_class_name: ($) =>
       seq(
-        repeat(choice($.attribute_specifier, $.alignas_qualifier)),
+        // Clang rejects `alignas`, `[[...]]`, and trailing attributes here, but accepts these vendor attributes.
+        repeat($.attribute_specifier),
         optional($.ms_declspec_modifier),
-        repeat($.attribute_declaration),
         // The name is a template-id, or a qualified name such as `Outer<int>::Inner` for a member class.
-        field('name', choice($.template_type, alias($.qualified_type_identifier, $.qualified_identifier))),
-        optional($.attribute_specifier)
+        field('name', choice($.template_type, alias($.qualified_type_identifier, $.qualified_identifier)))
       ),
 
     template_parameter_list: ($) =>

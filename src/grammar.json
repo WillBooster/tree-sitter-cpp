@@ -17794,17 +17794,8 @@
         {
           "type": "REPEAT",
           "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "attribute_specifier"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "alignas_qualifier"
-              }
-            ]
+            "type": "SYMBOL",
+            "name": "attribute_specifier"
           }
         },
         {
@@ -17818,13 +17809,6 @@
               "type": "BLANK"
             }
           ]
-        },
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "SYMBOL",
-            "name": "attribute_declaration"
-          }
         },
         {
           "type": "FIELD",
@@ -17847,18 +17831,6 @@
               }
             ]
           }
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "attribute_specifier"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
         }
       ]
     },
@@ -28251,6 +28223,10 @@
     [
       "_compound_literal_constexpr_specifier",
       "type_qualifier"
+    ],
+    [
+      "_class_declaration",
+      "_instantiated_class_name"
     ],
     [
       "_field_initializer_sequence"
