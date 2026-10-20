@@ -70,10 +70,9 @@ In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
 fuzzed with. Use runtime version 7.0.10 or later within major version 7:
 
-```toml
-[dependencies]
-tree-sitter = { package = "willbooster-tree-sitter", version = "7.0.10" }
-tree-sitter-cpp = { package = "willbooster-tree-sitter-cpp", version = "6" }
+```sh
+cargo add --rename tree-sitter willbooster-tree-sitter@7.0.10
+cargo add --rename tree-sitter-cpp willbooster-tree-sitter-cpp
 ```
 
 ```rust
