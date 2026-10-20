@@ -2832,3 +2832,226 @@ template <class R> struct S<R (&)()> {};
                 (abstract_reference_declarator))
               (parameter_list)))))
       (field_declaration_list))))
+
+================================================================================
+Assignment operands with overloaded operators
+================================================================================
+
+void f(Box& a, Box& b, bool flag) {
+  a + b = 1;
+  -a = 2;
+  (Box&)a = 3;
+  ++a = 4;
+  Box{} = 5;
+  a = b = 6;
+  flag ? a : b = 7;
+  (flag ? a : b) = 8;
+  boxes<int> = 9;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (reference_declarator (identifier)))
+        (parameter_declaration
+          (type_identifier)
+          (reference_declarator (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (expression_statement
+        (assignment_expression
+          (binary_expression (identifier) (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (unary_expression (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (cast_expression
+            (type_descriptor (type_identifier) (abstract_reference_declarator))
+            (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (update_expression (identifier))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (compound_literal_expression
+            (type_identifier)
+            (initializer_list))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (assignment_expression (identifier) (number_literal))))
+      (expression_statement
+        (conditional_expression
+          (identifier)
+          (identifier)
+          (assignment_expression (identifier) (number_literal))))
+      (expression_statement
+        (assignment_expression
+          (parenthesized_expression
+            (conditional_expression (identifier) (identifier) (identifier)))
+          (number_literal)))
+      (expression_statement
+        (assignment_expression
+          (template_function
+            (identifier)
+            (template_argument_list
+              (type_descriptor (primitive_type))))
+          (number_literal))))))
+
+================================================================================
+Compound comparison operands retain greater-equal tokens
+================================================================================
+
+void comparison(int a, int b, int c, int d, int e) {
+  if (a + b < c && d >= e) {}
+  if (!a < b && c >= d) {}
+  if (a + b < c || d >= e) {}
+  if (a + b < c, d >= e) {}
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (if_statement
+        condition: (condition_clause
+          value: (binary_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (identifier)
+                right: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement))
+      (if_statement
+        condition: (condition_clause
+          value: (binary_expression
+            left: (binary_expression
+              left: (unary_expression
+                argument: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement))
+      (if_statement
+        condition: (condition_clause
+          value: (binary_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (identifier)
+                right: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement))
+      (if_statement
+        condition: (condition_clause
+          value: (comma_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (identifier)
+                right: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement)))))
+
+================================================================================
+Split template closers retain following comparison tokens
+================================================================================
+
+template<class> struct Box {};
+template<class> constexpr int value = 2;
+bool nested() { return value<Box<int>>>=1; }
+bool compared() { return value<int>>1; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration))
+    (struct_specifier
+      name: (type_identifier)
+      body: (field_declaration_list)))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration))
+    (declaration
+      (type_qualifier)
+      type: (primitive_type)
+      declarator: (init_declarator
+        declarator: (identifier)
+        value: (number_literal))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (return_statement
+        (binary_expression
+          left: (template_function
+            name: (identifier)
+            arguments: (template_argument_list
+              (type_descriptor
+                type: (template_type
+                  name: (type_identifier)
+                  arguments: (template_argument_list
+                    (type_descriptor
+                      type: (primitive_type)))))))
+          right: (number_literal)))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (return_statement
+        (binary_expression
+          left: (template_function
+            name: (identifier)
+            arguments: (template_argument_list
+              (type_descriptor
+                type: (primitive_type))))
+          right: (number_literal))))))
