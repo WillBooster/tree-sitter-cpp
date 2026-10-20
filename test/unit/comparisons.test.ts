@@ -34,16 +34,28 @@ test('preserves split template closers before comparison tokens during edits', (
   let expression = 'value<Box<int>>>=1';
   let tree = parser.parse(prefix + expression + '; }')!;
   try {
-    for (const nextExpression of ['value<Box<int>> >=1', 'value<Box<int>>>=1', 'value<int>>1', 'value<Box<int>>>=1']) {
-      const startIndex = prefix.length;
+    for (const nextExpression of [
+      'value<Box<int>>>=2',
+      'value<Box<int> > >=1',
+      'value<Box<int>>>=1',
+      'value<int>>1',
+      'value<Box<int>>>=1',
+    ]) {
+      let unchangedPrefix = 0;
+      while (
+        unchangedPrefix < Math.min(expression.length, nextExpression.length) &&
+        expression[unchangedPrefix] === nextExpression[unchangedPrefix]
+      )
+        unchangedPrefix += 1;
+      const startIndex = prefix.length + unchangedPrefix;
       tree.edit(
         new Edit({
           startIndex,
-          oldEndIndex: startIndex + expression.length,
-          newEndIndex: startIndex + nextExpression.length,
+          oldEndIndex: prefix.length + expression.length,
+          newEndIndex: prefix.length + nextExpression.length,
           startPosition: { row: 0, column: startIndex },
-          oldEndPosition: { row: 0, column: startIndex + expression.length },
-          newEndPosition: { row: 0, column: startIndex + nextExpression.length },
+          oldEndPosition: { row: 0, column: prefix.length + expression.length },
+          newEndPosition: { row: 0, column: prefix.length + nextExpression.length },
         })
       );
       const source = prefix + nextExpression + '; }';
