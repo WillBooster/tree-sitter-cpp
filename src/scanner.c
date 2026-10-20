@@ -165,15 +165,15 @@ static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *va
     if (!valid_symbols[TEMPLATE_CLOSE]) return false;
     advance(lexer);
     lexer->mark_end(lexer);
-    if (!skip_template_splices(lexer, false)) return false;
+    bool splice_lookahead = skip_template_splices(lexer, false);
     // [temp.names] splits >>, but [lex.pptoken] keeps >= and >>= intact.
     // The second half of >> must survive even when the next preprocessing token is >=.
-    bool split = lexer->lookahead == '>';
+    bool split = splice_lookahead && lexer->lookahead == '>';
     if (split) {
         advance(lexer);
-        if (!skip_template_splices(lexer, false)) return false;
+        splice_lookahead = skip_template_splices(lexer, false);
     }
-    if (lexer->lookahead == '=') return false;
+    if (splice_lookahead && lexer->lookahead == '=') return false;
     scanner->pending_template_close = split;
     lexer->result_symbol = TEMPLATE_CLOSE;
     return true;

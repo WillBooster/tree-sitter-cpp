@@ -144,3 +144,30 @@ test('classifies spliced closing tokens without joining spaces or comments', () 
     parser.delete();
   }
 });
+
+test('keeps escaped identifiers separate from template closing tokens', () => {
+  const parser = new Parser().setLanguage(language);
+  const source = String.raw`template<class> struct Box {};
+Box<int>\u03b1;
+Box<Box<int>>\u03b2;
+Box<int>\
+\u03b3;`;
+  const tree = parser.parse(source)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    const declarations = tree.rootNode.descendantsOfType('declaration');
+    expect(declarations.map((node) => node.childForFieldName('declarator')?.text)).toEqual([
+      String.raw`\u03b1`,
+      String.raw`\u03b2`,
+      String.raw`\u03b3`,
+    ]);
+    expect(declarations.map((node) => node.childForFieldName('type')?.text)).toEqual([
+      'Box<int>',
+      'Box<Box<int>>',
+      'Box<int>',
+    ]);
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});
