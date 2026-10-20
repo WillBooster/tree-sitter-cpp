@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { expect, test } from 'vitest';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 
-import { Edit, Parser, Query, type Node, type Tree } from '@willbooster/web-tree-sitter';
+import { Edit, Parser, Query, type Language, type Node, type Tree } from '@willbooster/web-tree-sitter';
 
 import treeSitterJson from '../../tree-sitter.json';
 
@@ -13,18 +13,25 @@ const Root = path.join(import.meta.dirname, '../..');
 const Source = fs.readFileSync(path.join(Root, 'test/fixtures/definitionDirectives.cpp'), 'utf8');
 await Parser.init();
 
-test('highlights definition alternatives without capturing identifier or literal spellings', async () => {
+let language: Language;
+const queries: Query[] = [];
+beforeAll(async () => {
+  language = await loadCurrentWasmBuild();
+  const grammar = treeSitterJson.grammars[0]!;
+  for (const kind of ['highlights', 'locals', 'tags', 'injections'] as const) {
+    const files = [(grammar as Partial<Record<typeof kind, string | string[]>>)[kind] ?? []].flat();
+    queries.push(new Query(language, files.map((file) => fs.readFileSync(path.join(Root, file), 'utf8')).join('\n')));
+  }
+}, 30_000);
+afterAll(() => {
+  for (const query of queries) query.delete();
+});
+
+test('highlights definition alternatives without capturing identifier or literal spellings', () => {
   const parser = new Parser();
-  const queries: Query[] = [];
   let tree: Tree | undefined;
   try {
-    const language = await loadCurrentWasmBuild();
     parser.setLanguage(language);
-    const grammar = treeSitterJson.grammars[0]!;
-    for (const kind of ['highlights', 'locals', 'tags', 'injections'] as const) {
-      const files = [(grammar as Partial<Record<typeof kind, string | string[]>>)[kind] ?? []].flat();
-      queries.push(new Query(language, files.map((file) => fs.readFileSync(path.join(Root, file), 'utf8')).join('\n')));
-    }
     tree = parser.parse(Source)!;
     expect(tree.rootNode.hasError).toBe(false);
     const arms = tree.rootNode.descendantsOfType('preproc_elifdef');
@@ -127,10 +134,9 @@ test('highlights definition alternatives without capturing identifier or literal
     expect(source).toBe(Source);
   } finally {
     tree?.delete();
-    for (const query of queries) query.delete();
     parser.delete();
   }
-}, 30_000);
+});
 
 function point(source: string, index: number): { row: number; column: number } {
   const prefix = source.slice(0, index);
