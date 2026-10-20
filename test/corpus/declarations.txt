@@ -1450,6 +1450,16 @@ template A<int, bool>::A(char *, size_t);
 
 extern template int Foo::foo<int>();
 
+template class Ring<int, 4>;
+
+extern template struct ns::Pair<long>;
+
+template class __declspec(dllexport) Ring<long>;
+
+template class __attribute__((visibility("default"))) Ring<short>;
+
+template struct Outer<int>::Inner;
+
 --------------------------------------------------------------------------------
 
 (translation_unit
@@ -1480,7 +1490,56 @@ extern template int Foo::foo<int>();
           (template_argument_list
             (type_descriptor
               (primitive_type)))))
-      (parameter_list))))
+      (parameter_list)))
+  (template_instantiation
+    (class_specifier
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (primitive_type))
+          (number_literal)))))
+  (template_instantiation
+    (struct_specifier
+      (qualified_identifier
+        (namespace_identifier)
+        (template_type
+          (type_identifier)
+          (template_argument_list
+            (type_descriptor
+              (sized_type_specifier)))))))
+  (template_instantiation
+    (class_specifier
+      (ms_declspec_modifier
+        (identifier))
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (sized_type_specifier))))))
+  (template_instantiation
+    (class_specifier
+      (attribute_specifier
+        (argument_list
+          (call_expression
+            (identifier)
+            (argument_list
+              (string_literal
+                (string_content))))))
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (sized_type_specifier))))))
+  (template_instantiation
+    (struct_specifier
+      (qualified_identifier
+        (template_type
+          (type_identifier)
+          (template_argument_list
+            (type_descriptor
+              (primitive_type))))
+        (type_identifier)))))
 
 ================================================================================
 Structured binding declarations

@@ -125,6 +125,7 @@ module.exports = grammar(C, {
 
   conflicts: ($, original) => [
     ...original,
+    [$._class_declaration, $._instantiated_class_name],
     [$._field_initializer_sequence],
     [$._field_initializer_conditionals],
     [sym('preproc_elifdef_in_initializer_list'), sym('preproc_elifdef_in_block')],
@@ -629,10 +630,36 @@ module.exports = grammar(C, {
         seq(
           optional('extern'),
           'template',
-          optional($._declaration_specifiers),
-          field('declarator', $._declarator),
+          choice(
+            seq(optional($._declaration_specifiers), field('declarator', $._declarator)),
+            // `template class Ring<int>;` instantiates a class and declares nothing.
+            field(
+              'type',
+              choice(
+                alias($._instantiated_class_specifier, $.class_specifier),
+                alias($._instantiated_struct_specifier, $.struct_specifier),
+                alias($._instantiated_union_specifier, $.union_specifier)
+              )
+            )
+          ),
           ';'
         )
+      ),
+
+    // An explicit instantiation cannot define the class, so these specifiers have no body.
+    _instantiated_class_specifier: ($) => seq('class', $._instantiated_class_name),
+
+    _instantiated_struct_specifier: ($) => seq('struct', $._instantiated_class_name),
+
+    _instantiated_union_specifier: ($) => seq('union', $._instantiated_class_name),
+
+    _instantiated_class_name: ($) =>
+      seq(
+        // Clang rejects `alignas`, `[[...]]`, and trailing attributes here, but accepts these vendor attributes.
+        repeat($.attribute_specifier),
+        optional($.ms_declspec_modifier),
+        // The name is a template-id, or a qualified name such as `Outer<int>::Inner` for a member class.
+        field('name', choice($.template_type, alias($.qualified_type_identifier, $.qualified_identifier)))
       ),
 
     template_parameter_list: ($) =>

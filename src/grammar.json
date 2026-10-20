@@ -17680,21 +17680,67 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "_declaration_specifiers"
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "_declaration_specifiers"
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "FIELD",
+                    "name": "declarator",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_declarator"
+                    }
+                  }
+                ]
               },
               {
-                "type": "BLANK"
+                "type": "FIELD",
+                "name": "type",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_instantiated_class_specifier"
+                      },
+                      "named": true,
+                      "value": "class_specifier"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_instantiated_struct_specifier"
+                      },
+                      "named": true,
+                      "value": "struct_specifier"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_instantiated_union_specifier"
+                      },
+                      "named": true,
+                      "value": "union_specifier"
+                    }
+                  ]
+                }
               }
             ]
-          },
-          {
-            "type": "FIELD",
-            "name": "declarator",
-            "content": {
-              "type": "SYMBOL",
-              "name": "_declarator"
-            }
           },
           {
             "type": "STRING",
@@ -17702,6 +17748,91 @@
           }
         ]
       }
+    },
+    "_instantiated_class_specifier": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "class"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_instantiated_class_name"
+        }
+      ]
+    },
+    "_instantiated_struct_specifier": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "struct"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_instantiated_class_name"
+        }
+      ]
+    },
+    "_instantiated_union_specifier": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "union"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_instantiated_class_name"
+        }
+      ]
+    },
+    "_instantiated_class_name": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_specifier"
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "ms_declspec_modifier"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "template_type"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "qualified_type_identifier"
+                },
+                "named": true,
+                "value": "qualified_identifier"
+              }
+            ]
+          }
+        }
+      ]
     },
     "template_parameter_list": {
       "type": "SEQ",
@@ -28092,6 +28223,10 @@
     [
       "_compound_literal_constexpr_specifier",
       "type_qualifier"
+    ],
+    [
+      "_class_declaration",
+      "_instantiated_class_name"
     ],
     [
       "_field_initializer_sequence"
