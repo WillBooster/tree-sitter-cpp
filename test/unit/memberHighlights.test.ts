@@ -10,7 +10,7 @@ import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 await Parser.init();
 
-test('highlights member access separately from designated initializers', async () => {
+test('highlights member operators while retaining C++ dot contexts', async () => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
   const query = new Query(
@@ -19,17 +19,29 @@ test('highlights member access separately from designated initializers', async (
       fs.readFileSync(path.resolve(import.meta.dirname, '../..', file), 'utf8')
     ).join('\n')
   );
-  const tree = parser.parse(`struct Item { int amount; };
+  const tree = parser.parse(`export module sample.items.details;
+import sample.tools;
+struct Item { int amount; };
 int read(Item value, Item* pointer) {
   Item initialized = {.amount = 1};
+  HELPER(NAME, .);
   return value.amount + pointer->amount + initialized.amount;
 }
 `)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
     const punctuation = query.captures(tree.rootNode).filter(({ node }) => node.text === '.' || node.text === '->');
-    expect(punctuation.map(({ name }) => name)).toEqual(['delimiter', 'operator', 'operator', 'operator']);
-    expect(punctuation.map(({ node }) => node.text)).toEqual(['.', '.', '->', '.']);
+    expect(punctuation.map(({ name }) => name)).toEqual([
+      'delimiter',
+      'delimiter',
+      'delimiter',
+      'delimiter',
+      'operator',
+      'operator',
+      'operator',
+      'operator',
+    ]);
+    expect(punctuation.map(({ node }) => node.text)).toEqual(['.', '.', '.', '.', '.', '.', '->', '.']);
   } finally {
     tree.delete();
     query.delete();
