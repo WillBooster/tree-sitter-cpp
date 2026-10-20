@@ -4623,6 +4623,10 @@
         "required": true,
         "types": [
           {
+            "type": "alias_declaration",
+            "named": true
+          },
+          {
             "type": "declaration",
             "named": true
           },
