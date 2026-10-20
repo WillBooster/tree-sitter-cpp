@@ -4185,6 +4185,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -5714,6 +5730,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -5774,6 +5806,22 @@
                 {
                   "type": "SYMBOL",
                   "name": "ms_based_modifier"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
                 },
                 {
                   "type": "BLANK"
@@ -5848,6 +5896,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -5902,6 +5966,22 @@
         "content": {
           "type": "SEQ",
           "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
             {
               "type": "STRING",
               "value": "*"
@@ -16848,6 +16928,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -18548,6 +18644,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -18745,6 +18857,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -18862,6 +18990,22 @@
                 {
                   "type": "SYMBOL",
                   "name": "ms_based_modifier"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
                 },
                 {
                   "type": "BLANK"
@@ -20844,6 +20988,22 @@
       "type": "SEQ",
       "members": [
         {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 2,
+              "content": {
+                "type": "SYMBOL",
+                "name": "ms_call_modifier"
+              }
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
           "type": "SYMBOL",
           "name": "_scope_resolution"
         },
@@ -20874,6 +21034,22 @@
     "qualified_pointer_field_declarator": {
       "type": "SEQ",
       "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 2,
+              "content": {
+                "type": "SYMBOL",
+                "name": "ms_call_modifier"
+              }
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
         {
           "type": "SYMBOL",
           "name": "_scope_resolution"
@@ -20911,6 +21087,22 @@
       "type": "SEQ",
       "members": [
         {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 2,
+              "content": {
+                "type": "SYMBOL",
+                "name": "ms_call_modifier"
+              }
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
           "type": "SYMBOL",
           "name": "_scope_resolution"
         },
@@ -20946,6 +21138,22 @@
     "abstract_qualified_pointer_declarator": {
       "type": "SEQ",
       "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 2,
+              "content": {
+                "type": "SYMBOL",
+                "name": "ms_call_modifier"
+              }
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
         {
           "type": "SYMBOL",
           "name": "_scope_resolution"
@@ -21801,6 +22009,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -22137,6 +22361,22 @@
               ]
             },
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
@@ -22353,6 +22593,22 @@
                 "type": "SEQ",
                 "members": [
                   {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "PREC_DYNAMIC",
+                        "value": 3,
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "ms_call_modifier"
+                        }
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
+                  {
                     "type": "STRING",
                     "value": "*"
                   },
@@ -22403,6 +22659,22 @@
               {
                 "type": "SEQ",
                 "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "PREC_DYNAMIC",
+                        "value": 3,
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "ms_call_modifier"
+                        }
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
                   {
                     "type": "STRING",
                     "value": "*"
@@ -22627,6 +22899,22 @@
     "_trailing_abstract_qualified_pointer_declarator": {
       "type": "SEQ",
       "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 3,
+              "content": {
+                "type": "SYMBOL",
+                "name": "ms_call_modifier"
+              }
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
         {
           "type": "SYMBOL",
           "name": "_scope_resolution"
@@ -24187,6 +24475,22 @@
       "content": {
         "type": "SEQ",
         "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "PREC_DYNAMIC",
+                "value": 2,
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "ms_call_modifier"
+                }
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
           {
             "type": "STRING",
             "value": "*"
@@ -28363,6 +28667,18 @@
       "_function_declaration_declarator"
     ],
     [
+      "pointer_declarator"
+    ],
+    [
+      "pointer_field_declarator"
+    ],
+    [
+      "pointer_type_declarator"
+    ],
+    [
+      "abstract_pointer_declarator"
+    ],
+    [
       "_top_level_item",
       "_top_level_statement"
     ],
@@ -28666,6 +28982,27 @@
     [
       "_declarator",
       "parenthesized_argument_initialized_pointer_declarator"
+    ],
+    [
+      "function_definition_pointer_declarator"
+    ],
+    [
+      "required_parentheses_pointer_declarator"
+    ],
+    [
+      "qualified_pointer_declarator"
+    ],
+    [
+      "abstract_qualified_pointer_declarator"
+    ],
+    [
+      "qualified_pointer_type_declarator"
+    ],
+    [
+      "qualified_pointer_field_declarator"
+    ],
+    [
+      "_trailing_abstract_qualified_pointer_declarator"
     ],
     [
       "null",

@@ -191,6 +191,13 @@ module.exports = grammar(C, {
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
+    [$.function_definition_pointer_declarator],
+    [$.required_parentheses_pointer_declarator],
+    [$.qualified_pointer_declarator],
+    [$.abstract_qualified_pointer_declarator],
+    [$.qualified_pointer_type_declarator],
+    [$.qualified_pointer_field_declarator],
+    [$._trailing_abstract_qualified_pointer_declarator],
     [$.null, $.expression_keyword_parameter],
     [$.expression, $.expression_keyword_parameter],
     [$._declarator, $._argument_initialized_name],
@@ -1423,7 +1430,13 @@ module.exports = grammar(C, {
         alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)
       ),
     _trailing_abstract_pointer_declarator: ($) => {
-      const prefix = seq('*', repeat($.attribute_declaration), repeat($.ms_pointer_modifier), repeat($.type_qualifier));
+      const prefix = seq(
+        optional(prec.dynamic(3, $.ms_call_modifier)),
+        '*',
+        repeat($.attribute_declaration),
+        repeat($.ms_pointer_modifier),
+        repeat($.type_qualifier)
+      );
       return choice(
         prec.dynamic(2, seq(prefix, field('declarator', prec.right(1, $._trailing_abstract_declarator)))),
         prec.dynamic(1, seq(prefix, prec(1, blank())))
@@ -1447,7 +1460,8 @@ module.exports = grammar(C, {
       pointerToMember(
         $,
         $._trailing_abstract_qualified_pointer_declarator,
-        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator)
+        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
+        3
       ),
 
     noexcept: ($) => prec.right(seq('noexcept', optional(seq('(', optional($.expression), ')')))),
@@ -1718,6 +1732,7 @@ module.exports = grammar(C, {
     new_pointer_declarator: ($) =>
       prec.right(
         seq(
+          optional(prec.dynamic(2, $.ms_call_modifier)),
           '*',
           repeat($.attribute_declaration),
           repeat($.ms_pointer_modifier),
@@ -2506,12 +2521,16 @@ function sizeofTypeOperand($) {
 }
 
 /**
- * @param {NoInfer<GrammarSymbols<'_scope_resolution' | 'qualified_identifier'>>} $
+ * @param {NoInfer<GrammarSymbols<'_scope_resolution' | 'qualified_identifier' | 'ms_call_modifier'>>} $
  * @param {RuleOrLiteral} self
  * @param {RuleOrLiteral} pointer
  */
-function pointerToMember($, self, pointer) {
-  return seq($._scope_resolution, field('name', choice(alias(self, $.qualified_identifier), pointer)));
+function pointerToMember($, self, pointer, callModifierPrecedence = 2) {
+  return seq(
+    optional(prec.dynamic(callModifierPrecedence, $.ms_call_modifier)),
+    $._scope_resolution,
+    field('name', choice(alias(self, $.qualified_identifier), pointer))
+  );
 }
 
 /**
