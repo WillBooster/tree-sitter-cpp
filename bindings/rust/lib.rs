@@ -45,6 +45,9 @@ pub const HIGHLIGHTS_QUERY: &str = concat!(
 /// The query for extracting symbol definitions from C++ source.
 pub const TAGS_QUERY: &str = include_str!("../../queries/tags.scm");
 
+/// The query for identifying languages and contents embedded in C++ raw strings.
+pub const INJECTIONS_QUERY: &str = include_str!("../../queries/injections.scm");
+
 #[cfg(test)]
 mod tests {
     use tree_sitter::StreamingIterator;
@@ -76,6 +79,20 @@ mod tests {
         assert_eq!(
             captured_texts(source, super::TAGS_QUERY, "name"),
             ["Example", "method", "function"]
+        );
+    }
+
+    #[test]
+    fn extracts_raw_string_injections() {
+        let source =
+            "const char* embedded = R\"sql(SELECT 1)sql\";\nconst char* plain = \"SELECT 2\";\n";
+        assert_eq!(
+            captured_texts(source, super::INJECTIONS_QUERY, "injection.language"),
+            ["sql"]
+        );
+        assert_eq!(
+            captured_texts(source, super::INJECTIONS_QUERY, "injection.content"),
+            ["SELECT 1"]
         );
     }
 

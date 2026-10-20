@@ -80,7 +80,10 @@
 (conditional_expression
   ["?" ":"] @operator)
 
-"." @delimiter
+(field_expression
+  operator: "." @operator)
+
+(field_designator "." @delimiter)
 ";" @delimiter
 
 (string_literal) @string
