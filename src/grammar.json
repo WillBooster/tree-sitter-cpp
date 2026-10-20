@@ -11487,8 +11487,22 @@
                 "type": "FIELD",
                 "name": "operator",
                 "content": {
-                  "type": "STRING",
-                  "value": ">"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": ">"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_split_template_close"
+                      },
+                      "named": false,
+                      "value": ">"
+                    }
+                  ]
                 }
               },
               {
@@ -28800,6 +28814,10 @@
     {
       "type": "SYMBOL",
       "name": "_template_close"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_split_template_close"
     },
     {
       "type": "SYMBOL",

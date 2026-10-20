@@ -6,12 +6,13 @@
 #include <stdint.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
 
 typedef struct {
+    bool pending_template_close;
     uint8_t delimiter_length;
     int32_t delimiter[MAX_DELIMITER_LENGTH];
 } Scanner;
@@ -19,6 +20,7 @@ typedef struct {
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
 
 static inline void reset(Scanner *scanner) {
+    scanner->pending_template_close = false;
     scanner->delimiter_length = 0;
     memset(scanner->delimiter, 0, sizeof scanner->delimiter);
 }
@@ -100,7 +102,7 @@ void *tree_sitter_cpp_external_scanner_create() {
 
 static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_pack_index_operator(TSLexer *lexer);
-static bool scan_template_close(TSLexer *lexer);
+static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
 static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
 static bool skip_pack_index_trivia(TSLexer *lexer);
 
@@ -111,6 +113,9 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
         // we're in error recovery
         return false;
     }
+
+    bool pending_close = scanner->pending_template_close && lexer->lookahead == '>';
+    scanner->pending_template_close = false;
 
     // No skipping leading whitespace: raw-string grammar is space-sensitive.
     if (valid_symbols[RAW_STRING_DELIMITER]) {
@@ -130,43 +135,55 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
         return scan_pack_index_operator(lexer);
     }
-    if (valid_symbols[TEMPLATE_CLOSE] && lexer->lookahead == '>') {
-        return scan_template_close(lexer);
+    if (valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE]) {
+        return scan_template_close(scanner, lexer, valid_symbols, pending_close);
     }
     lexer->result_symbol = PRAGMA_OPERATOR;
     return valid_symbols[PRAGMA_OPERATOR] && scan_pragma(lexer);
 }
 
-static bool scan_template_close(TSLexer *lexer) {
+static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close) {
+    if (lexer->lookahead != '>') return false;
+    if (pending_close) {
+        advance(lexer);
+        lexer->mark_end(lexer);
+        lexer->result_symbol = valid_symbols[TEMPLATE_CLOSE] ? TEMPLATE_CLOSE : SPLIT_TEMPLATE_CLOSE;
+        return true;
+    }
+    if (!valid_symbols[TEMPLATE_CLOSE]) return false;
     advance(lexer);
     lexer->mark_end(lexer);
     // [temp.names] splits >>, but [lex.pptoken] keeps >= and >>= intact.
-    if (lexer->lookahead == '>') advance(lexer);
+    // The second half of >> must survive even when the next preprocessing token is >=.
+    bool split = lexer->lookahead == '>';
+    if (split) advance(lexer);
     if (lexer->lookahead == '=') return false;
+    scanner->pending_template_close = split;
     lexer->result_symbol = TEMPLATE_CLOSE;
     return true;
 }
 
 unsigned tree_sitter_cpp_external_scanner_serialize(void *payload, char *buffer) {
-    _Static_assert(MAX_DELIMITER_LENGTH * sizeof(int32_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
+    _Static_assert(1 + MAX_DELIMITER_LENGTH * sizeof(int32_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
                    "Serialized delimiter is too long!");
 
     Scanner *scanner = (Scanner *)payload;
     size_t size = scanner->delimiter_length * sizeof(int32_t);
-    memcpy(buffer, scanner->delimiter, size);
-    return (unsigned)size;
+    buffer[0] = scanner->pending_template_close;
+    memcpy(buffer + 1, scanner->delimiter, size);
+    return (unsigned)size + 1;
 }
 
 void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
     Scanner *scanner = (Scanner *)payload;
-    if (length > sizeof(scanner->delimiter) || length % sizeof(int32_t) != 0) {
-        reset(scanner);
+    reset(scanner);
+    if (length == 0) return;
+    if (length - 1 > sizeof(scanner->delimiter) || (length - 1) % sizeof(int32_t) != 0 || (unsigned char)buffer[0] > 1) {
         return;
     }
-    scanner->delimiter_length = length / sizeof(int32_t);
-    if (length > 0) {
-        memcpy(&scanner->delimiter[0], buffer, length);
-    }
+    scanner->pending_template_close = buffer[0] != 0;
+    scanner->delimiter_length = (length - 1) / sizeof(int32_t);
+    memcpy(scanner->delimiter, buffer + 1, length - 1);
 }
 
 void tree_sitter_cpp_external_scanner_destroy(void *payload) {

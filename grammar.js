@@ -119,6 +119,7 @@ module.exports = grammar(C, {
     sym('raw_string_content'),
     sym('_pack_index_operator'),
     sym('_template_close'),
+    sym('_split_template_close'),
     ...original,
   ],
 
@@ -1979,10 +1980,22 @@ module.exports = grammar(C, {
       ];
 
       const inherited = ruleMembers(original, 'CHOICE').map((rule) => {
-        if (rule.type === 'PREC_LEFT' && rule.content.type === 'PREC_DYNAMIC') {
-          return { ...rule, content: rule.content.content };
-        }
-        return rule;
+        if (rule.type !== 'PREC_LEFT') return rule;
+        const body = rule.content.type === 'PREC_DYNAMIC' ? rule.content.content : rule.content;
+        if (body.type !== 'SEQ') return { ...rule, content: body };
+        return {
+          ...rule,
+          content: seq(
+            ...body.members.map((member) =>
+              member.type === 'FIELD' &&
+              member.name === 'operator' &&
+              member.content.type === 'STRING' &&
+              member.content.value === '>'
+                ? field('operator', choice('>', alias(sym('_split_template_close'), '>')))
+                : member
+            )
+          ),
+        };
       });
       return choice(
         ...inherited,
