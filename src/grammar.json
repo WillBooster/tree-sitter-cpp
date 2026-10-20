@@ -28935,7 +28935,20 @@
       "using_declaration"
     ],
     [
+      "attributed_statement",
+      "case_statement",
+      "using_declaration"
+    ],
+    [
+      "attributed_statement",
+      "case_statement"
+    ],
+    [
       "_declaration_modifiers",
+      "_single_case_statement",
+      "_single_attributed_statement"
+    ],
+    [
       "_single_case_statement",
       "_single_attributed_statement"
     ],

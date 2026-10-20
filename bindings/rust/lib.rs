@@ -1,7 +1,7 @@
 //! This crate provides C++ language support for the [tree-sitter] parsing library.
 //!
-//! The parser carries the ABI number of the WillBooster/tree-sitter fork, so it loads only with
-//! [willbooster-tree-sitter] 7.0.5 or later within major version 7; upstream's runtime rejects it.
+//! Use [willbooster-tree-sitter] 7.0.10 or later within major version 7. The parser carries the ABI
+//! number of the WillBooster/tree-sitter fork; upstream's runtime rejects it.
 //!
 //! Typically, you will use the [`LANGUAGE`] constant to add this language to a
 //! tree-sitter [`Parser`], and then use the parser to parse some code:
