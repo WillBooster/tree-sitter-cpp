@@ -2356,14 +2356,11 @@ module.exports = grammar(C, {
 
     this: () => 'this',
 
-    concatenated_string: ($) =>
-      prec.right(
-        seq(
-          choice($._contextual_identifier, $.string_literal, $.raw_string_literal),
-          choice($.string_literal, $.raw_string_literal),
-          repeat(choice($._contextual_identifier, $.string_literal, $.raw_string_literal))
-        )
-      ),
+    concatenated_string: ($) => {
+      const literal = choice($.string_literal, $.raw_string_literal);
+      const part = choice($._contextual_identifier, literal);
+      return prec.right(seq(choice(seq($._contextual_identifier, literal), seq(literal, part)), repeat(part)));
+    },
 
     number_literal: () => {
       const sign = /[-+]/;

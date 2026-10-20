@@ -2832,3 +2832,67 @@ template <class R> struct S<R (&)()> {};
                 (abstract_reference_declarator))
               (parameter_list)))))
       (field_declaration_list))))
+
+================================================================================
+Concatenated string literals with trailing macros
+================================================================================
+
+#define PREFIX "prefix"
+#define SUFFIX "suffix"
+const char* first = "hello " SUFFIX;
+const char* raw = R"sql(SELECT 1)sql" SUFFIX;
+const char* mixed = PREFIX "middle" SUFFIX R"(end)";
+int after() { return 0; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_def
+    (identifier)
+    (preproc_arg))
+  (preproc_def
+    (identifier)
+    (preproc_arg))
+  (declaration
+    (type_qualifier)
+    (primitive_type)
+    (init_declarator
+      (pointer_declarator
+        (identifier))
+      (concatenated_string
+        (string_literal
+          (string_content))
+        (identifier))))
+  (declaration
+    (type_qualifier)
+    (primitive_type)
+    (init_declarator
+      (pointer_declarator
+        (identifier))
+      (concatenated_string
+        (raw_string_literal
+          (raw_string_delimiter)
+          (raw_string_content)
+          (raw_string_delimiter))
+        (identifier))))
+  (declaration
+    (type_qualifier)
+    (primitive_type)
+    (init_declarator
+      (pointer_declarator
+        (identifier))
+      (concatenated_string
+        (identifier)
+        (string_literal
+          (string_content))
+        (identifier)
+        (raw_string_literal
+          (raw_string_content)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (number_literal)))))
