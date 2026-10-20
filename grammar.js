@@ -629,8 +629,11 @@ module.exports = grammar(C, {
         seq(
           optional('extern'),
           'template',
-          optional($._declaration_specifiers),
-          field('declarator', $._declarator),
+          choice(
+            seq(optional($._declaration_specifiers), field('declarator', $._declarator)),
+            // `template class Ring<int>;` instantiates a class and declares nothing.
+            field('type', choice($.class_specifier, $.struct_specifier, $.union_specifier))
+          ),
           ';'
         )
       ),

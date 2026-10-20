@@ -1450,6 +1450,10 @@ template A<int, bool>::A(char *, size_t);
 
 extern template int Foo::foo<int>();
 
+template class Ring<int, 4>;
+
+extern template struct ns::Pair<long>;
+
 --------------------------------------------------------------------------------
 
 (translation_unit
@@ -1480,7 +1484,24 @@ extern template int Foo::foo<int>();
           (template_argument_list
             (type_descriptor
               (primitive_type)))))
-      (parameter_list))))
+      (parameter_list)))
+  (template_instantiation
+    (class_specifier
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (primitive_type))
+          (number_literal)))))
+  (template_instantiation
+    (struct_specifier
+      (qualified_identifier
+        (namespace_identifier)
+        (template_type
+          (type_identifier)
+          (template_argument_list
+            (type_descriptor
+              (sized_type_specifier))))))))
 
 ================================================================================
 Structured binding declarations

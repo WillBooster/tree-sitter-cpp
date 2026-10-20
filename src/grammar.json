@@ -17680,21 +17680,52 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "_declaration_specifiers"
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "_declaration_specifiers"
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "FIELD",
+                    "name": "declarator",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_declarator"
+                    }
+                  }
+                ]
               },
               {
-                "type": "BLANK"
+                "type": "FIELD",
+                "name": "type",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "class_specifier"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "struct_specifier"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "union_specifier"
+                    }
+                  ]
+                }
               }
             ]
-          },
-          {
-            "type": "FIELD",
-            "name": "declarator",
-            "content": {
-              "type": "SYMBOL",
-              "name": "_declarator"
-            }
           },
           {
             "type": "STRING",
