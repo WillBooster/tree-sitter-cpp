@@ -192,7 +192,6 @@ module.exports = grammar(C, {
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
     [$.function_definition_pointer_declarator],
-    [$.required_parentheses_pointer_declarator],
     [$.qualified_pointer_declarator],
     [$.abstract_qualified_pointer_declarator],
     [$.qualified_pointer_type_declarator],
@@ -1327,14 +1326,18 @@ module.exports = grammar(C, {
     parenthesized_pointer_declarator: ($) =>
       seq(
         '(',
-        optional($.ms_call_modifier),
         choice(
           $.pointer_declarator,
           alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
-          $.reference_declarator,
-          alias($.required_parentheses_reference_declarator, $.reference_declarator),
           alias($.qualified_pointer_declarator, $.qualified_identifier),
-          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+          seq(
+            optional($.ms_call_modifier),
+            choice(
+              $.reference_declarator,
+              alias($.required_parentheses_reference_declarator, $.reference_declarator),
+              alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+            )
+          )
         ),
         ')'
       ),
@@ -1453,7 +1456,26 @@ module.exports = grammar(C, {
         )
       ),
     _trailing_abstract_parenthesized_declarator: ($) =>
-      prec(1, seq('(', optional($.ms_call_modifier), $._trailing_abstract_declarator, ')')),
+      prec(
+        1,
+        seq(
+          '(',
+          choice(
+            alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
+            alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier),
+            seq(
+              optional(prec.dynamic(3, $.ms_call_modifier)),
+              choice(
+                alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
+                alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
+                alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
+                alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator)
+              )
+            )
+          ),
+          ')'
+        )
+      ),
     _trailing_abstract_reference_declarator: ($) =>
       seq(choice('&', '&&'), choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank()))),
     _trailing_abstract_qualified_pointer_declarator: ($) =>

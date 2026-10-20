@@ -40,6 +40,8 @@ test('keeps calling-convention pointers inside trailing return types', async () 
   const tree = parser.parse(`auto pointer() -> int __stdcall *;
 auto callback() -> int (__stdcall *)(int);
 auto cdecl_callback() -> int (__cdecl *)(int);
+auto nested_callback() -> int (__stdcall (*))(int);
+auto reference_callback() -> int (__stdcall &)(int);
 struct __stdcall_type {};
 auto named_type() -> __stdcall_type *;
 auto plain_pointer() -> int *;
@@ -52,12 +54,16 @@ auto plain_callback() -> int (*)(int);
       '__stdcall *',
       '(__stdcall *)(int)',
       '(__cdecl *)(int)',
+      '(__stdcall (*))(int)',
+      '(__stdcall &)(int)',
       '*',
       '*',
       '(*)(int)',
     ]);
     expect(returns.map((node) => node.type)).toEqual([
       'abstract_pointer_declarator',
+      'abstract_function_declarator',
+      'abstract_function_declarator',
       'abstract_function_declarator',
       'abstract_function_declarator',
       'abstract_pointer_declarator',
@@ -96,6 +102,30 @@ auto create() { return new int __stdcall *[2]; }
       ['callback', 'abstract_function_declarator', '(__stdcall Holder::*)(int)'],
       ['allocation', 'abstract_pointer_declarator', '__stdcall *[2]'],
     ]);
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});
+
+test('retains convention placement before nested pointers and references', async () => {
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(language, '(ms_call_modifier) @modifier');
+  const tree = parser.parse(`int (__stdcall (*pointer))(int);
+int (__stdcall &reference)(int) = *pointer;
+int (__stdcall (&nested_reference))(int) = *pointer;
+`)!;
+  try {
+    expect(tree.rootNode.hasError).toBe(false);
+    const modifiers = query.captures(tree.rootNode).map(({ node }) => node);
+    expect(modifiers.map((node) => node.parent?.type)).toEqual([
+      'parenthesized_declarator',
+      'parenthesized_declarator',
+      'parenthesized_declarator',
+    ]);
+    expect(tree.rootNode.namedChildren).toHaveLength(3);
   } finally {
     tree.delete();
     query.delete();

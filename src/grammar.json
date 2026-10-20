@@ -21884,18 +21884,6 @@
           "members": [
             {
               "type": "SYMBOL",
-              "name": "ms_call_modifier"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
               "name": "pointer_declarator"
             },
             {
@@ -21908,19 +21896,6 @@
               "value": "pointer_declarator"
             },
             {
-              "type": "SYMBOL",
-              "name": "reference_declarator"
-            },
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "required_parentheses_reference_declarator"
-              },
-              "named": true,
-              "value": "reference_declarator"
-            },
-            {
               "type": "ALIAS",
               "content": {
                 "type": "SYMBOL",
@@ -21930,13 +21905,48 @@
               "value": "qualified_identifier"
             },
             {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "parenthesized_pointer_declarator"
-              },
-              "named": true,
-              "value": "parenthesized_declarator"
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "ms_call_modifier"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "reference_declarator"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "required_parentheses_reference_declarator"
+                      },
+                      "named": true,
+                      "value": "reference_declarator"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "parenthesized_pointer_declarator"
+                      },
+                      "named": true,
+                      "value": "parenthesized_declarator"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -22839,17 +22849,86 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "ms_call_modifier"
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_trailing_abstract_pointer_declarator"
+                },
+                "named": true,
+                "value": "abstract_pointer_declarator"
               },
               {
-                "type": "BLANK"
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_trailing_abstract_qualified_pointer_declarator"
+                },
+                "named": true,
+                "value": "qualified_identifier"
+              },
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "PREC_DYNAMIC",
+                        "value": 3,
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "ms_call_modifier"
+                        }
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_trailing_abstract_function_declarator"
+                        },
+                        "named": true,
+                        "value": "abstract_function_declarator"
+                      },
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_trailing_abstract_array_declarator"
+                        },
+                        "named": true,
+                        "value": "abstract_array_declarator"
+                      },
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_trailing_abstract_parenthesized_declarator"
+                        },
+                        "named": true,
+                        "value": "abstract_parenthesized_declarator"
+                      },
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_trailing_abstract_reference_declarator"
+                        },
+                        "named": true,
+                        "value": "abstract_reference_declarator"
+                      }
+                    ]
+                  }
+                ]
               }
             ]
-          },
-          {
-            "type": "SYMBOL",
-            "name": "_trailing_abstract_declarator"
           },
           {
             "type": "STRING",
@@ -28985,9 +29064,6 @@
     ],
     [
       "function_definition_pointer_declarator"
-    ],
-    [
-      "required_parentheses_pointer_declarator"
     ],
     [
       "qualified_pointer_declarator"
