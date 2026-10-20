@@ -1454,6 +1454,8 @@ template class Ring<int, 4>;
 
 extern template struct ns::Pair<long>;
 
+template class __declspec(dllexport) Ring<long>;
+
 --------------------------------------------------------------------------------
 
 (translation_unit
@@ -1501,7 +1503,16 @@ extern template struct ns::Pair<long>;
           (type_identifier)
           (template_argument_list
             (type_descriptor
-              (sized_type_specifier))))))))
+              (sized_type_specifier)))))))
+  (template_instantiation
+    (class_specifier
+      (ms_declspec_modifier
+        (identifier))
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (sized_type_specifier)))))))
 
 ================================================================================
 Structured binding declarations

@@ -632,11 +632,28 @@ module.exports = grammar(C, {
           choice(
             seq(optional($._declaration_specifiers), field('declarator', $._declarator)),
             // `template class Ring<int>;` instantiates a class and declares nothing.
-            field('type', choice($.class_specifier, $.struct_specifier, $.union_specifier))
+            field(
+              'type',
+              choice(
+                alias($._instantiated_class_specifier, $.class_specifier),
+                alias($._instantiated_struct_specifier, $.struct_specifier),
+                alias($._instantiated_union_specifier, $.union_specifier)
+              )
+            )
           ),
           ';'
         )
       ),
+
+    // An explicit instantiation cannot define the class, so these specifiers have no body.
+    _instantiated_class_specifier: ($) => seq('class', $._instantiated_class_name),
+
+    _instantiated_struct_specifier: ($) => seq('struct', $._instantiated_class_name),
+
+    _instantiated_union_specifier: ($) => seq('union', $._instantiated_class_name),
+
+    _instantiated_class_name: ($) =>
+      seq(optional($.ms_declspec_modifier), repeat($.attribute_declaration), field('name', $._class_name)),
 
     template_parameter_list: ($) =>
       seq(
