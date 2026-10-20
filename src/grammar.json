@@ -4731,6 +4731,10 @@
               },
               {
                 "type": "SYMBOL",
+                "name": "alias_declaration"
+              },
+              {
+                "type": "SYMBOL",
                 "name": "declaration_list"
               }
             ]
