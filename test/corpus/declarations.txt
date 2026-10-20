@@ -4474,3 +4474,105 @@ int main() { Value value; return first(value) + second(value) + third(value) + b
             (number_literal))
           (number_literal)
           (number_literal))))))
+
+================================================================================
+Type aliases in linkage specifications
+================================================================================
+
+extern "C" using Callback = void (*)(void);
+extern "C++" using Predicate [[maybe_unused]] = int (*)(int);
+namespace api {
+extern "C" using CallbackRef = int (&)(int);
+}
+extern "C" void function(void);
+extern "C" int definition() { return 0; }
+extern "C" { using Nested = void (*)(); }
+struct Following { int member; };
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (linkage_specification
+    (string_literal
+      (string_content))
+    (alias_declaration
+      (type_identifier)
+      (type_descriptor
+        (primitive_type)
+        (abstract_function_declarator
+          (abstract_parenthesized_declarator
+            (abstract_pointer_declarator))
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)))))))
+  (linkage_specification
+    (string_literal
+      (string_content))
+    (alias_declaration
+      (type_identifier)
+      (attribute_declaration
+        (attribute
+          (identifier)))
+      (type_descriptor
+        (primitive_type)
+        (abstract_function_declarator
+          (abstract_parenthesized_declarator
+            (abstract_pointer_declarator))
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)))))))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (linkage_specification
+        (string_literal
+          (string_content))
+        (alias_declaration
+          (type_identifier)
+          (type_descriptor
+            (primitive_type)
+            (abstract_function_declarator
+              (abstract_parenthesized_declarator
+                (abstract_reference_declarator))
+              (parameter_list
+                (parameter_declaration
+                  (primitive_type)))))))))
+  (linkage_specification
+    (string_literal
+      (string_content))
+    (declaration
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (primitive_type))))))
+  (linkage_specification
+    (string_literal
+      (string_content))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list))
+      (compound_statement
+        (return_statement
+          (number_literal)))))
+  (linkage_specification
+    (string_literal
+      (string_content))
+    (declaration_list
+      (alias_declaration
+        (type_identifier)
+        (type_descriptor
+          (primitive_type)
+          (abstract_function_declarator
+            (abstract_parenthesized_declarator
+              (abstract_pointer_declarator))
+            (parameter_list))))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)))))
