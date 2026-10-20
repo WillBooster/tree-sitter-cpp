@@ -179,7 +179,10 @@ module.exports = grammar(C, {
     [$.type_qualifier, $.friend_declaration],
     [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
     [$._declaration_modifiers, $.attributed_statement, $.case_statement, $.using_declaration],
+    [$.attributed_statement, $.case_statement, $.using_declaration],
+    [$.attributed_statement, $.case_statement],
     [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement],
+    [$._single_case_statement, $._single_attributed_statement],
     [$._declaration_modifiers, $._case_body_attributed_statement],
 
     [$.template_function, $.template_type],
