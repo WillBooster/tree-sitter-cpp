@@ -1712,7 +1712,14 @@ module.exports = grammar(C, {
 
     try_statement: ($) => seq('try', field('body', $.compound_statement), repeat1($.catch_clause)),
 
-    catch_clause: ($) => seq('catch', field('parameters', $.parameter_list), field('body', $.compound_statement)),
+    catch_clause: ($) =>
+      seq(
+        'catch',
+        field('parameters', alias($._catch_parameter_list, $.parameter_list)),
+        field('body', $.compound_statement)
+      ),
+
+    _catch_parameter_list: ($) => seq('(', choice($.parameter_declaration, $.variadic_parameter), ')'),
 
     _expression_not_binary: ($, original = missingOriginalRule()) => choice(...nonBinaryExpressions($, original)),
 

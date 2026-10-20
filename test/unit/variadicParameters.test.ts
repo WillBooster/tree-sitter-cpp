@@ -73,3 +73,40 @@ test('rejects parameters after a variadic ellipsis and a leading comma', () => {
     parser.delete();
   }
 });
+
+test('keeps function varargs separate from exception declarations', () => {
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(language, '(catch_clause parameters: (parameter_list (variadic_parameter) @catch_all))');
+  const source = `void handled() {
+  try {}
+  catch (int) {}
+  catch ([[maybe_unused]] double value) {}
+  catch (int (*callback)(int, ...)) {}
+  catch (...) {}
+}`;
+  const tree = parser.parse(source)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(tree.rootNode.descendantsOfType('catch_clause')).toHaveLength(4);
+    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['...']);
+    for (const parameters of [
+      'int value...',
+      'int...',
+      'int value, ...',
+      '..., int value',
+      'int first, int second',
+      '',
+    ]) {
+      const invalid = parser.parse(`void f() { try {} catch (${parameters}) {} }`)!;
+      try {
+        expect(invalid.rootNode.hasError, parameters).toBe(true);
+      } finally {
+        invalid.delete();
+      }
+    }
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});

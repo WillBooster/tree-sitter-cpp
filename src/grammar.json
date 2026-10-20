@@ -24284,8 +24284,13 @@
           "type": "FIELD",
           "name": "parameters",
           "content": {
-            "type": "SYMBOL",
-            "name": "parameter_list"
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_catch_parameter_list"
+            },
+            "named": true,
+            "value": "parameter_list"
           }
         },
         {
@@ -24295,6 +24300,32 @@
             "type": "SYMBOL",
             "name": "compound_statement"
           }
+        }
+      ]
+    },
+    "_catch_parameter_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "parameter_declaration"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "variadic_parameter"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": ")"
         }
       ]
     },
