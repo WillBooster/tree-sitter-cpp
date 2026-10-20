@@ -657,7 +657,8 @@ module.exports = grammar(C, {
         repeat(choice($.attribute_specifier, $.alignas_qualifier)),
         optional($.ms_declspec_modifier),
         repeat($.attribute_declaration),
-        field('name', $._class_name),
+        // The name is a template-id, or a qualified name such as `Outer<int>::Inner` for a member class.
+        field('name', choice($.template_type, alias($.qualified_type_identifier, $.qualified_identifier))),
         optional($.attribute_specifier)
       ),
 
