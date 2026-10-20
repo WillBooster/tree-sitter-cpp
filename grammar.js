@@ -1533,6 +1533,13 @@ module.exports = grammar(C, {
         ';'
       ),
 
+    linkage_specification: ($) =>
+      seq(
+        'extern',
+        field('value', $.string_literal),
+        field('body', choice($.function_definition, $.declaration, $.alias_declaration, $.declaration_list))
+      ),
+
     alias_declaration: ($) =>
       seq(
         'using',
