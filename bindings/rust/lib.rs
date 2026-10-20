@@ -35,6 +35,13 @@ pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_cpp) 
 /// [`node-types.json`]: https://tree-sitter.github.io/tree-sitter/using-parsers/6-static-node-types
 pub const NODE_TYPES: &str = include_str!("../../src/node-types.json");
 
+/// The combined C and C++ syntax-highlighting query, with inherited C patterns first.
+pub const HIGHLIGHTS_QUERY: &str = concat!(
+    include_str!("../../queries/c/highlights.scm"),
+    "\n",
+    include_str!("../../queries/highlights.scm")
+);
+
 /// The query for extracting symbol definitions from C++ source.
 pub const TAGS_QUERY: &str = include_str!("../../queries/tags.scm");
 
@@ -51,6 +58,19 @@ mod tests {
         parser
             .set_language(&super::LANGUAGE.into())
             .expect("Error loading C++ parser");
+    }
+
+    #[test]
+    fn highlights_c_and_cpp_syntax() {
+        let source = "class Example { int value = 1; };\n";
+        for (name, texts) in [
+            ("keyword", vec!["class"]),
+            ("type", vec!["Example", "int"]),
+            ("property", vec!["value"]),
+            ("number", vec!["1"]),
+        ] {
+            assert_eq!(captured_texts(source, super::HIGHLIGHTS_QUERY, name), texts);
+        }
     }
 
     #[test]
