@@ -10790,12 +10790,8 @@
           "name": "requires_clause"
         },
         {
-          "type": "PREC_DYNAMIC",
-          "value": -2,
-          "content": {
-            "type": "SYMBOL",
-            "name": "template_function"
-          }
+          "type": "SYMBOL",
+          "name": "template_function"
         },
         {
           "type": "SYMBOL",
@@ -18097,15 +18093,8 @@
         {
           "type": "ALIAS",
           "content": {
-            "type": "TOKEN",
-            "content": {
-              "type": "PREC",
-              "value": 1,
-              "content": {
-                "type": "STRING",
-                "value": ">"
-              }
-            }
+            "type": "SYMBOL",
+            "name": "_template_close"
           },
           "named": false,
           "value": ">"
@@ -22973,15 +22962,8 @@
         {
           "type": "ALIAS",
           "content": {
-            "type": "TOKEN",
-            "content": {
-              "type": "PREC",
-              "value": 1,
-              "content": {
-                "type": "STRING",
-                "value": ">"
-              }
-            }
+            "type": "SYMBOL",
+            "name": "_template_close"
           },
           "named": false,
           "value": ">"
@@ -28814,6 +28796,10 @@
     {
       "type": "SYMBOL",
       "name": "_pack_index_operator"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_template_close"
     },
     {
       "type": "SYMBOL",

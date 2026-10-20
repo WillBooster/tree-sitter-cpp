@@ -2912,3 +2912,86 @@ void f(Box& a, Box& b, bool flag) {
             (template_argument_list
               (type_descriptor (primitive_type))))
           (number_literal))))))
+
+================================================================================
+Compound comparison operands retain greater-equal tokens
+================================================================================
+
+void comparison(int a, int b, int c, int d, int e) {
+  if (a + b < c && d >= e) {}
+  if (!a < b && c >= d) {}
+  if (a + b < c || d >= e) {}
+  if (a + b < c, d >= e) {}
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (if_statement
+        condition: (condition_clause
+          value: (binary_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (identifier)
+                right: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement))
+      (if_statement
+        condition: (condition_clause
+          value: (binary_expression
+            left: (binary_expression
+              left: (unary_expression
+                argument: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement))
+      (if_statement
+        condition: (condition_clause
+          value: (binary_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (identifier)
+                right: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement))
+      (if_statement
+        condition: (condition_clause
+          value: (comma_expression
+            left: (binary_expression
+              left: (binary_expression
+                left: (identifier)
+                right: (identifier))
+              right: (identifier))
+            right: (binary_expression
+              left: (identifier)
+              right: (identifier))))
+        consequence: (compound_statement)))))

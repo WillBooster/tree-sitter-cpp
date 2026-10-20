@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
@@ -100,6 +100,7 @@ void *tree_sitter_cpp_external_scanner_create() {
 
 static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_pack_index_operator(TSLexer *lexer);
+static bool scan_template_close(TSLexer *lexer);
 static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
 static bool skip_pack_index_trivia(TSLexer *lexer);
 
@@ -129,8 +130,21 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
         return scan_pack_index_operator(lexer);
     }
+    if (valid_symbols[TEMPLATE_CLOSE] && lexer->lookahead == '>') {
+        return scan_template_close(lexer);
+    }
     lexer->result_symbol = PRAGMA_OPERATOR;
     return valid_symbols[PRAGMA_OPERATOR] && scan_pragma(lexer);
+}
+
+static bool scan_template_close(TSLexer *lexer) {
+    advance(lexer);
+    lexer->mark_end(lexer);
+    // [temp.names] splits >>, but [lex.pptoken] keeps >= and >>= intact.
+    if (lexer->lookahead == '>') advance(lexer);
+    if (lexer->lookahead == '=') return false;
+    lexer->result_symbol = TEMPLATE_CLOSE;
+    return true;
 }
 
 unsigned tree_sitter_cpp_external_scanner_serialize(void *payload, char *buffer) {

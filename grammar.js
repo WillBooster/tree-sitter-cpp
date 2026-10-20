@@ -118,6 +118,7 @@ module.exports = grammar(C, {
     sym('raw_string_delimiter'),
     sym('raw_string_content'),
     sym('_pack_index_operator'),
+    sym('_template_close'),
     ...original,
   ],
 
@@ -674,7 +675,7 @@ module.exports = grammar(C, {
             $.template_template_parameter_declaration
           )
         ),
-        alias(token(prec(1, '>')), '>')
+        alias(sym('_template_close'), '>')
       ),
 
     type_parameter_declaration: ($) => prec(1, seq(choice('typename', 'class'), optional($._type_identifier))),
@@ -1471,7 +1472,7 @@ module.exports = grammar(C, {
             prec.dynamic(1, choice($.expression, $.parameter_pack_expansion))
           )
         ),
-        alias(token(prec(1, '>')), '>')
+        alias(sym('_template_close'), '>')
       ),
 
     // A lone identifier as a template argument is resolved to a type statically instead of by GLR with
@@ -2161,11 +2162,9 @@ module.exports = grammar(C, {
 
     _assignment_left_expression: ($) =>
       choice(
-        ...nonBinaryExpressions($, C.grammar.rules._expression_not_binary)
-          .filter(
-            (rule) => rule.type !== 'SYMBOL' || !['conditional_expression', 'assignment_expression'].includes(rule.name)
-          )
-          .map((rule) => (rule.type === 'SYMBOL' && rule.name === 'template_function' ? prec.dynamic(-2, rule) : rule)),
+        ...nonBinaryExpressions($, C.grammar.rules._expression_not_binary).filter(
+          (rule) => rule.type !== 'SYMBOL' || !['conditional_expression', 'assignment_expression'].includes(rule.name)
+        ),
         $.binary_expression,
         alias($.pointer_to_member_expression, $.binary_expression),
         $.named_cast_expression,
