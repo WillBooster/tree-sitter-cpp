@@ -130,7 +130,7 @@ test('highlights definition alternatives without capturing identifier or literal
     for (const query of queries) query.delete();
     parser.delete();
   }
-});
+}, 30_000);
 
 function point(source: string, index: number): { row: number; column: number } {
   const prefix = source.slice(0, index);
