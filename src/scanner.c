@@ -265,7 +265,7 @@ static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols) {
                 return (valid_symbols[PREPROC_ARG] || directive_text) && scan_preproc_arg(lexer, true, directive_text);
             }
         }
-        if (scan_preproc_newline(lexer, false)) {
+        if (lexer->eof(lexer) || scan_preproc_newline(lexer, false)) {
             lexer->mark_end(lexer);
             lexer->result_symbol = PREPROC_NEWLINE;
             return true;
