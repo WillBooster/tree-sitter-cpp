@@ -105,3 +105,42 @@ int shift(int a, int b) { return a >> b; }`)!;
     parser.delete();
   }
 });
+
+test('classifies spliced closing tokens without joining spaces or comments', () => {
+  const parser = new Parser().setLanguage(language);
+  const prefix = 'template<class> struct Box {}; template<class> constexpr int value = 2; bool f() { return ';
+  try {
+    for (const newline of ['\n', '\r\n']) {
+      const splice = '\\' + newline;
+      for (const gap of ['', splice]) {
+        const template = 'value<Box<int>' + splice + '>';
+        const source = prefix + template + gap + '>=1; }';
+        const tree = parser.parse(source)!;
+        try {
+          expect(tree.rootNode.hasError, source).toBe(false);
+          expect(tree.rootNode.descendantsOfType('assignment_expression')).toHaveLength(0);
+          const comparison = tree.rootNode.descendantsOfType('return_statement')[0]!.namedChildren[0]!;
+          expect(comparison.childForFieldName('operator')?.text).toBe('>=');
+          expect(comparison.childForFieldName('left')?.text).toBe(template);
+          expect(comparison.childForFieldName('left')?.endIndex).toBe(prefix.length + template.length);
+        } finally {
+          tree.delete();
+        }
+      }
+    }
+    for (const gap of [' ', '/* keep */']) {
+      const source = 'template<class> int slot; void f() { slot<int>' + gap + '=1; }';
+      const tree = parser.parse(source)!;
+      try {
+        expect(tree.rootNode.hasError, source).toBe(false);
+        const assignment = tree.rootNode.descendantsOfType('assignment_expression')[0]!;
+        expect(assignment.childForFieldName('left')?.text).toBe('slot<int>');
+        expect(assignment.childForFieldName('operator')?.text).toBe('=');
+      } finally {
+        tree.delete();
+      }
+    }
+  } finally {
+    parser.delete();
+  }
+});

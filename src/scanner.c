@@ -103,33 +103,27 @@ void *tree_sitter_cpp_external_scanner_create() {
 static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_pack_index_operator(TSLexer *lexer);
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
+static bool scan_raw_string_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static bool skip_template_splices(TSLexer *lexer, bool skip);
 static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
 static bool skip_pack_index_trivia(TSLexer *lexer);
 
 bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     Scanner *scanner = (Scanner *)payload;
 
-    if (valid_symbols[RAW_STRING_DELIMITER] && valid_symbols[RAW_STRING_CONTENT]) {
-        // we're in error recovery
-        return false;
+    if (valid_symbols[RAW_STRING_DELIMITER] || valid_symbols[RAW_STRING_CONTENT]) {
+        return scan_raw_string_token(scanner, lexer, valid_symbols);
     }
 
-    bool pending_close = scanner->pending_template_close && lexer->lookahead == '>';
+    bool pending_close = scanner->pending_template_close;
     scanner->pending_template_close = false;
-
-    // No skipping leading whitespace: raw-string grammar is space-sensitive.
-    if (valid_symbols[RAW_STRING_DELIMITER]) {
-        lexer->result_symbol = RAW_STRING_DELIMITER;
-        return scan_raw_string_delimiter(scanner, lexer);
-    }
-
-    if (valid_symbols[RAW_STRING_CONTENT]) {
-        lexer->result_symbol = RAW_STRING_CONTENT;
-        return scan_raw_string_content(scanner, lexer);
-    }
 
     if (valid_symbols[PREPROC_ARG] || valid_symbols[PREPROC_NEWLINE] || valid_symbols[PREPROC_LPAREN] || valid_symbols[PREPROC_DIRECTIVE_ARG] || valid_symbols[PREPROC_FUNCTION_NAME]) {
         return scan_preprocessor(lexer, valid_symbols);
+    }
+    if (pending_close) {
+        if (!skip_template_splices(lexer, true)) return false;
+        pending_close = lexer->lookahead == '>';
     }
     if (!skip_pack_index_whitespace(lexer, true)) return false;
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
@@ -140,6 +134,24 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     }
     lexer->result_symbol = PRAGMA_OPERATOR;
     return valid_symbols[PRAGMA_OPERATOR] && scan_pragma(lexer);
+}
+
+static bool scan_raw_string_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+    if (valid_symbols[RAW_STRING_DELIMITER] && valid_symbols[RAW_STRING_CONTENT]) return false;
+    scanner->pending_template_close = false;
+    // Raw-string delimiters and contents are space-sensitive.
+    lexer->result_symbol = valid_symbols[RAW_STRING_DELIMITER] ? RAW_STRING_DELIMITER : RAW_STRING_CONTENT;
+    return valid_symbols[RAW_STRING_DELIMITER]
+        ? scan_raw_string_delimiter(scanner, lexer)
+        : scan_raw_string_content(scanner, lexer);
+}
+
+static bool skip_template_splices(TSLexer *lexer, bool skip) {
+    while (lexer->lookahead == '\\') {
+        lexer->advance(lexer, skip);
+        if (!scan_preproc_newline(lexer, skip)) return false;
+    }
+    return true;
 }
 
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close) {
@@ -153,10 +165,14 @@ static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *va
     if (!valid_symbols[TEMPLATE_CLOSE]) return false;
     advance(lexer);
     lexer->mark_end(lexer);
+    if (!skip_template_splices(lexer, false)) return false;
     // [temp.names] splits >>, but [lex.pptoken] keeps >= and >>= intact.
     // The second half of >> must survive even when the next preprocessing token is >=.
     bool split = lexer->lookahead == '>';
-    if (split) advance(lexer);
+    if (split) {
+        advance(lexer);
+        if (!skip_template_splices(lexer, false)) return false;
+    }
     if (lexer->lookahead == '=') return false;
     scanner->pending_template_close = split;
     lexer->result_symbol = TEMPLATE_CLOSE;
