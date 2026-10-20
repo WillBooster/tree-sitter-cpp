@@ -444,13 +444,12 @@ void f() {
           (condition_clause
             (identifier))
           (compound_statement
-            (attributed_statement
+            (case_statement
               (attribute_declaration
                 (attribute
                   (identifier)))
-              (case_statement
-                (number_literal)
-                (compound_statement)))
+              (number_literal)
+              (compound_statement))
             (case_statement
               (number_literal)
               (attributed_statement
