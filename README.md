@@ -20,7 +20,7 @@ This fork fixes parsing bugs and raises conformance with the ISO C++ standard
 The npm package ships `tree-sitter-cpp.wasm` for
 [@willbooster/web-tree-sitter](https://www.npmjs.com/package/@willbooster/web-tree-sitter), which runs in Node.js, Bun,
 browsers, and Cloudflare Workers. The parser carries the ABI number of the WillBooster/tree-sitter fork, so it loads
-only with that runtime, version 4.0.2 or later within major version 4; upstream's runtime rejects it. Install both:
+only with that runtime, version 7.0.5 or later within major version 7; upstream's runtime rejects it. Install both:
 
 ```sh
 npm install @willbooster/tree-sitter-cpp @willbooster/web-tree-sitter
@@ -68,12 +68,12 @@ grammar's in `queries/` and, in `queries/c/`, the highlights of the C grammar it
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
-fuzzed with. The parser loads only with that runtime, version 4.0.2 or later within major version 4:
+fuzzed with. The parser loads only with that runtime, version 7.0.5 or later within major version 7:
 
 ```toml
 [dependencies]
-tree-sitter = { package = "willbooster-tree-sitter", version = "4.0.2" }
-tree-sitter-cpp = { package = "willbooster-tree-sitter-cpp", version = "5" }
+tree-sitter = { package = "willbooster-tree-sitter", version = "7.0.5" }
+tree-sitter-cpp = { package = "willbooster-tree-sitter-cpp", version = "6" }
 ```
 
 ```rust

@@ -7,7 +7,7 @@
 #endif
 
 #define TS_GENERATION_PROFILED 1
-#define LANGUAGE_VERSION 0x57420003
+#define LANGUAGE_VERSION 0x57420006
 #define STATE_COUNT 24518
 #define LARGE_STATE_COUNT 128
 #define LEX_STATE_COUNT 954
@@ -32442,9 +32442,40 @@ static const TSCharacterRange ts_lex_sym_identifier_character_set_2[] = {
   {0x2f800, 0x2fa1d}, {0x30000, 0x3134a}, {0x31350, 0x323af}, {0xe0100, 0xe01ef},
 };
 
+static uint8_t ts_lex_0(TSLexer *, TSStateId *, bool *, TSLexerPosition *);
+static uint8_t ts_lex_1(TSLexer *, TSStateId *, bool *, TSLexerPosition *);
+static uint8_t ts_lex_2(TSLexer *, TSStateId *, bool *, TSLexerPosition *);
+static uint8_t ts_lex_3(TSLexer *, TSStateId *, bool *, TSLexerPosition *);
+
 static bool ts_lex(TSLexer *lexer, TSStateId state) {
   UNUSED TSLexerPosition start_tags[2];
-  START_LEXER();
+  bool result = false;
+  for (;;) {
+    uint8_t status;
+    switch (state / 256) {
+      case 0: status = ts_lex_0(lexer, &state, &result, start_tags); break;
+      case 1: status = ts_lex_1(lexer, &state, &result, start_tags); break;
+      case 2: status = ts_lex_2(lexer, &state, &result, start_tags); break;
+      case 3: status = ts_lex_3(lexer, &state, &result, start_tags); break;
+      default: return result;
+    }
+    if (status < 2) return status != 0;
+  }
+}
+
+static uint8_t ts_lex_0(TSLexer *lexer, TSStateId *state_out, bool *result_out, TSLexerPosition *start_tags) {
+  (void)start_tags;
+  TSStateId state = *state_out;
+  bool result = *result_out;
+  bool skip = false;
+  UNUSED bool eof;
+  int32_t lookahead;
+  goto start;
+  next_state:
+  lexer->advance(lexer, skip);
+  start:
+  skip = false;
+  lookahead = lexer->lookahead;
   eof = lookahead == 0 && lexer->eof(lexer);
   switch (state) {
     case 0:
@@ -38371,6 +38402,28 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
       if (lookahead == '\n' ||
           lookahead == '\r') SKIP(57);
       END_STATE();
+    default:
+      *state_out = state;
+      *result_out = result;
+      return 2;
+  }
+}
+
+static uint8_t ts_lex_1(TSLexer *lexer, TSStateId *state_out, bool *result_out, TSLexerPosition *start_tags) {
+  (void)start_tags;
+  TSStateId state = *state_out;
+  bool result = *result_out;
+  bool skip = false;
+  UNUSED bool eof;
+  int32_t lookahead;
+  goto start;
+  next_state:
+  lexer->advance(lexer, skip);
+  start:
+  skip = false;
+  lookahead = lexer->lookahead;
+  eof = lookahead == 0 && lexer->eof(lexer);
+  switch (state) {
     case 256:
       if (lookahead == 'U') ADVANCE(518);
       if (lookahead == 'u') ADVANCE(510);
@@ -39722,6 +39775,28 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
           ('A' <= lookahead && lookahead <= 'F') ||
           ('a' <= lookahead && lookahead <= 'f')) ADVANCE(509);
       END_STATE();
+    default:
+      *state_out = state;
+      *result_out = result;
+      return 2;
+  }
+}
+
+static uint8_t ts_lex_2(TSLexer *lexer, TSStateId *state_out, bool *result_out, TSLexerPosition *start_tags) {
+  (void)start_tags;
+  TSStateId state = *state_out;
+  bool result = *result_out;
+  bool skip = false;
+  UNUSED bool eof;
+  int32_t lookahead;
+  goto start;
+  next_state:
+  lexer->advance(lexer, skip);
+  start:
+  skip = false;
+  lookahead = lexer->lookahead;
+  eof = lookahead == 0 && lexer->eof(lexer);
+  switch (state) {
     case 512:
       if (('0' <= lookahead && lookahead <= '9') ||
           ('A' <= lookahead && lookahead <= 'F') ||
@@ -41684,6 +41759,28 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
       ACCEPT_TOKEN(anon_sym_COLON);
       if (lookahead == ':') ADVANCE(770);
       END_STATE();
+    default:
+      *state_out = state;
+      *result_out = result;
+      return 2;
+  }
+}
+
+static uint8_t ts_lex_3(TSLexer *lexer, TSStateId *state_out, bool *result_out, TSLexerPosition *start_tags) {
+  (void)start_tags;
+  TSStateId state = *state_out;
+  bool result = *result_out;
+  bool skip = false;
+  UNUSED bool eof;
+  int32_t lookahead;
+  goto start;
+  next_state:
+  lexer->advance(lexer, skip);
+  start:
+  skip = false;
+  lookahead = lexer->lookahead;
+  eof = lookahead == 0 && lexer->eof(lexer);
+  switch (state) {
     case 768:
       lexer->mark_start(lexer, &start_tags[0]);
       ACCEPT_TOKEN(anon_sym_COLON);
@@ -42838,7 +42935,9 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
           lookahead != '\n') { start_tags[0] = start_tags[1]; ADVANCE(916); }
       END_STATE();
     default:
-      return false;
+      *state_out = state;
+      *result_out = result;
+      return 2;
   }
 }
 
@@ -44556,7 +44655,9 @@ static uint32_t ts_keyword_lookup(const char *text, uint32_t length) {
   uint16_t state = first & TS_KEYWORD_STATE_MASK;
   for (uint32_t i = 1; i < length; i++) {
     if (ts_keyword_states[state].accept) prefix = TS_KEYWORD_PREFIX;
-    uint16_t next = ts_keyword_next(state, (uint8_t)text[i]);
+    uint8_t byte = (uint8_t)text[i];
+    if (byte >= 128) return prefix;
+    uint16_t next = ts_keyword_next(state, byte);
     if (next == UINT16_MAX) return prefix;
     state = next & TS_KEYWORD_STATE_MASK;
   }

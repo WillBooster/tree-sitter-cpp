@@ -108,8 +108,6 @@ const VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES = [
   ...CONTEXTUAL_IDENTIFIER_NAMES.slice(2),
 ];
 
-const commaSep = C.commaSep;
-const commaSep1 = C.commaSep1;
 const preprocIf = C.preprocIf;
 
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
@@ -2572,4 +2570,14 @@ function missingOriginalRule() {
 function ruleMembers(rule, expectedType) {
   if (rule.type !== expectedType) throw new Error(`Expected an inherited ${expectedType} rule.`);
   return rule.members;
+}
+
+/** @param {Rule} rule */
+function commaSep(rule) {
+  return optional(commaSep1(rule));
+}
+
+/** @param {Rule} rule */
+function commaSep1(rule) {
+  return seq(rule, repeat(seq(',', rule)));
 }
