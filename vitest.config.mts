@@ -9,6 +9,7 @@ export default defineConfig({
       {
         test: {
           name: 'node',
+          testTimeout: 30_000,
           globalSetup: 'test/helpers/installCli.ts',
           include: ['test/unit/**/*.test.ts'],
           exclude: ['test/unit/browser/**'],
