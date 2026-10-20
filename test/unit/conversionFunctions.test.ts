@@ -9,7 +9,7 @@ const Root = path.resolve(import.meta.dirname, '../..');
 const Source = fs.readFileSync(path.join(Root, 'test/fixtures/conversionFunctions.cpp'), 'utf8');
 await Parser.init();
 
-test('preserves conversion declarations and queries after edits', { timeout: 30_000 }, async () => {
+test('preserves conversion declarations and queries after edits', async () => {
   const parser = new Parser();
   const queries: Query[] = [];
   let tree: Tree | undefined;
