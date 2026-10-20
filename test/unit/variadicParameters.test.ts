@@ -12,6 +12,7 @@ void third(int value...);
 void unnamed(int...);
 void sized(unsigned long...);
 void pointers(int*...);
+void wide(wchar_t...);
 void after(int value, unsigned long...);
 void keywordPrefixes(int intensity, double doubleValue);
 template<class... Ts> void packed(Ts... values);
@@ -31,6 +32,7 @@ template<class... size_t> void libraryNamedPack(size_t...);
       'unnamed',
       'sized',
       'pointers',
+      'wide',
       'after',
     ]);
     for (const { node } of captures) {
