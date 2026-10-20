@@ -1456,6 +1456,8 @@ extern template struct ns::Pair<long>;
 
 template class __declspec(dllexport) Ring<long>;
 
+template class __attribute__((visibility("default"))) Ring<short>;
+
 --------------------------------------------------------------------------------
 
 (translation_unit
@@ -1508,6 +1510,20 @@ template class __declspec(dllexport) Ring<long>;
     (class_specifier
       (ms_declspec_modifier
         (identifier))
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (sized_type_specifier))))))
+  (template_instantiation
+    (class_specifier
+      (attribute_specifier
+        (argument_list
+          (call_expression
+            (identifier)
+            (argument_list
+              (string_literal
+                (string_content))))))
       (template_type
         (type_identifier)
         (template_argument_list

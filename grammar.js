@@ -653,7 +653,13 @@ module.exports = grammar(C, {
     _instantiated_union_specifier: ($) => seq('union', $._instantiated_class_name),
 
     _instantiated_class_name: ($) =>
-      seq(optional($.ms_declspec_modifier), repeat($.attribute_declaration), field('name', $._class_name)),
+      seq(
+        repeat(choice($.attribute_specifier, $.alignas_qualifier)),
+        optional($.ms_declspec_modifier),
+        repeat($.attribute_declaration),
+        field('name', $._class_name),
+        optional($.attribute_specifier)
+      ),
 
     template_parameter_list: ($) =>
       seq(
