@@ -108,6 +108,19 @@ const VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES = [
   ...CONTEXTUAL_IDENTIFIER_NAMES.slice(2),
 ];
 
+const BUILTIN_TYPE_KEYWORDS = [
+  'bool',
+  'char',
+  'char8_t',
+  'char16_t',
+  'char32_t',
+  'wchar_t',
+  'int',
+  'float',
+  'double',
+  'void',
+];
+
 const preprocIf = C.preprocIf;
 
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
@@ -123,6 +136,13 @@ module.exports = grammar(C, {
 
   conflicts: ($, original) => [
     ...original,
+    [$.parameter_list],
+    [$.parameter_declaration, $.variadic_parameter_declaration],
+    [$.sized_type_specifier, $._non_pack_sized_type],
+    [$.sized_type_specifier, $.expression, $._non_pack_sized_type],
+    [$.sized_type_specifier, $.expression, $.call_expression, $._non_pack_sized_type],
+    [$.primitive_type, $._non_pack_unnamed_parameter],
+    [$.primitive_type, $._non_pack_sized_type],
     [$._class_declaration, $._instantiated_class_name],
     [$._field_initializer_sequence],
     [$._field_initializer_conditionals],
@@ -701,20 +721,62 @@ module.exports = grammar(C, {
         )
       ),
 
-    parameter_list: ($) =>
-      seq(
+    parameter_list: ($) => {
+      const parameter = choice(
+        $.parameter_declaration,
+        $.explicit_object_parameter_declaration,
+        $.optional_parameter_declaration,
+        $.variadic_parameter_declaration,
+        alias($.expression_keyword_parameter, $.parameter_declaration)
+      );
+      return seq(
         '(',
-        commaSep(
+        optional(
           choice(
-            $.parameter_declaration,
-            $.explicit_object_parameter_declaration,
-            $.optional_parameter_declaration,
-            $.variadic_parameter_declaration,
-            '...',
-            alias($.expression_keyword_parameter, $.parameter_declaration)
+            $.variadic_parameter,
+            seq(commaSep1(parameter), optional(seq(optional(','), $.variadic_parameter))),
+            prec.dynamic(
+              PREC.CERTAIN_DECLARATION,
+              seq(
+                repeat(seq(parameter, ',')),
+                alias($._non_pack_unnamed_parameter, $.parameter_declaration),
+                $.variadic_parameter
+              )
+            )
           )
         ),
         ')'
+      );
+    },
+
+    _non_pack_unnamed_parameter: ($) =>
+      seq(
+        replaceRuleField(
+          C.grammar.rules._declaration_specifiers,
+          'type',
+          choice(
+            alias($._non_pack_builtin_type, $.primitive_type),
+            alias($._non_pack_sized_type, $.sized_type_specifier)
+          )
+        ),
+        field('declarator', optional($._abstract_declarator))
+      ),
+
+    primitive_type: ($, original = missingOriginalRule()) => {
+      if (original.type !== 'TOKEN') throw new Error('Expected an inherited primitive type token.');
+      const typedefNames = ruleMembers(original.content, 'CHOICE').filter(
+        (rule) => rule.type !== 'STRING' || !BUILTIN_TYPE_KEYWORDS.includes(rule.value)
+      );
+      return choice(token(prec(1, choice(...typedefNames))), $._non_pack_builtin_type);
+    },
+
+    _non_pack_builtin_type: () => token(prec(1, choice(...BUILTIN_TYPE_KEYWORDS))),
+
+    _non_pack_sized_type: ($) =>
+      replaceRuleField(
+        C.grammar.rules.sized_type_specifier,
+        'type',
+        optional(alias($._non_pack_builtin_type, $.primitive_type))
       ),
 
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
@@ -2501,30 +2563,31 @@ function pointerToMember($, self, pointer) {
  * @returns {Rule}
  */
 function withDeclarator(rule, declarator) {
-  const result = replaceDeclarator(rule, declarator);
+  const result = replaceRuleField(rule, 'declarator', declarator);
   if (JSON.stringify(result) === JSON.stringify(rule)) throw new Error('The rule has no declarator field to replace.');
   return result;
 }
 
 /**
  * @param {Rule} rule
- * @param {Rule} declarator
+ * @param {string} name
+ * @param {Rule} replacement
  * @returns {Rule}
  */
-function replaceDeclarator(rule, declarator) {
+function replaceRuleField(rule, name, replacement) {
   switch (rule.type) {
     case 'FIELD': {
-      return rule.name === 'declarator' ? field('declarator', declarator) : rule;
+      return rule.name === name ? field(name, replacement) : rule;
     }
     case 'SEQ':
     case 'CHOICE': {
-      return { ...rule, members: rule.members.map((member) => replaceDeclarator(member, declarator)) };
+      return { ...rule, members: rule.members.map((member) => replaceRuleField(member, name, replacement)) };
     }
     case 'PREC':
     case 'PREC_DYNAMIC':
     case 'PREC_LEFT':
     case 'PREC_RIGHT': {
-      return { ...rule, content: replaceDeclarator(rule.content, declarator) };
+      return { ...rule, content: replaceRuleField(rule.content, name, replacement) };
     }
     default: {
       return rule;

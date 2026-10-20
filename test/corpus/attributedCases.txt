@@ -106,7 +106,8 @@ void f(int x) {
                     (identifier)
                     (argument_list))))
               (catch_clause
-                (parameter_list)
+                (parameter_list
+                  (variadic_parameter))
                 (compound_statement
                   (throw_statement))))
             (co_yield_statement

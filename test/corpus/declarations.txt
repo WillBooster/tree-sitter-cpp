@@ -314,7 +314,8 @@ struct S {
             (throw_statement
               (number_literal)))
           (catch_clause
-            (parameter_list)
+            (parameter_list
+              (variadic_parameter))
             (compound_statement
               (return_statement
                 (identifier)))))))))
