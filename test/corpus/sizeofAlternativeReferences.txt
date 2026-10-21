@@ -114,3 +114,112 @@ int following() { return 0; }
     (compound_statement
       (return_statement
         (number_literal)))))
+
+================================
+Singleton macro direct initializers remain value calls
+================================
+
+#define ID(...) 1
+int directAnd(ID(and));
+int directBitand(ID(bitand));
+int localUses() { int localAnd(ID(and)); int localBitand(ID(bitand)); return localAnd + localBitand; }
+int function();
+int values[3];
+auto callSize = sizeof(function());
+auto subscriptSize = sizeof(values[0]);
+int following() { return directAnd + directBitand; }
+
+---
+
+(translation_unit
+  (preproc_function_def
+    (identifier)
+    (preproc_params)
+    (preproc_arg))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier))))))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (argument_list
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (call_expression
+              (identifier)
+              (argument_list
+                (identifier))))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (argument_list
+            (call_expression
+              (identifier)
+              (argument_list
+                (identifier))))))
+      (return_statement
+        (binary_expression
+          (identifier)
+          (identifier)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list)))
+  (declaration
+    (primitive_type)
+    (array_declarator
+      (identifier)
+      (number_literal)))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (sizeof_expression
+        (parenthesized_expression
+          (call_expression
+            (identifier)
+            (argument_list))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (sizeof_expression
+        (parenthesized_expression
+          (subscript_expression
+            (identifier)
+            (subscript_argument_list
+              (number_literal)))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (binary_expression
+          (identifier)
+          (identifier))))))

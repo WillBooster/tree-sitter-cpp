@@ -259,6 +259,8 @@ module.exports = grammar(C, {
     [$._trailing_return_type_descriptor],
     [$._trailing_abstract_pointer_declarator],
     [$._trailing_abstract_reference_declarator],
+    [$._sizeof_reference_pointer_declarator],
+    [$._sizeof_reference_qualified_pointer_declarator],
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
@@ -2167,6 +2169,35 @@ module.exports = grammar(C, {
         )
       ),
 
+    _sizeof_reference_type_descriptor: ($) =>
+      withDeclarator(C.grammar.rules.type_descriptor, $._sizeof_reference_declarator),
+    _sizeof_reference_declarator: ($) =>
+      prec(
+        1,
+        choice(
+          $.abstract_reference_declarator,
+          alias($._sizeof_reference_pointer_declarator, $.abstract_pointer_declarator),
+          alias($._sizeof_reference_function_declarator, $.abstract_function_declarator),
+          alias($._sizeof_reference_array_declarator, $.abstract_array_declarator),
+          alias($._sizeof_reference_parenthesized_declarator, $.abstract_parenthesized_declarator),
+          alias($._sizeof_reference_qualified_pointer_declarator, $.qualified_identifier)
+        )
+      ),
+    _sizeof_reference_pointer_declarator: ($) =>
+      withPointerDeclarator($, $._sizeof_reference_declarator, C.grammar.rules.abstract_pointer_declarator),
+    _sizeof_reference_function_declarator: ($) =>
+      prec(1, seq(field('declarator', $._sizeof_reference_declarator), $._function_declarator_seq)),
+    _sizeof_reference_array_declarator: ($) =>
+      withDeclarator(C.grammar.rules.abstract_array_declarator, $._sizeof_reference_declarator),
+    _sizeof_reference_parenthesized_declarator: ($) =>
+      prec(1, seq('(', optional($.ms_call_modifier), $._sizeof_reference_declarator, ')')),
+    _sizeof_reference_qualified_pointer_declarator: ($) =>
+      pointerToMember(
+        $,
+        $._sizeof_reference_qualified_pointer_declarator,
+        alias($._sizeof_reference_pointer_declarator, $.abstract_pointer_declarator)
+      ),
+
     _sizeof_qualified_postfix_expression: ($) =>
       choice(
         alias($.sizeof_operand_call_expression, $.call_expression),
@@ -2279,7 +2310,7 @@ module.exports = grammar(C, {
         optional(
           choice(
             argument,
-            prec.dynamic(-3, alias(choice('and', 'bitand'), $.identifier)),
+            alias(choice('and', 'bitand'), $.identifier),
             seq(anyArgument, repeat1(seq(',', anyArgument)))
           )
         ),
@@ -2759,12 +2790,14 @@ function declarationItem($) {
 /**
  * `sizeof(x)`, `sizeof(x[0])`, and `sizeof(f())` read as either a type or an expression, and an even tie let the other
  * readings of the statement decide, so `sizeof(x)[0]` could apply `[0]` to the size of a type `x`. The type reading
- * loses unless the parenthesized operand is a qualified name, which keeps `sizeof(ns::T)` a type.
- * @param {NoInfer<GrammarSymbols<'qualified_type_descriptor' | 'type_descriptor'>>} $
+ * loses unless the operand is a qualified name or contains an abstract reference declarator. Keeping the reference
+ * preference inside sizeof leaves singleton alternative-word macro arguments in direct initializers unchanged.
+ * @param {NoInfer<GrammarSymbols<'qualified_type_descriptor' | 'type_descriptor' | '_sizeof_reference_type_descriptor'>>} $
  */
 function sizeofTypeOperand($) {
   return choice(
     prec.dynamic(-1, seq('(', field('type', $.type_descriptor), ')')),
+    prec.dynamic(2, seq('(', field('type', alias($._sizeof_reference_type_descriptor, $.type_descriptor)), ')')),
     prec.dynamic(1, seq('(', field('type', alias($.qualified_type_descriptor, $.type_descriptor)), ')'))
   );
 }

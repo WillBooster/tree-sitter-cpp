@@ -30,7 +30,7 @@ test('keeps alternative sizeof reference operands equivalent to primary tokens w
       .descendantsOfType('sizeof_expression')
       .filter((node) => /\b(?:bitand|and)\b/.test(node.text));
     const expectedOperands = [...source.matchAll(/(?<=static_assert\()sizeof\(.+?\)(?= ==)/g)];
-    expect(expectedOperands).toHaveLength(16);
+    expect(expectedOperands).toHaveLength(22);
     expect(operands).toHaveLength(expectedOperands.length);
     for (const [index, operand] of operands.entries()) {
       const expected = expectedOperands[index]!;
@@ -74,6 +74,50 @@ test('keeps alternative sizeof reference operands equivalent to primary tokens w
     for (const query of queries) query.delete();
     tree.delete();
     primary.delete();
+    parser.delete();
+  }
+});
+
+test('retains singleton macro calls in direct initializers and genuine sizeof value operands', async () => {
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser().setLanguage(language);
+  const tree = parser.parse(source)!;
+  const queries = configuredQueries(language);
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    const names = ['directAnd', 'directBitand', 'localAnd', 'localBitand'];
+    const initializers = tree.rootNode
+      .descendantsOfType('init_declarator')
+      .filter((node) => names.includes(node.childForFieldName('declarator')?.text ?? ''));
+    expect(initializers.map((node) => node.childForFieldName('declarator')?.type)).toEqual(
+      names.map(() => 'identifier')
+    );
+    expect(initializers.map((node) => node.childForFieldName('declarator')?.text)).toEqual(names);
+    expect(initializers.map((node) => node.descendantsOfType('call_expression')[0]?.text)).toEqual([
+      'ID(and)',
+      'ID(bitand)',
+      'ID(and)',
+      'ID(bitand)',
+    ]);
+    const macroCalls = tree.rootNode
+      .descendantsOfType('call_expression')
+      .filter((node) => node.childForFieldName('function')?.text === 'ID');
+    expect(macroCalls.map((node) => node.childForFieldName('arguments')?.firstNamedChild?.type)).toEqual(
+      Array.from({ length: 6 }, () => 'identifier')
+    );
+    const operands = tree.rootNode
+      .descendantsOfType('sizeof_expression')
+      .filter((node) => ['sizeof(function())', 'sizeof(values[0])'].includes(node.text));
+    expect(operands.map((node) => node.childForFieldName('value')?.type)).toEqual([
+      'parenthesized_expression',
+      'parenthesized_expression',
+    ]);
+    const tags = queries[1]!.captures(tree.rootNode);
+    expect(tags.filter(({ name, node }) => name === 'name' && names.includes(node.text))).toHaveLength(0);
+    expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 0; }');
+  } finally {
+    for (const query of queries) query.delete();
+    tree.delete();
     parser.delete();
   }
 });
