@@ -133,15 +133,20 @@ int (__stdcall (&nested_reference))(int) = *pointer;
   }
 });
 
-test('retains functions and fields with conventions after pointer stars through edits', async () => {
+test.each([
+  ['*', 'nullptr', 'pointer_declarator'],
+  ['&', 'storage', 'reference_declarator'],
+  ['&&', 'static_cast<int&&>(storage)', 'reference_declarator'],
+])('retains functions and fields with conventions after %s through edits', async (operator, value, declaratorType) => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, '(function_declarator declarator: (_) @name) (ms_call_modifier) @modifier');
-  const original = `using LPVOID = void;
-int * __stdcall defined() { return nullptr; }
-int * __stdcall declared();
-LPVOID * __stdcall Alloc(int n);
-struct S { int * __stdcall method(); };
+  const original = `using Value = int;
+int storage;
+int ${operator} __stdcall defined() { return ${value}; }
+int ${operator} __stdcall declared();
+Value ${operator} __stdcall Alloc(int n);
+struct S { int ${operator} __stdcall method(); };
 int *after() { return nullptr; }
 `;
   let source = original;
@@ -159,10 +164,10 @@ int *after() { return nullptr; }
       ]);
       const modifiers = captures.filter(({ name }) => name === 'modifier').map(({ node }) => node);
       expect(modifiers).toHaveLength(4);
-      expect(modifiers.every((node) => node.parent?.type === 'pointer_declarator')).toBe(true);
+      expect(modifiers.every((node) => node.parent?.type === declaratorType)).toBe(true);
       const definitions = tree.rootNode.descendantsOfType('function_definition');
       expect(definitions.map((node) => node.text)).toEqual([
-        `int * ${modifiers[0]!.text} defined() { return nullptr; }`,
+        `int ${operator} ${modifiers[0]!.text} defined() { return ${value}; }`,
         'int *after() { return nullptr; }',
       ]);
       for (const node of [...definitions, ...modifiers]) {

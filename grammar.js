@@ -429,7 +429,7 @@ module.exports = grammar(C, {
       ),
     function_definition_pointer_declarator: ($) => withPointerDeclarator($, $._function_definition_declarator),
     function_definition_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._function_definition_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._function_definition_declarator))),
 
     declaration: ($) =>
       choice(
@@ -792,7 +792,7 @@ module.exports = grammar(C, {
 
     variadic_pointer_declarator: ($) => withPointerDeclarator($, $._variadic_declarator),
 
-    variadic_reference_declarator: ($) => seq(choice('&&', '&'), $._variadic_declarator),
+    variadic_reference_declarator: ($) => withReferenceDeclarator($, $._variadic_declarator),
 
     init_declarator: ($, original = missingOriginalRule()) =>
       choice(
@@ -861,7 +861,7 @@ module.exports = grammar(C, {
         )
       ),
     argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq('&', $._argument_initialized_name))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._argument_initialized_name, '&'))),
     _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
     parenthesized_argument_initialized_pointer_declarator: ($) =>
       withPointerDeclarator(
@@ -872,9 +872,12 @@ module.exports = grammar(C, {
         )
       ),
     parenthesized_argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq('&', $.parenthesized_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $.parenthesized_declarator, '&'))),
     argument_initialized_rvalue_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq('&&', choice($._argument_initialized_name, $.parenthesized_declarator)))),
+      prec.dynamic(
+        1,
+        prec.right(withReferenceDeclarator($, choice($._argument_initialized_name, $.parenthesized_declarator), '&&'))
+      ),
 
     // A single argument that starts with a keyword that no parameter starts with (see
     // test/unit/expressionKeywordParameter.test.ts): an expression that starts with one, possibly followed by calls,
@@ -1206,7 +1209,7 @@ module.exports = grammar(C, {
         alias($.abstract_qualified_pointer_declarator, $.qualified_identifier)
       ),
 
-    reference_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
+    reference_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._declarator))),
     pointer_declarator: ($, original = missingOriginalRule()) =>
       withDeclarator(original, undefined, optional($.ms_call_modifier)),
     pointer_field_declarator: ($, original = missingOriginalRule()) =>
@@ -1223,10 +1226,10 @@ module.exports = grammar(C, {
       pointerToMember($, $.qualified_pointer_type_declarator, alias($.pointer_type_declarator, $.pointer_declarator)),
     abstract_qualified_pointer_declarator: ($) =>
       pointerToMember($, $.abstract_qualified_pointer_declarator, $.abstract_pointer_declarator),
-    reference_field_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
-    reference_type_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
+    reference_field_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._field_declarator))),
+    reference_type_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._type_declarator))),
 
-    abstract_reference_declarator: ($) => prec.right(seq(choice('&', '&&'), optional($._abstract_declarator))),
+    abstract_reference_declarator: ($) => prec.right(withReferenceDeclarator($, optional($._abstract_declarator))),
 
     structured_binding_declarator: ($) =>
       prec.dynamic(
@@ -1370,7 +1373,7 @@ module.exports = grammar(C, {
 
     required_parentheses_pointer_declarator: ($) => withPointerDeclarator($, $._required_parentheses_declarator),
     required_parentheses_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._required_parentheses_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._required_parentheses_declarator))),
 
     required_parentheses_function_declarator: ($) =>
       prec.dynamic(
@@ -1421,7 +1424,7 @@ module.exports = grammar(C, {
     direct_initialized_pointer_declarator: ($) =>
       withPointerDeclarator($, $._direct_initialized_parenthesized_declarator),
     direct_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._direct_initialized_parenthesized_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._direct_initialized_parenthesized_declarator))),
 
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
@@ -2576,6 +2579,15 @@ function pointerToMember($, self, pointer, callModifierPrecedence = 2) {
  */
 function withPointerDeclarator($, declarator) {
   return withDeclarator(C.grammar.rules.pointer_declarator, declarator, optional($.ms_call_modifier));
+}
+
+/**
+ * @param {NoInfer<GrammarSymbols<'ms_call_modifier'>>} $
+ * @param {Rule} declarator
+ * @param {Rule | string} [operator]
+ */
+function withReferenceDeclarator($, declarator, operator = choice('&', '&&')) {
+  return seq(operator, optional($.ms_call_modifier), declarator);
 }
 
 /**
