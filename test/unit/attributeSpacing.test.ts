@@ -143,14 +143,12 @@ test('keeps long qualified declarator attribute lists flat with linear parse gro
   };
   try {
     parse(1000);
-    let small = Infinity,
-      large = Infinity;
-    for (let run = 0; run < 4; run++) {
-      small = Math.min(small, parse(200));
-      large = Math.min(large, parse(1000));
-    }
-    expect(large / small).toBeLessThan(12);
-    expect(large).toBeLessThan(2_000_000);
+    const samples = Array.from({ length: 4 }, () => [parse(200), parse(1000)] as const);
+    const small = Math.min(...samples.map(([small]) => small));
+    const large = Math.min(...samples.map(([, large]) => large));
+    const diagnostic = JSON.stringify({ node: process.version, samples, small, large });
+    expect(large / small, diagnostic).toBeLessThan(12);
+    expect(large, diagnostic).toBeLessThan(2_000_000);
   } finally {
     parser.delete();
   }
