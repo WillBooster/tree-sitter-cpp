@@ -1,0 +1,273 @@
+================================
+Alternative reference tokens retain declarators and qualifiers
+================================
+
+int globalValue;
+int bitand left = globalValue;
+int and right = 1;
+using LRef = int bitand;
+typedef int and RRef;
+using LArray = int(bitand)[3];
+using RArray = int(and)[3];
+int bitand returnReference() { return globalValue; }
+auto trailingReference() -> int bitand { return globalValue; }
+void takeAbstract(int bitand, int and);
+void takeNamed(int bitand left, int and right);
+int bitand (*callback)(int) = nullptr;
+struct Box {
+  int bitand field;
+  int bitand get() bitand;
+  int and move() and;
+  operator int bitand() bitand;
+};
+int bitand Box::get() bitand { return globalValue; }
+int and Box::move() and { return static_cast<int and>(globalValue); }
+Box::operator int bitand() bitand { return globalValue; }
+template<class... Ts> void packs(Ts bitand... values) {}
+void direct(int value) {
+  int bitand local(value);
+  int bitand (grouped)(value);
+  int and moved(1);
+  int and (groupedMoved)(1);
+  packs(value);
+}
+int following() { return 0; }
+
+---
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (identifier))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (identifier)))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (reference_declarator
+        (identifier))
+      (number_literal)))
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)
+      (abstract_reference_declarator)))
+  (type_definition
+    (primitive_type)
+    (reference_declarator
+      (type_identifier)))
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)
+      (abstract_array_declarator
+        (abstract_parenthesized_declarator
+          (abstract_reference_declarator))
+        (number_literal))))
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)
+      (abstract_array_declarator
+        (abstract_parenthesized_declarator
+          (abstract_reference_declarator))
+        (number_literal))))
+  (function_definition
+    (primitive_type)
+    (reference_declarator
+      (function_declarator
+        (identifier)
+        (parameter_list)))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (placeholder_type_specifier
+      (auto))
+    (function_declarator
+      (identifier)
+      (parameter_list)
+      (trailing_return_type
+        (type_descriptor
+          (primitive_type)
+          (abstract_reference_declarator))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (abstract_reference_declarator))
+        (parameter_declaration
+          (primitive_type)
+          (abstract_reference_declarator)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (reference_declarator
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (reference_declarator
+            (identifier))))))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (reference_declarator
+        (function_declarator
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)))))
+      (null)))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (reference_declarator
+          (field_identifier)))
+      (field_declaration
+        (primitive_type)
+        (reference_declarator
+          (function_declarator
+            (field_identifier)
+            (parameter_list)
+            (ref_qualifier))))
+      (field_declaration
+        (primitive_type)
+        (reference_declarator
+          (function_declarator
+            (field_identifier)
+            (parameter_list)
+            (ref_qualifier))))
+      (declaration
+        (operator_cast
+          (primitive_type)
+          (abstract_reference_declarator
+            (abstract_function_declarator
+              (parameter_list)
+              (ref_qualifier)))))))
+  (function_definition
+    (primitive_type)
+    (reference_declarator
+      (function_declarator
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier))
+        (parameter_list)
+        (ref_qualifier)))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    (primitive_type)
+    (reference_declarator
+      (function_declarator
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier))
+        (parameter_list)
+        (ref_qualifier)))
+    (compound_statement
+      (return_statement
+        (named_cast_expression
+          (type_descriptor
+            (primitive_type)
+            (abstract_reference_declarator))
+          (identifier)))))
+  (function_definition
+    (qualified_identifier
+      (namespace_identifier)
+      (operator_cast
+        (primitive_type)
+        (abstract_reference_declarator
+          (abstract_function_declarator
+            (parameter_list)
+            (ref_qualifier)))))
+    (compound_statement
+      (return_statement
+        (identifier))))
+  (template_declaration
+    (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (variadic_parameter_declaration
+            (type_identifier)
+            (reference_declarator
+              (variadic_declarator
+                (identifier))))))
+      (compound_statement)))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (reference_declarator
+          (function_declarator
+            (identifier)
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))))
+      (declaration
+        (primitive_type)
+        (reference_declarator
+          (function_declarator
+            (parenthesized_declarator
+              (identifier))
+            (parameter_list
+              (parameter_declaration
+                (type_identifier))))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (reference_declarator
+            (identifier))
+          (argument_list
+            (number_literal))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (reference_declarator
+            (parenthesized_declarator
+              (identifier)))
+          (argument_list
+            (number_literal))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (number_literal)))))
