@@ -5,10 +5,12 @@
 #include "empty.h"
 #include HEADER
 #include HEADER_OF(empty)
-#include HEADER EMPTY
-#include EMPTY HEADER
+#include HEADER EMPTY // trailing
+#include EMPTY HEADER /* trailing */
 #include HEADER_OF(empty) EMPTY
 #include HEADER_PATH(empty.h) EMPTY
+#include HEADER EMPTY _Pragma("GCC diagnostic push")
+#include HEADER _Pragma("GCC diagnostic push") EMPTY
 struct Pair { int value; };
 void take(Pair);
 void use(int);

@@ -28,6 +28,8 @@ test('retains computed include paths and enclosing C++ initializers through edit
       'HEADER_OF(empty) EMPTY',
       'HEADER_PATH(empty.h) EMPTY',
       'HEADER EMPTY',
+      'HEADER _Pragma("GCC diagnostic push") EMPTY',
+      'HEADER EMPTY',
       'HEADER_PATH(empty.h) EMPTY',
       'HEADER_OF(empty) EMPTY',
     ]);
@@ -122,6 +124,83 @@ int following() { return 1; }
     expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 1; }');
   } finally {
     tree.delete();
+    parser.delete();
+  }
+});
+
+test('preserves raw strings and following initializer elements across raw-token edits', () => {
+  const source = fs.readFileSync(path.join(root, 'test/fixtures/rawIncludes.cpp'), 'utf8');
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(
+    language,
+    '(preproc_include path: (preproc_include_argument (raw_string_literal) @raw) @path)'
+  );
+  let tree = parser.parse(source)!;
+  const original = 'R"(a"b)"';
+  const multiline = 'R"tag(a"b\nc)tag"';
+  const start = source.indexOf(original);
+  let current = source,
+    spelling = original;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(
+      query
+        .captures(tree.rootNode)
+        .filter(({ name }) => name === 'raw')
+        .map(({ node }) => node.text)
+    ).toEqual([original, multiline]);
+    for (const replacement of [multiline, original]) {
+      const nextSource = current.slice(0, start) + replacement + current.slice(start + spelling.length);
+      tree.edit(
+        new Edit({
+          startIndex: start,
+          oldEndIndex: start + spelling.length,
+          newEndIndex: start + replacement.length,
+          startPosition: pointAt(current, start),
+          oldEndPosition: pointAt(current, start + spelling.length),
+          newEndPosition: pointAt(nextSource, start + replacement.length),
+        })
+      );
+      const next = parser.parse(nextSource, tree)!;
+      tree.delete();
+      tree = next;
+      const fresh = parser.parse(nextSource)!;
+      try {
+        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+        expect(
+          tree.rootNode
+            .descendantsOfType('initializer_list')
+            .map((node) =>
+              node.namedChildren.filter((child) => child.type === 'number_literal').map((child) => child.text)
+            )
+        ).toEqual([['1'], ['2']]);
+        expect(
+          query
+            .captures(tree.rootNode)
+            .filter(({ name }) => name === 'raw')
+            .map(({ node }) => node.text)
+        ).toEqual([replacement, multiline]);
+        expect(
+          query
+            .captures(tree.rootNode)
+            .filter(({ name }) => name === 'path')
+            .map(({ node }) => node.text)
+        ).toEqual([`H(/*inside*/ ${replacement}) EMPTY`, `H(${multiline}) EMPTY`]);
+        expect(metadata(tree.rootNode)).toEqual(metadata(fresh.rootNode));
+        expect(captures(query, tree)).toEqual(captures(query, fresh));
+        for (const { node } of query.captures(tree.rootNode))
+          expect(nextSource.slice(node.startIndex, node.endIndex)).toBe(node.text);
+        expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 3; }');
+      } finally {
+        fresh.delete();
+      }
+      current = nextSource;
+      spelling = replacement;
+    }
+    expect(current).toBe(source);
+  } finally {
+    tree.delete();
+    query.delete();
     parser.delete();
   }
 });
