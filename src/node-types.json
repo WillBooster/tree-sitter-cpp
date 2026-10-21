@@ -1029,16 +1029,6 @@
           }
         ]
       },
-      "namespace": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "identifier",
-            "named": true
-          }
-        ]
-      },
       "prefix": {
         "multiple": false,
         "required": false,
@@ -1064,10 +1054,21 @@
   {
     "type": "attribute_declaration",
     "named": true,
-    "fields": {},
+    "fields": {
+      "namespace": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "annotation",
@@ -1104,19 +1105,67 @@
       "required": true,
       "types": [
         {
-          "type": "_declarator",
-          "named": true
-        },
-        {
-          "type": "_field_declarator",
-          "named": true
-        },
-        {
-          "type": "_type_declarator",
+          "type": "array_declarator",
           "named": true
         },
         {
           "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "destructor_name",
+          "named": true
+        },
+        {
+          "type": "field_identifier",
+          "named": true
+        },
+        {
+          "type": "function_declarator",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "operator_name",
+          "named": true
+        },
+        {
+          "type": "parenthesized_declarator",
+          "named": true
+        },
+        {
+          "type": "pointer_declarator",
+          "named": true
+        },
+        {
+          "type": "primitive_type",
+          "named": true
+        },
+        {
+          "type": "qualified_identifier",
+          "named": true
+        },
+        {
+          "type": "reference_declarator",
+          "named": true
+        },
+        {
+          "type": "structured_binding_declarator",
+          "named": true
+        },
+        {
+          "type": "template_function",
+          "named": true
+        },
+        {
+          "type": "template_method",
+          "named": true
+        },
+        {
+          "type": "type_identifier",
           "named": true
         }
       ]
@@ -9097,19 +9146,11 @@
     "named": false
   },
   {
-    "type": "[[",
-    "named": false
-  },
-  {
     "type": "[]",
     "named": false
   },
   {
     "type": "]",
-    "named": false
-  },
-  {
-    "type": "]]",
     "named": false
   },
   {

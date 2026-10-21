@@ -137,6 +137,11 @@ module.exports = grammar(C, {
   ],
 
   conflicts: ($, original) => [
+    [$.attribute, $._scope_resolution],
+    [$.expression, $.contract_specifier],
+    [$.expression, $.explicit_object_parameter_declaration],
+    [$._declarator, $.attributed_declarator, $.expression],
+    [$._declarator, $.attributed_declarator, $.type_specifier, $.expression],
     ...original,
     [sym('preproc_if_in_parameter_prefix'), sym('preproc_if_in_parameter_group')],
     [sym('preproc_elif_in_parameter_prefix'), sym('preproc_elif_in_parameter_group')],
@@ -400,13 +405,23 @@ module.exports = grammar(C, {
         )
       ),
 
-    attribute: ($, original = missingOriginalRule()) =>
-      seq(optional(seq('using', field('namespace', $._contextual_identifier), ':')), ...ruleMembers(original, 'SEQ')),
+    attribute: (_, original = missingOriginalRule()) => prec(1, original),
 
     annotation: ($) => seq('=', choice($.expression, $.parameter_pack_expansion)),
 
-    attribute_declaration: ($, original = missingOriginalRule()) =>
-      choice(original, seq('[[', commaSep1($.annotation), ']]')),
+    attribute_declaration: ($) =>
+      choice(
+        seq(
+          '[',
+          '[',
+          optional(seq('using', field('namespace', $._contextual_identifier), ':')),
+          optional($.attribute),
+          repeat(seq(',', optional($.attribute))),
+          ']',
+          ']'
+        ),
+        seq('[', '[', commaSep1($.annotation), ']', ']')
+      ),
 
     // When used in a trailing return type, these specifiers can now occur immediately before
     // a compound statement. This introduces a shift/reduce conflict that needs to be resolved
@@ -1285,7 +1300,7 @@ module.exports = grammar(C, {
 
     access_specifier: () => choice('public', 'private', 'protected'),
 
-    _declarator: ($, original = missingOriginalRule()) =>
+    _unattributed_declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
@@ -1298,7 +1313,7 @@ module.exports = grammar(C, {
         $.structured_binding_declarator
       ),
 
-    _field_declarator: ($, original = missingOriginalRule()) =>
+    _unattributed_field_declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias($.reference_field_declarator, $.reference_declarator),
@@ -1307,7 +1322,7 @@ module.exports = grammar(C, {
         $.operator_name
       ),
 
-    _type_declarator: ($, original = missingOriginalRule()) =>
+    _unattributed_type_declarator: ($, original = missingOriginalRule()) =>
       choice(
         original,
         alias($.reference_type_declarator, $.reference_declarator),
