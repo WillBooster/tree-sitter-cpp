@@ -2274,13 +2274,30 @@ module.exports = grammar(C, {
         $.operator_argument
       );
       const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
-      return seq('(', optional(choice(argument, seq(anyArgument, repeat1(seq(',', anyArgument))))), ')');
+      return seq(
+        '(',
+        optional(
+          choice(
+            argument,
+            alias(choice('and', 'bitand'), $.identifier),
+            seq(anyArgument, repeat1(seq(',', anyArgument)))
+          )
+        ),
+        ')'
+      );
     },
 
     operator_argument: () =>
       choice(
         'not',
         'compl',
+        'or',
+        'bitor',
+        'xor',
+        'not_eq',
+        'and_eq',
+        'or_eq',
+        'xor_eq',
         '+',
         '-',
         '/',
@@ -2324,6 +2341,8 @@ module.exports = grammar(C, {
       choice(
         '*',
         '&',
+        'bitand',
+        'and',
         // Not the `&&` token: accepting it here would make `&&label` in `f(1, &&label)` lex as one token.
         seq('&', '&')
       ),
