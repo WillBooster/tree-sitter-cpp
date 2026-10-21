@@ -108,6 +108,19 @@ const VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES = [
   ...CONTEXTUAL_IDENTIFIER_NAMES.slice(2),
 ];
 
+const BUILTIN_TYPE_KEYWORDS = [
+  'bool',
+  'char',
+  'char8_t',
+  'char16_t',
+  'char32_t',
+  'wchar_t',
+  'int',
+  'float',
+  'double',
+  'void',
+];
+
 const preprocIf = C.preprocIf;
 
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
@@ -125,6 +138,43 @@ module.exports = grammar(C, {
 
   conflicts: ($, original) => [
     ...original,
+    [sym('preproc_if_in_parameter_prefix'), sym('preproc_if_in_parameter_group')],
+    [sym('preproc_elif_in_parameter_prefix'), sym('preproc_elif_in_parameter_group')],
+    [sym('preproc_ifdef_in_parameter_prefix'), sym('preproc_ifdef_in_parameter_group')],
+    [sym('preproc_elifdef_in_parameter_prefix'), sym('preproc_elifdef_in_parameter_group')],
+    [
+      sym('preproc_if_in_parameter_clause'),
+      sym('preproc_if_in_parameter_prefix'),
+      sym('preproc_if_in_parameter_group'),
+    ],
+    [sym('preproc_else_in_parameter_prefix'), sym('preproc_else_in_parameter_group')],
+    [
+      sym('preproc_elif_in_parameter_clause'),
+      sym('preproc_elif_in_parameter_prefix'),
+      sym('preproc_elif_in_parameter_group'),
+    ],
+    [
+      sym('preproc_ifdef_in_parameter_clause'),
+      sym('preproc_ifdef_in_parameter_prefix'),
+      sym('preproc_ifdef_in_parameter_group'),
+    ],
+    [
+      sym('preproc_elifdef_in_parameter_clause'),
+      sym('preproc_elifdef_in_parameter_prefix'),
+      sym('preproc_elifdef_in_parameter_group'),
+    ],
+    [$._non_variadic_parameter_group, $._parameter_clause],
+    [
+      sym('preproc_else_in_parameter_clause'),
+      sym('preproc_else_in_parameter_prefix'),
+      sym('preproc_else_in_parameter_group'),
+    ],
+    [$.parameter_declaration, $.variadic_parameter_declaration],
+    [$.sized_type_specifier, $._non_pack_sized_type],
+    [$.sized_type_specifier, $.expression, $._non_pack_sized_type],
+    [$.sized_type_specifier, $.expression, $.call_expression, $._non_pack_sized_type],
+    [$.primitive_type, $._non_pack_unnamed_parameter],
+    [$.primitive_type, $._non_pack_sized_type],
     [$._class_declaration, $._instantiated_class_name],
     [$._field_initializer_sequence],
     [$._field_initializer_conditionals],
@@ -716,20 +766,82 @@ module.exports = grammar(C, {
         )
       ),
 
-    parameter_list: ($) =>
+    parameter_list: ($) => seq('(', optional($._parameter_clause), ')'),
+
+    ...preprocIf('_in_parameter_clause', () => sym('_parameter_clause'), 0, false),
+    ...preprocIf('_in_parameter_prefix', () => sym('_parameter_prefix'), 0, false),
+    ...preprocIf('_in_parameter_group', () => sym('_non_variadic_parameter_clause'), 0, false),
+
+    _parameter_clause_item: ($) =>
+      choice(
+        $.parameter_declaration,
+        $.explicit_object_parameter_declaration,
+        $.optional_parameter_declaration,
+        $.variadic_parameter_declaration,
+        alias($.expression_keyword_parameter, $.parameter_declaration)
+      ),
+
+    _non_variadic_parameter_group: ($) =>
+      choice(
+        $._parameter_clause_item,
+        alias(sym('preproc_if_in_parameter_group'), sym('preproc_if')),
+        alias(sym('preproc_ifdef_in_parameter_group'), sym('preproc_ifdef'))
+      ),
+
+    _parameter_prefix: ($) =>
+      repeat1(
+        choice(
+          seq($._non_variadic_parameter_group, ','),
+          alias(sym('preproc_if_in_parameter_prefix'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_parameter_prefix'), sym('preproc_ifdef'))
+        )
+      ),
+
+    _non_variadic_parameter_clause: ($) => seq(optional($._parameter_prefix), $._non_variadic_parameter_group),
+
+    _parameter_clause: ($) =>
       seq(
-        '(',
-        commaSep(
+        optional($._parameter_prefix),
+        choice(
+          $.variadic_parameter,
+          seq($._parameter_clause_item, optional($.variadic_parameter)),
+          prec.dynamic(
+            PREC.CERTAIN_DECLARATION,
+            seq(alias($._non_pack_unnamed_parameter, $.parameter_declaration), $.variadic_parameter)
+          ),
+          alias(sym('preproc_if_in_parameter_clause'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_parameter_clause'), sym('preproc_ifdef'))
+        )
+      ),
+
+    _non_pack_unnamed_parameter: ($) =>
+      seq(
+        replaceRuleField(
+          C.grammar.rules._declaration_specifiers,
+          'type',
           choice(
-            $.parameter_declaration,
-            $.explicit_object_parameter_declaration,
-            $.optional_parameter_declaration,
-            $.variadic_parameter_declaration,
-            '...',
-            alias($.expression_keyword_parameter, $.parameter_declaration)
+            alias($._non_pack_builtin_type, $.primitive_type),
+            alias($._non_pack_sized_type, $.sized_type_specifier)
           )
         ),
-        ')'
+        field('declarator', optional($._abstract_declarator))
+      ),
+
+    primitive_type: ($, original = missingOriginalRule()) => {
+      if (original.type !== 'TOKEN') throw new Error('Expected an inherited primitive type token.');
+      const typedefNames = ruleMembers(original.content, 'CHOICE').filter(
+        (rule) => rule.type !== 'STRING' || !BUILTIN_TYPE_KEYWORDS.includes(rule.value)
+      );
+      return choice(token(prec(1, choice(...typedefNames))), $._non_pack_builtin_type);
+    },
+
+    _non_pack_builtin_type: () => token(prec(1, choice(...BUILTIN_TYPE_KEYWORDS))),
+
+    _non_pack_sized_type: ($) =>
+      replaceRuleField(
+        C.grammar.rules.sized_type_specifier,
+        'type',
+        optional(alias($._non_pack_builtin_type, $.primitive_type))
       ),
 
     explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
@@ -1210,14 +1322,10 @@ module.exports = grammar(C, {
       ),
 
     reference_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._declarator))),
-    pointer_declarator: ($, original = missingOriginalRule()) =>
-      withDeclarator(original, undefined, optional($.ms_call_modifier)),
-    pointer_field_declarator: ($, original = missingOriginalRule()) =>
-      withDeclarator(original, undefined, optional($.ms_call_modifier)),
-    pointer_type_declarator: ($, original = missingOriginalRule()) =>
-      withDeclarator(original, undefined, optional($.ms_call_modifier)),
-    abstract_pointer_declarator: ($, original = missingOriginalRule()) =>
-      withDeclarator(original, undefined, optional($.ms_call_modifier)),
+    pointer_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+    pointer_field_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+    pointer_type_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+    abstract_pointer_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
 
     qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
     qualified_pointer_field_declarator: ($) =>
@@ -1704,7 +1812,14 @@ module.exports = grammar(C, {
 
     try_statement: ($) => seq('try', field('body', $.compound_statement), repeat1($.catch_clause)),
 
-    catch_clause: ($) => seq('catch', field('parameters', $.parameter_list), field('body', $.compound_statement)),
+    catch_clause: ($) =>
+      seq(
+        'catch',
+        field('parameters', alias($._catch_parameter_list, $.parameter_list)),
+        field('body', $.compound_statement)
+      ),
+
+    _catch_parameter_list: ($) => seq('(', choice($.parameter_declaration, $.variadic_parameter), ')'),
 
     _expression_not_binary: ($, original = missingOriginalRule()) => choice(...nonBinaryExpressions($, original)),
 
@@ -2575,10 +2690,11 @@ function pointerToMember($, self, pointer, callModifierPrecedence = 2) {
 
 /**
  * @param {NoInfer<GrammarSymbols<'ms_call_modifier'>>} $
- * @param {Rule} declarator
+ * @param {Rule | undefined} declarator
+ * @param {Rule} [original]
  */
-function withPointerDeclarator($, declarator) {
-  return withDeclarator(C.grammar.rules.pointer_declarator, declarator, optional($.ms_call_modifier));
+function withPointerDeclarator($, declarator, original = C.grammar.rules.pointer_declarator) {
+  return withDeclarator(original, declarator, $.ms_call_modifier);
 }
 
 /**
@@ -2593,42 +2709,66 @@ function withReferenceDeclarator($, declarator, operator = choice('&', '&&')) {
 /**
  * @param {Rule} rule
  * @param {Rule | undefined} declarator
- * @param {Rule} [prefix]
+ * @param {Rule} [pointerModifier]
  * @returns {Rule}
  */
-function withDeclarator(rule, declarator, prefix) {
-  const result = replaceDeclarator(rule, declarator, prefix);
+function withDeclarator(rule, declarator, pointerModifier) {
+  const result = replaceRuleField(rule, 'declarator', declarator, pointerModifier);
   if (JSON.stringify(result) === JSON.stringify(rule)) throw new Error('The rule has no declarator field to replace.');
   return result;
 }
 
 /**
  * @param {Rule} rule
- * @param {Rule | undefined} declarator
- * @param {Rule} [prefix]
+ * @param {string} name
+ * @param {Rule | undefined} replacement
+ * @param {Rule} [pointerModifier]
  * @returns {Rule}
  */
-function replaceDeclarator(rule, declarator, prefix) {
+function replaceRuleField(rule, name, replacement, pointerModifier) {
   switch (rule.type) {
     case 'FIELD': {
-      if (rule.name !== 'declarator') return rule;
-      const replacement = field('declarator', declarator ?? rule.content);
-      return prefix ? seq(prefix, replacement) : replacement;
+      return rule.name === name ? field(name, replacement ?? rule.content) : rule;
     }
-    case 'SEQ':
+    case 'SEQ': {
+      const members = rule.members.map((member) => replaceRuleField(member, name, replacement, pointerModifier));
+      return { ...rule, members: pointerModifier ? interleavePointerModifier(members, pointerModifier) : members };
+    }
     case 'CHOICE': {
-      return { ...rule, members: rule.members.map((member) => replaceDeclarator(member, declarator, prefix)) };
+      return {
+        ...rule,
+        members: rule.members.map((member) => replaceRuleField(member, name, replacement, pointerModifier)),
+      };
     }
     case 'PREC':
     case 'PREC_DYNAMIC':
     case 'PREC_LEFT':
     case 'PREC_RIGHT': {
-      return { ...rule, content: replaceDeclarator(rule.content, declarator, prefix) };
+      return { ...rule, content: replaceRuleField(rule.content, name, replacement, pointerModifier) };
     }
     default: {
       return rule;
     }
   }
+}
+
+/**
+ * @param {Rule[]} members
+ * @param {Rule} modifier
+ */
+function interleavePointerModifier(members, modifier) {
+  const index = members.findIndex(
+    (member) =>
+      member.type === 'REPEAT' && member.content.type === 'SYMBOL' && member.content.name === 'ms_pointer_modifier'
+  );
+  if (index === -1) return members;
+  const pointerModifiers = members[index];
+  const qualifiers = members[index + 1];
+  if (pointerModifiers?.type !== 'REPEAT' || qualifiers?.type !== 'REPEAT') {
+    throw new Error('The pointer modifier and qualifier groups must be adjacent repeats.');
+  }
+  const modifiers = repeat(choice(pointerModifiers.content, qualifiers.content));
+  return [...members.slice(0, index), seq(modifiers, optional(seq(modifier, modifiers))), ...members.slice(index + 2)];
 }
 
 /**

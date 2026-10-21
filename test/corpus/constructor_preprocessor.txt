@@ -345,7 +345,8 @@ int main() { return after() < 0; }
                   (number_literal)))))))
       (compound_statement)
       (catch_clause
-        (parameter_list)
+        (parameter_list
+          (variadic_parameter))
         (compound_statement
           (throw_statement)))))
   (function_definition

@@ -134,19 +134,23 @@ int (__stdcall (&nested_reference))(int) = *pointer;
 });
 
 test.each([
-  ['*', 'nullptr', 'pointer_declarator'],
-  ['&', 'storage', 'reference_declarator'],
-  ['&&', 'static_cast<int&&>(storage)', 'reference_declarator'],
-])('retains functions and fields with conventions after %s through edits', async (operator, value, declaratorType) => {
+  ['* __stdcall', 'nullptr', 'pointer_declarator'],
+  ['& __stdcall', 'storage', 'reference_declarator'],
+  ['&& __stdcall', 'static_cast<int&&>(storage)', 'reference_declarator'],
+  ['* __stdcall const', 'nullptr', 'pointer_declarator'],
+  ['* __stdcall volatile', 'nullptr', 'pointer_declarator'],
+  ['* __stdcall __ptr32', 'nullptr', 'pointer_declarator'],
+  ['* const __stdcall __ptr32 volatile', 'nullptr', 'pointer_declarator'],
+])('retains functions and fields with %s through edits', async (prefix, value, declaratorType) => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, '(function_declarator declarator: (_) @name) (ms_call_modifier) @modifier');
   const original = `using Value = int;
 int storage;
-int ${operator} __stdcall defined() { return ${value}; }
-int ${operator} __stdcall declared();
-Value ${operator} __stdcall Alloc(int n);
-struct S { int ${operator} __stdcall method(); };
+int ${prefix} defined() { return ${value}; }
+int ${prefix} declared();
+Value ${prefix} Alloc(int n);
+struct S { int ${prefix} method(); };
 int *after() { return nullptr; }
 `;
   let source = original;
@@ -167,7 +171,7 @@ int *after() { return nullptr; }
       expect(modifiers.every((node) => node.parent?.type === declaratorType)).toBe(true);
       const definitions = tree.rootNode.descendantsOfType('function_definition');
       expect(definitions.map((node) => node.text)).toEqual([
-        `int ${operator} ${modifiers[0]!.text} defined() { return ${value}; }`,
+        `int ${prefix.replace('__stdcall', modifiers[0]!.text)} defined() { return ${value}; }`,
         'int *after() { return nullptr; }',
       ]);
       for (const node of [...definitions, ...modifiers]) {

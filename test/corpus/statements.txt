@@ -296,7 +296,8 @@ void main() {
           (compound_statement
             (comment)))
         (catch_clause
-          (parameter_list)
+          (parameter_list
+            (variadic_parameter))
           (compound_statement
             (comment)))))))
 
@@ -607,7 +608,8 @@ void foo(int a) {
               (compound_statement
                 (comment))
               (catch_clause
-                (parameter_list)
+                (parameter_list
+                  (variadic_parameter))
                 (compound_statement)))
             (throw_statement
               (number_literal)))
