@@ -42,7 +42,7 @@ the compiler's interpretation.
 
 The npm package ships `tree-sitter-cpp.wasm` for
 [@willbooster/web-tree-sitter](https://www.npmjs.com/package/@willbooster/web-tree-sitter), which runs in Node.js, Bun,
-browsers, and Cloudflare Workers. Use runtime version 9.0.0 or later within major version 9. The parser uses the
+browsers, and Cloudflare Workers. Use runtime version 10.0.2 or later within major version 10. The parser uses the
 WillBooster/tree-sitter ABI `0x57420007`; upgrade the grammar and runtime together. Install both:
 
 ```sh
@@ -91,10 +91,10 @@ grammar's in `queries/` and, in `queries/c/`, the highlights of the C grammar it
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
-fuzzed with. Use runtime version 9.0.0 or later within major version 9:
+fuzzed with. Use runtime version 10.0.2 or later within major version 10:
 
 ```sh
-cargo add --rename tree-sitter willbooster-tree-sitter@9.0.0
+cargo add --rename tree-sitter willbooster-tree-sitter@10.0.2
 cargo add --rename tree-sitter-cpp willbooster-tree-sitter-cpp
 ```
 
