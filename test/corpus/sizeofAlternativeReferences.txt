@@ -1,0 +1,116 @@
+================================
+Alternative reference types in sizeof
+================================
+
+using Element = int;
+namespace ns { using Element = int; }
+template<class T> struct Box { T value; };
+static_assert(sizeof(int(bitand)[3]) == sizeof(int[3]));
+static_assert(sizeof(Element(and)) == sizeof(Element));
+static_assert(sizeof(ns::Element(bitand)[2][3]) == sizeof(ns::Element[2][3]));
+static_assert(sizeof(Box<int>(and)[3]) == sizeof(Box<int>[3]));
+int following() { return 0; }
+
+---
+
+(translation_unit
+  (alias_declaration
+    (type_identifier)
+    (type_descriptor
+      (primitive_type)))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (alias_declaration
+        (type_identifier)
+        (type_descriptor
+          (primitive_type)))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list
+        (field_declaration
+          (type_identifier)
+          (field_identifier)))))
+  (static_assert_declaration
+    (binary_expression
+      (sizeof_expression
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (abstract_parenthesized_declarator
+              (abstract_reference_declarator))
+            (number_literal))))
+      (sizeof_expression
+        (type_descriptor
+          (primitive_type)
+          (abstract_array_declarator
+            (number_literal))))))
+  (static_assert_declaration
+    (binary_expression
+      (sizeof_expression
+        (type_descriptor
+          (type_identifier)
+          (abstract_parenthesized_declarator
+            (abstract_reference_declarator))))
+      (sizeof_expression
+        (parenthesized_expression
+          (identifier)))))
+  (static_assert_declaration
+    (binary_expression
+      (sizeof_expression
+        (type_descriptor
+          (qualified_identifier
+            (namespace_identifier)
+            (type_identifier))
+          (abstract_array_declarator
+            (abstract_array_declarator
+              (abstract_parenthesized_declarator
+                (abstract_reference_declarator))
+              (number_literal))
+            (number_literal))))
+      (sizeof_expression
+        (parenthesized_expression
+          (subscript_expression
+            (subscript_expression
+              (qualified_identifier
+                (namespace_identifier)
+                (identifier))
+              (subscript_argument_list
+                (number_literal)))
+            (subscript_argument_list
+              (number_literal)))))))
+  (static_assert_declaration
+    (binary_expression
+      (sizeof_expression
+        (type_descriptor
+          (template_type
+            (type_identifier)
+            (template_argument_list
+              (type_descriptor
+                (primitive_type))))
+          (abstract_array_declarator
+            (abstract_parenthesized_declarator
+              (abstract_reference_declarator))
+            (number_literal))))
+      (sizeof_expression
+        (parenthesized_expression
+          (subscript_expression
+            (template_function
+              (identifier)
+              (template_argument_list
+                (type_descriptor
+                  (primitive_type))))
+            (subscript_argument_list
+              (number_literal)))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (number_literal)))))

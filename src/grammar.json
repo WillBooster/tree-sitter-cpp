@@ -13943,22 +13943,26 @@
                   ]
                 },
                 {
-                  "type": "ALIAS",
+                  "type": "PREC_DYNAMIC",
+                  "value": -3,
                   "content": {
-                    "type": "CHOICE",
-                    "members": [
-                      {
-                        "type": "STRING",
-                        "value": "and"
-                      },
-                      {
-                        "type": "STRING",
-                        "value": "bitand"
-                      }
-                    ]
-                  },
-                  "named": true,
-                  "value": "identifier"
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": "and"
+                        },
+                        {
+                          "type": "STRING",
+                          "value": "bitand"
+                        }
+                      ]
+                    },
+                    "named": true,
+                    "value": "identifier"
+                  }
                 },
                 {
                   "type": "SEQ",

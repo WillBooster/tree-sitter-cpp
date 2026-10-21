@@ -2279,7 +2279,7 @@ module.exports = grammar(C, {
         optional(
           choice(
             argument,
-            alias(choice('and', 'bitand'), $.identifier),
+            prec.dynamic(-3, alias(choice('and', 'bitand'), $.identifier)),
             seq(anyArgument, repeat1(seq(',', anyArgument)))
           )
         ),
