@@ -15,6 +15,26 @@ to its authors and contributors. This is not an official release of that project
 This fork fixes parsing bugs and raises conformance with the ISO C++ standard
 ([working draft](https://eel.is/c++draft/)).
 
+## Language coverage
+
+The parser uses one grammar across C++ standard editions, including syntax from the linked working draft. It has no
+compiler-style `-std` selection and does not guarantee complete conformance to any edition. The corpus provides
+examples of the forms it accepts:
+
+| Syntax                                                    | Examples                                          |
+| --------------------------------------------------------- | ------------------------------------------------- |
+| C++17 structured bindings                                 | [Declarations](test/corpus/declarations.txt)      |
+| C++20 concepts, requires clauses and requires expressions | [Concepts](test/corpus/concepts.txt)              |
+| C++20 modules, partitions, imports and exports            | [Modules](test/corpus/modules.txt)                |
+| Function contracts                                        | [Contracts](test/corpus/contracts.txt)            |
+| Reflection, splice syntax and annotations                 | [Reflection](test/corpus/reflection.txt)          |
+| Microsoft calling conventions                             | [Microsoft extensions](test/corpus/microsoft.txt) |
+
+The tree describes the written source. Preprocessing branches remain in the tree; macro expansion, condition
+evaluation and header inclusion are left to a preprocessor. Name lookup, type checking and other semantic validation
+are left to a compiler. In ambiguous declaration and expression syntax, the chosen tree can therefore differ from
+the compiler's interpretation.
+
 ## Usage
 
 The npm package ships `tree-sitter-cpp.wasm` for
