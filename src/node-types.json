@@ -5366,6 +5366,18 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
           "type": "variadic_parameter_declaration",
           "named": true
         }
@@ -5779,6 +5791,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -5839,6 +5855,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -5896,6 +5920,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -5963,6 +5995,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6023,6 +6059,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -6080,6 +6124,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -6118,6 +6170,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6178,6 +6234,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -6235,6 +6299,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -6380,6 +6452,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6440,6 +6516,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -6497,6 +6581,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -6564,6 +6656,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6621,6 +6717,14 @@
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
           "named": true
         },
         {
@@ -6682,6 +6786,14 @@
         {
           "type": "using_declaration",
           "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
+          "named": true
         }
       ]
     }
@@ -6742,6 +6854,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "primitive_type",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "private_module_fragment_declaration",
@@ -8575,6 +8692,11 @@
     }
   },
   {
+    "type": "variadic_parameter",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "variadic_parameter_declaration",
     "named": true,
     "fields": {
@@ -9460,10 +9582,6 @@
   },
   {
     "type": "preproc_directive",
-    "named": true
-  },
-  {
-    "type": "primitive_type",
     "named": true
   },
   {
