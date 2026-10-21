@@ -1,0 +1,110 @@
+================================================================================
+Spaced C++ attributes and empty lists
+================================================================================
+
+namespace N { extern int value; }
+int N::value [ /*gap*/ [maybe_unused] /*gap*/ ] = 0;
+int &reference [ [maybe_unused] ] = N::value;
+typedef int &Reference [ [maybe_unused] ];
+[[using gnu:]] int empty = 0;
+[[using gnu: unused,]] int trailing = 0;
+[[,]] int omitted = 0;
+void allocate() { auto p = new int * [ [clang::annotate_type("ptr")] ] [3]; }
+int following() { return reference; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (declaration
+        (storage_class_specifier)
+        (primitive_type)
+        (identifier))))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (attributed_declarator
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier))
+        (attribute_declaration
+          (comment)
+          (attribute
+            (identifier))
+          (comment)))
+      (number_literal)))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (reference_declarator
+        (attributed_declarator
+          (identifier)
+          (attribute_declaration
+            (attribute
+              (identifier)))))
+      (qualified_identifier
+        (namespace_identifier)
+        (identifier))))
+  (type_definition
+    (primitive_type)
+    (reference_declarator
+      (attributed_declarator
+        (type_identifier)
+        (attribute_declaration
+          (attribute
+            (identifier))))))
+  (declaration
+    (attribute_declaration
+      (identifier))
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (number_literal)))
+  (declaration
+    (attribute_declaration
+      (identifier)
+      (attribute
+        (identifier)))
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (number_literal)))
+  (declaration
+    (attribute_declaration)
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (number_literal)))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (new_expression
+            (primitive_type)
+            (abstract_pointer_declarator
+              (attribute_declaration
+                (attribute
+                  (identifier)
+                  (identifier)
+                  (argument_list
+                    (string_literal
+                      (string_content)))))
+              (new_declarator
+                (number_literal))))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (identifier)))))
