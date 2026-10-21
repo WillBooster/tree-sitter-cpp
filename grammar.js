@@ -342,6 +342,8 @@ module.exports = grammar(C, {
         alias($.operator_cast_declaration, $.declaration)
       ),
 
+    _preproc_include_token: ($, original = missingOriginalRule()) => choice(original, $.raw_string_literal),
+
     ...preprocIf('', () => sym('_top_level_item')),
     ...preprocIf('_in_block', () => sym('_block_item')),
 
