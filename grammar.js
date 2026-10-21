@@ -244,6 +244,17 @@ module.exports = grammar(C, {
     [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
+    [$.function_definition_pointer_declarator],
+    [$.argument_initialized_pointer_declarator],
+    [$.parenthesized_argument_initialized_pointer_declarator],
+    [$.required_parentheses_pointer_declarator],
+    [$.direct_initialized_pointer_declarator],
+    [$.variadic_pointer_declarator],
+    [$.qualified_pointer_declarator],
+    [$.abstract_qualified_pointer_declarator],
+    [$.qualified_pointer_type_declarator],
+    [$.qualified_pointer_field_declarator],
+    [$._trailing_abstract_qualified_pointer_declarator],
     [$.null, $.expression_keyword_parameter],
     [$.expression, $.expression_keyword_parameter],
     [$._declarator, $._argument_initialized_name],
@@ -466,10 +477,9 @@ module.exports = grammar(C, {
         alias($.function_definition_pointer_declarator, $.pointer_declarator),
         alias($.function_definition_reference_declarator, $.reference_declarator)
       ),
-    function_definition_pointer_declarator: ($) =>
-      withDeclarator(C.grammar.rules.pointer_declarator, $._function_definition_declarator),
+    function_definition_pointer_declarator: ($) => withPointerDeclarator($, $._function_definition_declarator),
     function_definition_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._function_definition_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._function_definition_declarator))),
 
     declaration: ($) =>
       choice(
@@ -892,9 +902,9 @@ module.exports = grammar(C, {
 
     variadic_array_declarator: ($) => withDeclarator(C.grammar.rules.array_declarator, $._variadic_declarator),
 
-    variadic_pointer_declarator: ($) => withDeclarator(C.grammar.rules.pointer_declarator, $._variadic_declarator),
+    variadic_pointer_declarator: ($) => withPointerDeclarator($, $._variadic_declarator),
 
-    variadic_reference_declarator: ($) => seq(choice('&&', '&'), $._variadic_declarator),
+    variadic_reference_declarator: ($) => withReferenceDeclarator($, $._variadic_declarator),
 
     init_declarator: ($, original = missingOriginalRule()) =>
       choice(
@@ -954,8 +964,8 @@ module.exports = grammar(C, {
       ),
 
     argument_initialized_pointer_declarator: ($) =>
-      withDeclarator(
-        C.grammar.rules.pointer_declarator,
+      withPointerDeclarator(
+        $,
         choice(
           $._argument_initialized_name,
           alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
@@ -963,20 +973,23 @@ module.exports = grammar(C, {
         )
       ),
     argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq('&', $._argument_initialized_name))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._argument_initialized_name, '&'))),
     _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
     parenthesized_argument_initialized_pointer_declarator: ($) =>
-      withDeclarator(
-        C.grammar.rules.pointer_declarator,
+      withPointerDeclarator(
+        $,
         choice(
           $.parenthesized_declarator,
           alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator)
         )
       ),
     parenthesized_argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq('&', $.parenthesized_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $.parenthesized_declarator, '&'))),
     argument_initialized_rvalue_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq('&&', choice($._argument_initialized_name, $.parenthesized_declarator)))),
+      prec.dynamic(
+        1,
+        prec.right(withReferenceDeclarator($, choice($._argument_initialized_name, $.parenthesized_declarator), '&&'))
+      ),
 
     // A single argument that starts with a keyword that no parameter starts with (see
     // test/unit/expressionKeywordParameter.test.ts): an expression that starts with one, possibly followed by calls,
@@ -1308,7 +1321,12 @@ module.exports = grammar(C, {
         alias($.abstract_qualified_pointer_declarator, $.qualified_identifier)
       ),
 
-    reference_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
+    reference_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._declarator))),
+    pointer_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+    pointer_field_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+    pointer_type_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+    abstract_pointer_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+
     qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
     qualified_pointer_field_declarator: ($) =>
       pointerToMember($, $.qualified_pointer_field_declarator, alias($.pointer_field_declarator, $.pointer_declarator)),
@@ -1316,10 +1334,10 @@ module.exports = grammar(C, {
       pointerToMember($, $.qualified_pointer_type_declarator, alias($.pointer_type_declarator, $.pointer_declarator)),
     abstract_qualified_pointer_declarator: ($) =>
       pointerToMember($, $.abstract_qualified_pointer_declarator, $.abstract_pointer_declarator),
-    reference_field_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
-    reference_type_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
+    reference_field_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._field_declarator))),
+    reference_type_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._type_declarator))),
 
-    abstract_reference_declarator: ($) => prec.right(seq(choice('&', '&&'), optional($._abstract_declarator))),
+    abstract_reference_declarator: ($) => prec.right(withReferenceDeclarator($, optional($._abstract_declarator))),
 
     structured_binding_declarator: ($) =>
       prec.dynamic(
@@ -1435,14 +1453,18 @@ module.exports = grammar(C, {
     parenthesized_pointer_declarator: ($) =>
       seq(
         '(',
-        optional($.ms_call_modifier),
         choice(
           $.pointer_declarator,
           alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
-          $.reference_declarator,
-          alias($.required_parentheses_reference_declarator, $.reference_declarator),
           alias($.qualified_pointer_declarator, $.qualified_identifier),
-          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+          seq(
+            optional($.ms_call_modifier),
+            choice(
+              $.reference_declarator,
+              alias($.required_parentheses_reference_declarator, $.reference_declarator),
+              alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+            )
+          )
         ),
         ')'
       ),
@@ -1457,10 +1479,9 @@ module.exports = grammar(C, {
         alias($.required_parentheses_reference_declarator, $.reference_declarator)
       ),
 
-    required_parentheses_pointer_declarator: ($) =>
-      withDeclarator(C.grammar.rules.pointer_declarator, $._required_parentheses_declarator),
+    required_parentheses_pointer_declarator: ($) => withPointerDeclarator($, $._required_parentheses_declarator),
     required_parentheses_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._required_parentheses_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._required_parentheses_declarator))),
 
     required_parentheses_function_declarator: ($) =>
       prec.dynamic(
@@ -1509,9 +1530,9 @@ module.exports = grammar(C, {
       ),
 
     direct_initialized_pointer_declarator: ($) =>
-      withDeclarator(C.grammar.rules.pointer_declarator, $._direct_initialized_parenthesized_declarator),
+      withPointerDeclarator($, $._direct_initialized_parenthesized_declarator),
     direct_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._direct_initialized_parenthesized_declarator))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._direct_initialized_parenthesized_declarator))),
 
     function_field_declarator: ($) =>
       prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
@@ -1538,7 +1559,13 @@ module.exports = grammar(C, {
         alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)
       ),
     _trailing_abstract_pointer_declarator: ($) => {
-      const prefix = seq('*', repeat($.attribute_declaration), repeat($.ms_pointer_modifier), repeat($.type_qualifier));
+      const prefix = seq(
+        optional(prec.dynamic(3, $.ms_call_modifier)),
+        '*',
+        repeat($.attribute_declaration),
+        repeat($.ms_pointer_modifier),
+        repeat($.type_qualifier)
+      );
       return choice(
         prec.dynamic(2, seq(prefix, field('declarator', prec.right(1, $._trailing_abstract_declarator)))),
         prec.dynamic(1, seq(prefix, prec(1, blank())))
@@ -1555,14 +1582,34 @@ module.exports = grammar(C, {
         )
       ),
     _trailing_abstract_parenthesized_declarator: ($) =>
-      prec(1, seq('(', optional($.ms_call_modifier), $._trailing_abstract_declarator, ')')),
+      prec(
+        1,
+        seq(
+          '(',
+          choice(
+            alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
+            alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier),
+            seq(
+              optional(prec.dynamic(3, $.ms_call_modifier)),
+              choice(
+                alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
+                alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
+                alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
+                alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator)
+              )
+            )
+          ),
+          ')'
+        )
+      ),
     _trailing_abstract_reference_declarator: ($) =>
       seq(choice('&', '&&'), choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank()))),
     _trailing_abstract_qualified_pointer_declarator: ($) =>
       pointerToMember(
         $,
         $._trailing_abstract_qualified_pointer_declarator,
-        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator)
+        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
+        3
       ),
 
     noexcept: ($) => prec.right(seq('noexcept', optional(seq('(', optional($.expression), ')')))),
@@ -1840,6 +1887,7 @@ module.exports = grammar(C, {
     new_pointer_declarator: ($) =>
       prec.right(
         seq(
+          optional(prec.dynamic(2, $.ms_call_modifier)),
           '*',
           repeat($.attribute_declaration),
           repeat($.ms_pointer_modifier),
@@ -2628,22 +2676,44 @@ function sizeofTypeOperand($) {
 }
 
 /**
- * @param {NoInfer<GrammarSymbols<'_scope_resolution' | 'qualified_identifier'>>} $
+ * @param {NoInfer<GrammarSymbols<'_scope_resolution' | 'qualified_identifier' | 'ms_call_modifier'>>} $
  * @param {RuleOrLiteral} self
  * @param {RuleOrLiteral} pointer
  */
-function pointerToMember($, self, pointer) {
-  return seq($._scope_resolution, field('name', choice(alias(self, $.qualified_identifier), pointer)));
+function pointerToMember($, self, pointer, callModifierPrecedence = 2) {
+  return seq(
+    optional(prec.dynamic(callModifierPrecedence, $.ms_call_modifier)),
+    $._scope_resolution,
+    field('name', choice(alias(self, $.qualified_identifier), pointer))
+  );
 }
 
 /**
- * Replaces the `declarator` field of a declarator rule, failing when the rule has none.
- * @param {Rule} rule
+ * @param {NoInfer<GrammarSymbols<'ms_call_modifier'>>} $
+ * @param {Rule | undefined} declarator
+ * @param {Rule} [original]
+ */
+function withPointerDeclarator($, declarator, original = C.grammar.rules.pointer_declarator) {
+  return withDeclarator(original, declarator, $.ms_call_modifier);
+}
+
+/**
+ * @param {NoInfer<GrammarSymbols<'ms_call_modifier'>>} $
  * @param {Rule} declarator
+ * @param {Rule | string} [operator]
+ */
+function withReferenceDeclarator($, declarator, operator = choice('&', '&&')) {
+  return seq(operator, optional($.ms_call_modifier), declarator);
+}
+
+/**
+ * @param {Rule} rule
+ * @param {Rule | undefined} declarator
+ * @param {Rule} [pointerModifier]
  * @returns {Rule}
  */
-function withDeclarator(rule, declarator) {
-  const result = replaceRuleField(rule, 'declarator', declarator);
+function withDeclarator(rule, declarator, pointerModifier) {
+  const result = replaceRuleField(rule, 'declarator', declarator, pointerModifier);
   if (JSON.stringify(result) === JSON.stringify(rule)) throw new Error('The rule has no declarator field to replace.');
   return result;
 }
@@ -2651,28 +2721,54 @@ function withDeclarator(rule, declarator) {
 /**
  * @param {Rule} rule
  * @param {string} name
- * @param {Rule} replacement
+ * @param {Rule | undefined} replacement
+ * @param {Rule} [pointerModifier]
  * @returns {Rule}
  */
-function replaceRuleField(rule, name, replacement) {
+function replaceRuleField(rule, name, replacement, pointerModifier) {
   switch (rule.type) {
     case 'FIELD': {
-      return rule.name === name ? field(name, replacement) : rule;
+      return rule.name === name ? field(name, replacement ?? rule.content) : rule;
     }
-    case 'SEQ':
+    case 'SEQ': {
+      const members = rule.members.map((member) => replaceRuleField(member, name, replacement, pointerModifier));
+      return { ...rule, members: pointerModifier ? interleavePointerModifier(members, pointerModifier) : members };
+    }
     case 'CHOICE': {
-      return { ...rule, members: rule.members.map((member) => replaceRuleField(member, name, replacement)) };
+      return {
+        ...rule,
+        members: rule.members.map((member) => replaceRuleField(member, name, replacement, pointerModifier)),
+      };
     }
     case 'PREC':
     case 'PREC_DYNAMIC':
     case 'PREC_LEFT':
     case 'PREC_RIGHT': {
-      return { ...rule, content: replaceRuleField(rule.content, name, replacement) };
+      return { ...rule, content: replaceRuleField(rule.content, name, replacement, pointerModifier) };
     }
     default: {
       return rule;
     }
   }
+}
+
+/**
+ * @param {Rule[]} members
+ * @param {Rule} modifier
+ */
+function interleavePointerModifier(members, modifier) {
+  const index = members.findIndex(
+    (member) =>
+      member.type === 'REPEAT' && member.content.type === 'SYMBOL' && member.content.name === 'ms_pointer_modifier'
+  );
+  if (index === -1) return members;
+  const pointerModifiers = members[index];
+  const qualifiers = members[index + 1];
+  if (pointerModifiers?.type !== 'REPEAT' || qualifiers?.type !== 'REPEAT') {
+    throw new Error('The pointer modifier and qualifier groups must be adjacent repeats.');
+  }
+  const modifiers = repeat(choice(pointerModifiers.content, qualifiers.content));
+  return [...members.slice(0, index), seq(modifiers, optional(seq(modifier, modifiers))), ...members.slice(index + 2)];
 }
 
 /**
