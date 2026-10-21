@@ -1,0 +1,59 @@
+================================================================================
+Computed include operands retain their complete paths
+================================================================================
+
+#define HEADER "empty.h"
+#define EMPTY
+#define HEADER_OF(name) <name.h>
+#define HEADER_PATH(name) <name>
+#include HEADER EMPTY
+#include EMPTY HEADER
+#include HEADER_OF(empty) EMPTY
+#include HEADER_PATH(empty.h) EMPTY
+int following() { return 1; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_def
+    (identifier)
+    (preproc_arg))
+  (preproc_def
+    (identifier))
+  (preproc_function_def
+    (identifier)
+    (preproc_params
+      (identifier))
+    (preproc_arg))
+  (preproc_function_def
+    (identifier)
+    (preproc_params
+      (identifier))
+    (preproc_arg))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier)))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier)))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier)
+      (identifier)))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier)
+      (identifier)
+      (identifier)))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (number_literal)))))

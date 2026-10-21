@@ -4414,6 +4414,10 @@
         {
           "type": "preproc_ifdef",
           "named": true
+        },
+        {
+          "type": "preproc_include",
+          "named": true
         }
       ]
     }
@@ -6876,6 +6880,10 @@
             "named": true
           },
           {
+            "type": "preproc_include_argument",
+            "named": true
+          },
+          {
             "type": "string_literal",
             "named": true
           },
@@ -6896,6 +6904,45 @@
         },
         {
           "type": "pragma_operator",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "preproc_include_argument",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "char_literal",
+          "named": true
+        },
+        {
+          "type": "comment",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "number_literal",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
+          "named": true
+        },
+        {
+          "type": "string_literal",
+          "named": true
+        },
+        {
+          "type": "system_lib_string",
           "named": true
         }
       ]
