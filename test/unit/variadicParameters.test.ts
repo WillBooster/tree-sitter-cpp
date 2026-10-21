@@ -178,21 +178,50 @@ test('recovers conditional parameter lists without consuming following definitio
   }
 });
 
-test('keeps conditional varargs within the complete function declaration', () => {
+test('keeps conditional parameter prefixes and tails within the complete function declaration', () => {
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,
     '(declaration declarator: (function_declarator declarator: (identifier) @name)) @declaration'
   );
-  const conditional = '#ifdef VARARGS\n  const char *fmt, ...\n#else\n  const char *fmt\n#endif\n';
+  const conditionalTail = '#ifdef VARARGS\n  const char *fmt, ...\n#else\n  const char *fmt\n#endif\n';
   const definitions = ['int after1(int value) { return value; }', 'int after2(int value) { return value; }'];
-  const suffix = ');\n' + definitions.join('\n') + '\n';
+  const following = definitions.join('\n') + '\n';
   try {
-    for (const prefix of ['int log_message(\n', 'int log_message(int first,\n']) {
+    for (const { first, conditional, tail, plain } of [
+      { first: '', conditional: conditionalTail, tail: '', plain: ['const char *fmt, ...\n', 'const char *fmt\n'] },
+      {
+        first: 'int first,',
+        conditional: conditionalTail,
+        tail: '',
+        plain: ['const char *fmt, ...\n', 'const char *fmt\n'],
+      },
+      { first: '', conditional: '#ifdef A\n int x,\n#endif\n', tail: 'int y\n', plain: ['int x,\n', ''] },
+      {
+        first: '',
+        conditional: '#if defined(A)\n int x\n#else\n long x\n#endif\n,\n',
+        tail: 'int y\n',
+        plain: ['int x,\n', ''],
+      },
+      {
+        first: '',
+        conditional: '#ifdef A\n int x, int z\n#else\n long x\n#endif\n,\n',
+        tail: 'int y\n',
+        plain: ['int x, int z,\n', ''],
+      },
+      {
+        first: '',
+        conditional: '#ifdef A\n#ifdef B\n int x,\n#endif\n#endif\n',
+        tail: 'int y\n',
+        plain: ['int x,\n', ''],
+      },
+    ]) {
+      const prefix = 'int log_message(' + first + '\n';
+      const suffix = tail + ');\n' + following;
       let previous = conditional;
       let tree = parser.parse(prefix + previous + suffix)!;
       try {
-        for (const parameters of [conditional, 'const char *fmt, ...\n', 'const char *fmt\n', conditional]) {
+        for (const parameters of [conditional, ...plain, conditional]) {
           tree.edit(
             new Edit({
               startIndex: prefix.length,
@@ -217,7 +246,7 @@ test('keeps conditional varargs within the complete function declaration', () =>
                 .filter(({ name }) => name === 'name')
                 .map(({ node }) => [node.text, node.startIndex, node.endIndex])
             ).toEqual([['log_message', 4, 15]]);
-            const declaration = prefix + parameters + ');';
+            const declaration = prefix + parameters + tail + ');';
             expect(
               captures
                 .filter(({ name }) => name === 'declaration')
