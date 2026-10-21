@@ -15,6 +15,29 @@ to its authors and contributors. This is not an official release of that project
 This fork fixes parsing bugs and raises conformance with the ISO C++ standard
 ([working draft](https://eel.is/c++draft/)).
 
+## Language coverage
+
+The parser uses one grammar for syntax from C++98 onward, including syntax from the linked working draft. It has no
+compiler-style `-std` selection and does not guarantee complete conformance to any edition. The corpus provides
+examples of the forms it accepts:
+
+| Syntax                                                    | Examples                                          |
+| --------------------------------------------------------- | ------------------------------------------------- |
+| C++98/03 declarations and classes                         | [Declarations](test/corpus/declarations.txt)      |
+| C++11 lambdas and C++14 generic lambdas                   | [Expressions](test/corpus/expressions.txt)        |
+| C++17 structured bindings                                 | [Declarations](test/corpus/declarations.txt)      |
+| C++20 concepts, requires clauses and requires expressions | [Concepts](test/corpus/concepts.txt)              |
+| C++20 modules, partitions, imports and exports            | [Modules](test/corpus/modules.txt)                |
+| C++23 consteval if statements                             | [Statements](test/corpus/statements.txt)          |
+| Working-draft function contracts                          | [Contracts](test/corpus/contracts.txt)            |
+| Working-draft reflection, splice syntax and annotations   | [Reflection](test/corpus/reflection.txt)          |
+| Microsoft declaration specifiers and calling conventions  | [Microsoft extensions](test/corpus/microsoft.txt) |
+
+The tree describes the written source. Preprocessing branches remain in the tree; macro expansion, condition
+evaluation and header inclusion are left to a preprocessor. Name lookup, type checking and other semantic validation
+are left to a compiler. In ambiguous declaration and expression syntax, the chosen tree can therefore differ from
+the compiler's interpretation.
+
 ## Usage
 
 The npm package ships `tree-sitter-cpp.wasm` for
