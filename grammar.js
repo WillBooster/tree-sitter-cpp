@@ -110,6 +110,8 @@ const ASSIGNMENT_OPERATORS = [
   'xor_eq',
 ];
 
+const REFERENCE_OPERATORS = ['&', 'bitand', '&&', 'and'];
+
 const CONTEXTUAL_IDENTIFIER_NAMES = ['pre', 'post', 'typeof', 'typeof_unqual', '__typeof_unqual', '__typeof_unqual__'];
 const VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES = [
   ...CONTEXTUAL_IDENTIFIER_NAMES.slice(0, 2),
@@ -1036,7 +1038,7 @@ module.exports = grammar(C, {
         )
       ),
     argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._argument_initialized_name, '&'))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._argument_initialized_name, choice('&', 'bitand')))),
     _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
     parenthesized_argument_initialized_pointer_declarator: ($) =>
       withPointerDeclarator(
@@ -1047,11 +1049,17 @@ module.exports = grammar(C, {
         )
       ),
     parenthesized_argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(withReferenceDeclarator($, $.parenthesized_declarator, '&'))),
+      prec.dynamic(1, prec.right(withReferenceDeclarator($, $.parenthesized_declarator, choice('&', 'bitand')))),
     argument_initialized_rvalue_reference_declarator: ($) =>
       prec.dynamic(
         1,
-        prec.right(withReferenceDeclarator($, choice($._argument_initialized_name, $.parenthesized_declarator), '&&'))
+        prec.right(
+          withReferenceDeclarator(
+            $,
+            choice($._argument_initialized_name, $.parenthesized_declarator),
+            choice('&&', 'and')
+          )
+        )
       ),
 
     // A single argument that starts with a keyword that no parameter starts with (see
@@ -1408,7 +1416,7 @@ module.exports = grammar(C, {
         seq('[', commaSep1(seq(optional('...'), $._contextual_identifier, repeat($.attribute_declaration))), ']')
       ),
 
-    ref_qualifier: () => choice('&', '&&'),
+    ref_qualifier: () => choice(...REFERENCE_OPERATORS),
 
     _function_declarator_seq: ($) =>
       seq($._function_declarator_core, optional($._function_postfix), repeat($.contract_specifier)),
@@ -1666,7 +1674,7 @@ module.exports = grammar(C, {
         )
       ),
     _trailing_abstract_reference_declarator: ($) =>
-      seq(choice('&', '&&'), choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank()))),
+      seq(choice(...REFERENCE_OPERATORS), choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank()))),
     _trailing_abstract_qualified_pointer_declarator: ($) =>
       pointerToMember(
         $,
@@ -2756,7 +2764,7 @@ function withPointerDeclarator($, declarator, original = C.grammar.rules.pointer
  * @param {Rule} declarator
  * @param {Rule | string} [operator]
  */
-function withReferenceDeclarator($, declarator, operator = choice('&', '&&')) {
+function withReferenceDeclarator($, declarator, operator = choice(...REFERENCE_OPERATORS)) {
   return seq(operator, optional($.ms_call_modifier), declarator);
 }
 
