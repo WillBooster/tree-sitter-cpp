@@ -42,6 +42,16 @@ const PREC = Object.assign(C.PREC, {
   THREE_WAY: C.PREC.RELATIONAL + 1,
 });
 
+/** @type {[string, number][]} */
+const ALTERNATIVE_BINARY_OPERATORS = [
+  ['or', PREC.LOGICAL_OR],
+  ['and', PREC.LOGICAL_AND],
+  ['bitor', PREC.INCLUSIVE_OR],
+  ['xor', PREC.EXCLUSIVE_OR],
+  ['bitand', PREC.BITWISE_AND],
+  ['not_eq', PREC.EQUAL],
+];
+
 const FOLD_OPERATORS = [
   '+',
   '-',
@@ -262,6 +272,7 @@ module.exports = grammar(C, {
     [$._trailing_abstract_qualified_pointer_declarator],
     [$.null, $.expression_keyword_parameter],
     [$.expression, $.expression_keyword_parameter],
+    [$.expression_keyword_parameter, $.operator_argument],
     [$._declarator, $._argument_initialized_name],
     [$.init_declarator, $._argument_initialized_declarator],
     [$._argument_initialized_declarator, $.later_keyword_argument_init_declarator],
@@ -342,6 +353,41 @@ module.exports = grammar(C, {
         alias($.operator_cast_declaration, $.declaration)
       ),
 
+    preproc_unary_expression: ($, original = missingOriginalRule()) =>
+      choice(
+        original,
+        prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $._preproc_expression)))
+      ),
+
+    preproc_binary_expression: ($, original = missingOriginalRule()) =>
+      choice(
+        original,
+        ...ALTERNATIVE_BINARY_OPERATORS.map(([operator, precedence]) =>
+          prec.left(
+            precedence,
+            seq(
+              field('left', $._preproc_expression),
+              field('operator', operator),
+              field('right', $._preproc_expression)
+            )
+          )
+        )
+      ),
+
+    preproc_argument_list: ($) =>
+      seq(
+        '(',
+        commaSep(
+          choice(
+            $._preproc_expression,
+            $.system_lib_string,
+            $.string_literal,
+            $.operator_argument,
+            alias($._declarator_operator_argument, $.operator_argument)
+          )
+        ),
+        ')'
+      ),
     _preproc_include_token: ($, original = missingOriginalRule()) => choice(original, $.raw_string_literal),
 
     ...preprocIf('', () => sym('_top_level_item')),
@@ -2163,15 +2209,7 @@ module.exports = grammar(C, {
 
     binary_expression: ($, original = missingOriginalRule()) => {
       /** @type {[string, number][]} */
-      const table = [
-        ['<=>', PREC.THREE_WAY],
-        ['or', PREC.LOGICAL_OR],
-        ['and', PREC.LOGICAL_AND],
-        ['bitor', PREC.INCLUSIVE_OR],
-        ['xor', PREC.EXCLUSIVE_OR],
-        ['bitand', PREC.BITWISE_AND],
-        ['not_eq', PREC.EQUAL],
-      ];
+      const table = [['<=>', PREC.THREE_WAY], ...ALTERNATIVE_BINARY_OPERATORS];
 
       const inherited = ruleMembers(original, 'CHOICE').map((rule) => {
         if (rule.type !== 'PREC_LEFT') return rule;
@@ -2220,6 +2258,8 @@ module.exports = grammar(C, {
 
     operator_argument: () =>
       choice(
+        'not',
+        'compl',
         '+',
         '-',
         '/',

@@ -1,0 +1,34 @@
+==================
+Alternative operators in preprocessing conditions
+==================
+
+#if not 0 and compl 0 not_eq 0 or 1 bitor 2 xor 3 bitand 4
+int selected;
+#endif
+int following;
+
+---
+
+(translation_unit
+  (preproc_if
+    (binary_expression
+      (binary_expression
+        (unary_expression
+          (number_literal))
+        (binary_expression
+          (unary_expression
+            (number_literal))
+          (number_literal)))
+      (binary_expression
+        (number_literal)
+        (binary_expression
+          (number_literal)
+          (binary_expression
+            (number_literal)
+            (number_literal)))))
+    (declaration
+      (primitive_type)
+      (identifier)))
+  (declaration
+    (primitive_type)
+    (identifier)))
