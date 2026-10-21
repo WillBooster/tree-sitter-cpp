@@ -31,7 +31,7 @@ examples of the forms it accepts:
 | C++23 consteval if statements                             | [Statements](test/corpus/statements.txt)          |
 | Working-draft function contracts                          | [Contracts](test/corpus/contracts.txt)            |
 | Working-draft reflection, splice syntax and annotations   | [Reflection](test/corpus/reflection.txt)          |
-| Microsoft calling conventions                             | [Microsoft extensions](test/corpus/microsoft.txt) |
+| Microsoft declaration specifiers and calling conventions  | [Microsoft extensions](test/corpus/microsoft.txt) |
 
 The tree describes the written source. Preprocessing branches remain in the tree; macro expansion, condition
 evaluation and header inclusion are left to a preprocessor. Name lookup, type checking and other semantic validation
