@@ -17,4 +17,10 @@ int second_branch();
 #if andrew
 int ordinary_identifier();
 #endif
+#define F(...) 1
+#if F(not, compl, and, or, bitand, bitor, xor, not_eq, and_eq, or_eq, xor_eq, !, ~, *, &, &&, <=>) and not 0
+int macro_branch();
+#endif
+int macro_value = F(not) + F(compl);
+int macro_following;
 int following() { return 4; }

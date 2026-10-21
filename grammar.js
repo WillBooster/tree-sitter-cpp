@@ -272,6 +272,7 @@ module.exports = grammar(C, {
     [$._trailing_abstract_qualified_pointer_declarator],
     [$.null, $.expression_keyword_parameter],
     [$.expression, $.expression_keyword_parameter],
+    [$.expression_keyword_parameter, $.operator_argument],
     [$._declarator, $._argument_initialized_name],
     [$.init_declarator, $._argument_initialized_declarator],
     [$._argument_initialized_declarator, $.later_keyword_argument_init_declarator],
@@ -371,6 +372,21 @@ module.exports = grammar(C, {
             )
           )
         )
+      ),
+
+    preproc_argument_list: ($) =>
+      seq(
+        '(',
+        commaSep(
+          choice(
+            $._preproc_expression,
+            $.system_lib_string,
+            $.string_literal,
+            $.operator_argument,
+            alias($._declarator_operator_argument, $.operator_argument)
+          )
+        ),
+        ')'
       ),
 
     ...preprocIf('', () => sym('_top_level_item')),
@@ -2241,6 +2257,8 @@ module.exports = grammar(C, {
 
     operator_argument: () =>
       choice(
+        'not',
+        'compl',
         '+',
         '-',
         '/',

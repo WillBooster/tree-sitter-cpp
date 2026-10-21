@@ -3369,6 +3369,19 @@
                     {
                       "type": "SYMBOL",
                       "name": "string_literal"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "operator_argument"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_declarator_operator_argument"
+                      },
+                      "named": true,
+                      "value": "operator_argument"
                     }
                   ]
                 },
@@ -3395,6 +3408,19 @@
                           {
                             "type": "SYMBOL",
                             "name": "string_literal"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "operator_argument"
+                          },
+                          {
+                            "type": "ALIAS",
+                            "content": {
+                              "type": "SYMBOL",
+                              "name": "_declarator_operator_argument"
+                            },
+                            "named": true,
+                            "value": "operator_argument"
                           }
                         ]
                       }
@@ -29778,6 +29804,14 @@
       "members": [
         {
           "type": "STRING",
+          "value": "not"
+        },
+        {
+          "type": "STRING",
+          "value": "compl"
+        },
+        {
+          "type": "STRING",
           "value": "+"
         },
         {
@@ -31876,6 +31910,10 @@
     [
       "expression",
       "expression_keyword_parameter"
+    ],
+    [
+      "expression_keyword_parameter",
+      "operator_argument"
     ],
     [
       "_declarator",
