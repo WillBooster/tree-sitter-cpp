@@ -112,3 +112,82 @@ int following() { return branch; }
     (compound_statement
       (return_statement
         (identifier)))))
+
+================================
+Single alternative-word macro arguments retain identifier fallback
+================================
+
+#define OP(...) ((void)0)
+#define SOME(...) 1
+#define CHECK(...) 1
+void consume() {
+  OP(and);
+  OP(bitand);
+  int y = SOME(and) + 1;
+  if (CHECK(bitand)) { return; }
+  int z = 1;
+}
+int following() { return 0; }
+
+---
+
+(translation_unit
+  (preproc_function_def
+    (identifier)
+    (preproc_params)
+    (preproc_arg))
+  (preproc_function_def
+    (identifier)
+    (preproc_params)
+    (preproc_arg))
+  (preproc_function_def
+    (identifier)
+    (preproc_params)
+    (preproc_arg))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (binary_expression
+            (call_expression
+              (identifier)
+              (argument_list
+                (identifier)))
+            (number_literal))))
+      (if_statement
+        (condition_clause
+          (call_expression
+            (identifier)
+            (argument_list
+              (identifier))))
+        (compound_statement
+          (return_statement)))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (number_literal)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (number_literal)))))

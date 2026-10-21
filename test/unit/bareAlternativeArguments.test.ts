@@ -116,6 +116,72 @@ test('preserves full metadata and captures through a macro argument spelling edi
     parser.delete();
   }
 });
+test('keeps singleton word macro arguments clean through one-to-many argument edits and undo', () => {
+  const original = fs.readFileSync(path.join(root, 'test/fixtures/singleAlternativeArguments.cpp'), 'utf8');
+  const parser = new Parser().setLanguage(language);
+  const query = highlights();
+  let current = original;
+  let spelling = 'and';
+  const start = original.indexOf('OP(and)') + 'OP('.length;
+  let tree = parser.parse(current)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    const captures = query.captures(tree.rootNode);
+    for (const match of original.matchAll(/\b(?:and|bitand)\b/g)) {
+      const token = tree.rootNode.descendantForIndex(match.index, match.index + match[0].length)!;
+      expect(token.type).toBe('identifier');
+      const at = captures.filter(
+        ({ node }) => node.startIndex === match.index && node.endIndex === match.index + match[0].length
+      );
+      expect(at.filter(({ name }) => name === 'operator')).toEqual([]);
+      expect(at.filter(({ name }) => name === 'variable')).toHaveLength(1);
+    }
+    for (const replacement of ['bitand', 'and, bitand', '', 'and']) {
+      const next = current.slice(0, start) + replacement + current.slice(start + spelling.length);
+      tree.edit(
+        new Edit({
+          startIndex: start,
+          oldEndIndex: start + spelling.length,
+          newEndIndex: start + replacement.length,
+          startPosition: point(current, start),
+          oldEndPosition: point(current, start + spelling.length),
+          newEndPosition: point(next, start + replacement.length),
+        })
+      );
+      const incremental = parser.parse(next, tree)!;
+      tree.delete();
+      tree = incremental;
+      const fresh = parser.parse(next)!;
+      try {
+        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+        expect(metadata(tree.rootNode)).toEqual(metadata(fresh.rootNode));
+        const captureMetadata = (node: Node): unknown =>
+          query.captures(node).map(({ name, node }) => [name, metadata(node)]);
+        expect(captureMetadata(tree.rootNode)).toEqual(captureMetadata(fresh.rootNode));
+        expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 0; }');
+        expect(tree.rootNode.descendantsOfType('declaration').map((node) => node.text)).toEqual([
+          'int y = SOME(and) + 1;',
+          'int z = 1;',
+        ]);
+        expect(tree.rootNode.descendantsOfType('if_statement')).toHaveLength(1);
+        const call = tree.rootNode.descendantsOfType('call_expression')[0]!.childForFieldName('arguments')!;
+        expect(call.descendantsOfType('operator_argument').map((node) => node.text)).toEqual(
+          replacement.includes(',') ? ['and', 'bitand'] : []
+        );
+      } finally {
+        fresh.delete();
+      }
+      current = next;
+      spelling = replacement;
+    }
+    expect(current).toBe(original);
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});
+
 function namedStructure(node: Node): unknown {
   return [
     node.type,

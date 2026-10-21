@@ -2274,7 +2274,17 @@ module.exports = grammar(C, {
         $.operator_argument
       );
       const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
-      return seq('(', optional(choice(argument, seq(anyArgument, repeat1(seq(',', anyArgument))))), ')');
+      return seq(
+        '(',
+        optional(
+          choice(
+            argument,
+            alias(choice('and', 'bitand'), $.identifier),
+            seq(anyArgument, repeat1(seq(',', anyArgument)))
+          )
+        ),
+        ')'
+      );
     },
 
     operator_argument: () =>
