@@ -29,13 +29,24 @@ test('keeps alternative sizeof reference operands equivalent to primary tokens w
     const operands = tree.rootNode
       .descendantsOfType('sizeof_expression')
       .filter((node) => /\b(?:bitand|and)\b/.test(node.text));
-    expect(operands).toHaveLength(16);
-    for (const operand of operands) {
+    const expectedOperands = [...source.matchAll(/(?<=static_assert\()sizeof\(.+?\)(?= ==)/g)];
+    expect(expectedOperands).toHaveLength(16);
+    expect(operands).toHaveLength(expectedOperands.length);
+    for (const [index, operand] of operands.entries()) {
+      const expected = expectedOperands[index]!;
+      const start = expected.index;
+      const end = start + expected[0].length;
       const type = operand.childForFieldName('type');
       expect(type?.type).toBe('type_descriptor');
       expect(type?.descendantsOfType('abstract_reference_declarator')).toHaveLength(1);
       expect(operand.childForFieldName('value')).toBeNull();
-      expect(source.slice(operand.startIndex, operand.endIndex)).toBe(operand.text);
+      expect([operand.startIndex, operand.endIndex, operand.startPosition, operand.endPosition, operand.text]).toEqual([
+        start,
+        end,
+        point(source, start),
+        point(source, end),
+        expected[0],
+      ]);
     }
     const highlights = queries[0]!.captures(tree.rootNode);
     for (const match of source.slice(0, split).matchAll(/\b(?:bitand|and)\b/g)) {
