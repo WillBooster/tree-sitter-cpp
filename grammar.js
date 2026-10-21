@@ -110,7 +110,8 @@ const ASSIGNMENT_OPERATORS = [
   'xor_eq',
 ];
 
-const REFERENCE_OPERATORS = ['&', 'bitand', '&&', 'and'];
+const LVALUE_REFERENCE_OPERATORS = ['&', 'bitand'];
+const REFERENCE_OPERATORS = [...LVALUE_REFERENCE_OPERATORS, '&&', 'and'];
 
 const CONTEXTUAL_IDENTIFIER_NAMES = ['pre', 'post', 'typeof', 'typeof_unqual', '__typeof_unqual', '__typeof_unqual__'];
 const VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES = [
@@ -1038,7 +1039,10 @@ module.exports = grammar(C, {
         )
       ),
     argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._argument_initialized_name, choice('&', 'bitand')))),
+      prec.dynamic(
+        1,
+        prec.right(withReferenceDeclarator($, $._argument_initialized_name, choice(...LVALUE_REFERENCE_OPERATORS)))
+      ),
     _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
     parenthesized_argument_initialized_pointer_declarator: ($) =>
       withPointerDeclarator(
@@ -1049,7 +1053,10 @@ module.exports = grammar(C, {
         )
       ),
     parenthesized_argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(withReferenceDeclarator($, $.parenthesized_declarator, choice('&', 'bitand')))),
+      prec.dynamic(
+        1,
+        prec.right(withReferenceDeclarator($, $.parenthesized_declarator, choice(...LVALUE_REFERENCE_OPERATORS)))
+      ),
     argument_initialized_rvalue_reference_declarator: ($) =>
       prec.dynamic(
         1,
@@ -2099,11 +2106,11 @@ module.exports = grammar(C, {
         )
       ),
 
-    lambda_default_capture: () => choice('=', '&'),
+    lambda_default_capture: () => choice('=', ...LVALUE_REFERENCE_OPERATORS),
 
     _lambda_capture_identifier: ($) =>
       seq(
-        optional('&'),
+        optional(choice(...LVALUE_REFERENCE_OPERATORS)),
         choice(
           $._contextual_identifier,
           $.qualified_identifier,
@@ -2112,7 +2119,13 @@ module.exports = grammar(C, {
       ),
 
     lambda_capture_initializer: ($) =>
-      seq(optional('&'), optional('...'), field('left', $._contextual_identifier), '=', field('right', $.expression)),
+      seq(
+        optional(choice(...LVALUE_REFERENCE_OPERATORS)),
+        optional('...'),
+        field('left', $._contextual_identifier),
+        '=',
+        field('right', $.expression)
+      ),
 
     _lambda_capture: ($) =>
       choice(seq(optional('*'), $.this), $._lambda_capture_identifier, $.lambda_capture_initializer),
