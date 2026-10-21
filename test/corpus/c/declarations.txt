@@ -496,7 +496,8 @@ static baz quux(...);
     (type_identifier)
     (function_declarator
       (identifier)
-      (parameter_list))))
+      (parameter_list
+        (variadic_parameter)))))
 
 ================================================================================
 Function definitions
@@ -784,7 +785,8 @@ struct __attribute__((__packed__)) foo_t {
           (type_qualifier)
           (primitive_type)
           (pointer_declarator
-            (identifier))))
+            (identifier)))
+        (variadic_parameter))
       (attribute_specifier
         (argument_list
           (identifier)))
