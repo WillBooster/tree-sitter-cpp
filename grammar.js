@@ -2281,6 +2281,13 @@ module.exports = grammar(C, {
       choice(
         'not',
         'compl',
+        'or',
+        'bitor',
+        'xor',
+        'not_eq',
+        'and_eq',
+        'or_eq',
+        'xor_eq',
         '+',
         '-',
         '/',
@@ -2324,6 +2331,8 @@ module.exports = grammar(C, {
       choice(
         '*',
         '&',
+        'bitand',
+        'and',
         // Not the `&&` token: accepting it here would make `&&label` in `f(1, &&label)` lex as one token.
         seq('&', '&')
       ),

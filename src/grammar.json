@@ -30097,6 +30097,34 @@
         },
         {
           "type": "STRING",
+          "value": "or"
+        },
+        {
+          "type": "STRING",
+          "value": "bitor"
+        },
+        {
+          "type": "STRING",
+          "value": "xor"
+        },
+        {
+          "type": "STRING",
+          "value": "not_eq"
+        },
+        {
+          "type": "STRING",
+          "value": "and_eq"
+        },
+        {
+          "type": "STRING",
+          "value": "or_eq"
+        },
+        {
+          "type": "STRING",
+          "value": "xor_eq"
+        },
+        {
+          "type": "STRING",
           "value": "+"
         },
         {
@@ -30251,6 +30279,14 @@
         {
           "type": "STRING",
           "value": "&"
+        },
+        {
+          "type": "STRING",
+          "value": "bitand"
+        },
+        {
+          "type": "STRING",
+          "value": "and"
         },
         {
           "type": "SEQ",
