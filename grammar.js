@@ -195,6 +195,11 @@ module.exports = grammar(C, {
     [$._declarator, $.argument_initialized_rvalue_reference_declarator],
     [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
     [$.function_definition_pointer_declarator],
+    [$.argument_initialized_pointer_declarator],
+    [$.parenthesized_argument_initialized_pointer_declarator],
+    [$.required_parentheses_pointer_declarator],
+    [$.direct_initialized_pointer_declarator],
+    [$.variadic_pointer_declarator],
     [$.qualified_pointer_declarator],
     [$.abstract_qualified_pointer_declarator],
     [$.qualified_pointer_type_declarator],
@@ -422,8 +427,7 @@ module.exports = grammar(C, {
         alias($.function_definition_pointer_declarator, $.pointer_declarator),
         alias($.function_definition_reference_declarator, $.reference_declarator)
       ),
-    function_definition_pointer_declarator: ($) =>
-      withDeclarator(C.grammar.rules.pointer_declarator, $._function_definition_declarator),
+    function_definition_pointer_declarator: ($) => withPointerDeclarator($, $._function_definition_declarator),
     function_definition_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._function_definition_declarator))),
 
@@ -786,7 +790,7 @@ module.exports = grammar(C, {
 
     variadic_array_declarator: ($) => withDeclarator(C.grammar.rules.array_declarator, $._variadic_declarator),
 
-    variadic_pointer_declarator: ($) => withDeclarator(C.grammar.rules.pointer_declarator, $._variadic_declarator),
+    variadic_pointer_declarator: ($) => withPointerDeclarator($, $._variadic_declarator),
 
     variadic_reference_declarator: ($) => seq(choice('&&', '&'), $._variadic_declarator),
 
@@ -848,8 +852,8 @@ module.exports = grammar(C, {
       ),
 
     argument_initialized_pointer_declarator: ($) =>
-      withDeclarator(
-        C.grammar.rules.pointer_declarator,
+      withPointerDeclarator(
+        $,
         choice(
           $._argument_initialized_name,
           alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
@@ -860,8 +864,8 @@ module.exports = grammar(C, {
       prec.dynamic(1, prec.right(seq('&', $._argument_initialized_name))),
     _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
     parenthesized_argument_initialized_pointer_declarator: ($) =>
-      withDeclarator(
-        C.grammar.rules.pointer_declarator,
+      withPointerDeclarator(
+        $,
         choice(
           $.parenthesized_declarator,
           alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator)
@@ -1203,6 +1207,15 @@ module.exports = grammar(C, {
       ),
 
     reference_declarator: ($) => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
+    pointer_declarator: ($, original = missingOriginalRule()) =>
+      withDeclarator(original, undefined, optional($.ms_call_modifier)),
+    pointer_field_declarator: ($, original = missingOriginalRule()) =>
+      withDeclarator(original, undefined, optional($.ms_call_modifier)),
+    pointer_type_declarator: ($, original = missingOriginalRule()) =>
+      withDeclarator(original, undefined, optional($.ms_call_modifier)),
+    abstract_pointer_declarator: ($, original = missingOriginalRule()) =>
+      withDeclarator(original, undefined, optional($.ms_call_modifier)),
+
     qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
     qualified_pointer_field_declarator: ($) =>
       pointerToMember($, $.qualified_pointer_field_declarator, alias($.pointer_field_declarator, $.pointer_declarator)),
@@ -1355,8 +1368,7 @@ module.exports = grammar(C, {
         alias($.required_parentheses_reference_declarator, $.reference_declarator)
       ),
 
-    required_parentheses_pointer_declarator: ($) =>
-      withDeclarator(C.grammar.rules.pointer_declarator, $._required_parentheses_declarator),
+    required_parentheses_pointer_declarator: ($) => withPointerDeclarator($, $._required_parentheses_declarator),
     required_parentheses_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._required_parentheses_declarator))),
 
@@ -1407,7 +1419,7 @@ module.exports = grammar(C, {
       ),
 
     direct_initialized_pointer_declarator: ($) =>
-      withDeclarator(C.grammar.rules.pointer_declarator, $._direct_initialized_parenthesized_declarator),
+      withPointerDeclarator($, $._direct_initialized_parenthesized_declarator),
     direct_initialized_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._direct_initialized_parenthesized_declarator))),
 
@@ -2559,36 +2571,47 @@ function pointerToMember($, self, pointer, callModifierPrecedence = 2) {
 }
 
 /**
- * Replaces the `declarator` field of a declarator rule, failing when the rule has none.
- * @param {Rule} rule
+ * @param {NoInfer<GrammarSymbols<'ms_call_modifier'>>} $
  * @param {Rule} declarator
+ */
+function withPointerDeclarator($, declarator) {
+  return withDeclarator(C.grammar.rules.pointer_declarator, declarator, optional($.ms_call_modifier));
+}
+
+/**
+ * @param {Rule} rule
+ * @param {Rule | undefined} declarator
+ * @param {Rule} [prefix]
  * @returns {Rule}
  */
-function withDeclarator(rule, declarator) {
-  const result = replaceDeclarator(rule, declarator);
+function withDeclarator(rule, declarator, prefix) {
+  const result = replaceDeclarator(rule, declarator, prefix);
   if (JSON.stringify(result) === JSON.stringify(rule)) throw new Error('The rule has no declarator field to replace.');
   return result;
 }
 
 /**
  * @param {Rule} rule
- * @param {Rule} declarator
+ * @param {Rule | undefined} declarator
+ * @param {Rule} [prefix]
  * @returns {Rule}
  */
-function replaceDeclarator(rule, declarator) {
+function replaceDeclarator(rule, declarator, prefix) {
   switch (rule.type) {
     case 'FIELD': {
-      return rule.name === 'declarator' ? field('declarator', declarator) : rule;
+      if (rule.name !== 'declarator') return rule;
+      const replacement = field('declarator', declarator ?? rule.content);
+      return prefix ? seq(prefix, replacement) : replacement;
     }
     case 'SEQ':
     case 'CHOICE': {
-      return { ...rule, members: rule.members.map((member) => replaceDeclarator(member, declarator)) };
+      return { ...rule, members: rule.members.map((member) => replaceDeclarator(member, declarator, prefix)) };
     }
     case 'PREC':
     case 'PREC_DYNAMIC':
     case 'PREC_LEFT':
     case 'PREC_RIGHT': {
-      return { ...rule, content: replaceDeclarator(rule.content, declarator) };
+      return { ...rule, content: replaceDeclarator(rule.content, declarator, prefix) };
     }
     default: {
       return rule;

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Edit, Parser, Query, type Node, type Tree } from '@willbooster/web-tree-sitter';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
@@ -132,3 +132,101 @@ int (__stdcall (&nested_reference))(int) = *pointer;
     parser.delete();
   }
 });
+
+test('retains functions and fields with conventions after pointer stars through edits', async () => {
+  const language = await loadCurrentWasmBuild();
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(language, '(function_declarator declarator: (_) @name) (ms_call_modifier) @modifier');
+  const original = `using LPVOID = void;
+int * __stdcall defined() { return nullptr; }
+int * __stdcall declared();
+LPVOID * __stdcall Alloc(int n);
+struct S { int * __stdcall method(); };
+int *after() { return nullptr; }
+`;
+  let source = original;
+  let tree = parser.parse(source)!;
+  try {
+    for (const replacement of ['__cdecl', '__stdcall']) {
+      expect(tree.rootNode.hasError).toBe(false);
+      const captures = query.captures(tree.rootNode);
+      expect(captures.filter(({ name }) => name === 'name').map(({ node }) => node.text)).toEqual([
+        'defined',
+        'declared',
+        'Alloc',
+        'method',
+        'after',
+      ]);
+      const modifiers = captures.filter(({ name }) => name === 'modifier').map(({ node }) => node);
+      expect(modifiers).toHaveLength(4);
+      expect(modifiers.every((node) => node.parent?.type === 'pointer_declarator')).toBe(true);
+      const definitions = tree.rootNode.descendantsOfType('function_definition');
+      expect(definitions.map((node) => node.text)).toEqual([
+        `int * ${modifiers[0]!.text} defined() { return nullptr; }`,
+        'int *after() { return nullptr; }',
+      ]);
+      for (const node of [...definitions, ...modifiers]) {
+        expect(source.slice(node.startIndex, node.endIndex)).toBe(node.text);
+        expect([node.startPosition, node.endPosition]).toEqual([
+          point(source, node.startIndex),
+          point(source, node.endIndex),
+        ]);
+      }
+      const start = source.indexOf(modifiers[0]!.text);
+      const end = start + modifiers[0]!.text.length;
+      const next = source.slice(0, start) + replacement + source.slice(end);
+      tree.edit(
+        new Edit({
+          startIndex: start,
+          oldEndIndex: end,
+          newEndIndex: start + replacement.length,
+          startPosition: point(source, start),
+          oldEndPosition: point(source, end),
+          newEndPosition: point(next, start + replacement.length),
+        })
+      );
+      let incremental: Tree | undefined;
+      const fresh = parser.parse(next)!;
+      try {
+        incremental = parser.parse(next, tree)!;
+        expect(incremental.rootNode.hasError).toBe(false);
+        expect(snapshot(incremental.rootNode)).toEqual(snapshot(fresh.rootNode));
+        expect(query.captures(incremental.rootNode).map(({ name, node }) => [name, snapshot(node)])).toEqual(
+          query.captures(fresh.rootNode).map(({ name, node }) => [name, snapshot(node)])
+        );
+        tree.delete();
+        tree = incremental;
+        incremental = undefined;
+        source = next;
+      } finally {
+        incremental?.delete();
+        fresh.delete();
+      }
+    }
+    expect(source).toBe(original);
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});
+
+function point(source: string, index: number): { row: number; column: number } {
+  const prefix = source.slice(0, index);
+  return { row: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
+}
+
+function snapshot(node: Node): unknown {
+  return [
+    node.type,
+    node.isNamed,
+    node.isExtra,
+    node.isMissing,
+    node.hasError,
+    node.startIndex,
+    node.endIndex,
+    node.startPosition,
+    node.endPosition,
+    node.children.map((child, index) => [node.fieldNameForChild(index), snapshot(child)]),
+  ];
+}
