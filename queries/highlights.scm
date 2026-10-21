@@ -22,6 +22,8 @@
 (function_declarator
   declarator: (field_identifier) @function)
 
+(operator_argument "." @operator)
+
 ; Types
 
 ((namespace_identifier) @type
@@ -37,6 +39,8 @@
 ; Modules
 (module_name
   (identifier) @module)
+
+(module_name "." @delimiter)
 
 ; Keywords
 
@@ -78,6 +82,13 @@
 
 [(operator_name "operator" @keyword)
  (operator_cast "operator" @keyword)]
+
+; Operators
+
+[
+ ".*" "->*" "<=>"
+ "and" "and_eq" "bitand" "bitor" "compl" "not" "not_eq" "or" "or_eq" "xor" "xor_eq"
+] @operator
 
 ; Strings
 

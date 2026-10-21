@@ -106,7 +106,8 @@ T::T() try : f1(0) {} catch(...) {}
             (number_literal))))
       (compound_statement)
       (catch_clause
-        (parameter_list)
+        (parameter_list
+          (variadic_parameter))
         (compound_statement)))))
 
 ================================================================================
@@ -590,7 +591,8 @@ void foo() try {} catch(...) {}
     (try_statement
       (compound_statement)
       (catch_clause
-        (parameter_list)
+        (parameter_list
+          (variadic_parameter))
         (compound_statement)))))
 
 ================================================================================
@@ -614,7 +616,8 @@ T::operator int() try { throw 1; } catch (...) { return 2; }
         (throw_statement
           (number_literal)))
       (catch_clause
-        (parameter_list)
+        (parameter_list
+          (variadic_parameter))
         (compound_statement
           (return_statement
             (number_literal)))))))

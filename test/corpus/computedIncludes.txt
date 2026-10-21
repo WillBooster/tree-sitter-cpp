@@ -1,0 +1,101 @@
+================================================================================
+Computed include operands retain their complete paths
+================================================================================
+
+#define HEADER "empty.h"
+#define EMPTY
+#define HEADER_OF(name) <name.h>
+#define HEADER_PATH(name) <name>
+#include HEADER EMPTY // trailing
+#include EMPTY HEADER /* trailing */
+#include HEADER_OF(empty) EMPTY
+#include HEADER_PATH(empty.h) EMPTY
+int following() { return 1; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_def
+    (identifier)
+    (preproc_arg))
+  (preproc_def
+    (identifier))
+  (preproc_function_def
+    (identifier)
+    (preproc_params
+      (identifier))
+    (preproc_arg))
+  (preproc_function_def
+    (identifier)
+    (preproc_params
+      (identifier))
+    (preproc_arg))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier))
+    (comment))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier))
+    (comment))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier)
+      (identifier)))
+  (preproc_include
+    (preproc_include_argument
+      (identifier)
+      (identifier)
+      (identifier)
+      (identifier)))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (return_statement
+        (number_literal)))))
+
+================================================================================
+Raw include arguments preserve following initializer elements
+================================================================================
+
+#define H(...) "empty.h"
+#define EMPTY
+int values[] = {
+#include H(/*inside*/ R"(a"b)") EMPTY // raw tail
+1
+};
+int after;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_function_def
+    (identifier)
+    (preproc_params)
+    (preproc_arg))
+  (preproc_def
+    (identifier))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (array_declarator
+        (identifier))
+      (initializer_list
+        (preproc_include
+          (preproc_include_argument
+            (identifier)
+            (comment)
+            (raw_string_literal
+              (raw_string_content))
+            (identifier))
+          (comment))
+        (number_literal))))
+  (declaration
+    (primitive_type)
+    (identifier)))
