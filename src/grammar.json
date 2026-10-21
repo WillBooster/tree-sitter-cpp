@@ -30978,10 +30978,6 @@
       "_scope_resolution"
     ],
     [
-      "attribute",
-      "_lambda_capture_identifier"
-    ],
-    [
       "expression",
       "contract_specifier"
     ],
