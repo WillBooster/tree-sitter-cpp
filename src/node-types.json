@@ -5366,6 +5366,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "variadic_parameter",
           "named": true
         },
@@ -5783,6 +5791,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -5843,6 +5855,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -5900,6 +5920,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -5967,6 +5995,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6027,6 +6059,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -6084,6 +6124,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -6122,6 +6170,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6182,6 +6234,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -6239,6 +6299,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -6384,6 +6452,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6444,6 +6516,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -6501,6 +6581,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -6568,6 +6656,10 @@
           "named": true
         },
         {
+          "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
           "type": "export_declaration",
           "named": true
         },
@@ -6628,6 +6720,14 @@
           "named": true
         },
         {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_pack_expansion",
           "named": true
         },
@@ -6685,6 +6785,14 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]

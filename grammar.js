@@ -138,7 +138,6 @@ module.exports = grammar(C, {
 
   conflicts: ($, original) => [
     ...original,
-    [$.parameter_list],
     [$.parameter_declaration, $.variadic_parameter_declaration],
     [$.sized_type_specifier, $._non_pack_sized_type],
     [$.sized_type_specifier, $.expression, $._non_pack_sized_type],
@@ -726,7 +725,11 @@ module.exports = grammar(C, {
         )
       ),
 
-    parameter_list: ($) => {
+    parameter_list: ($) => seq('(', optional($._parameter_clause), ')'),
+
+    ...preprocIf('_in_parameter_clause', () => sym('_parameter_clause'), 0, false),
+
+    _parameter_clause: ($) => {
       const parameter = choice(
         $.parameter_declaration,
         $.explicit_object_parameter_declaration,
@@ -735,23 +738,17 @@ module.exports = grammar(C, {
         alias($.expression_keyword_parameter, $.parameter_declaration)
       );
       return seq(
-        '(',
-        optional(
-          choice(
-            $.variadic_parameter,
-            seq(
-              repeat(seq(parameter, ',')),
-              choice(
-                seq(parameter, optional(seq(optional(','), $.variadic_parameter))),
-                prec.dynamic(
-                  PREC.CERTAIN_DECLARATION,
-                  seq(alias($._non_pack_unnamed_parameter, $.parameter_declaration), $.variadic_parameter)
-                )
-              )
-            )
-          )
-        ),
-        ')'
+        repeat(seq(parameter, ',')),
+        choice(
+          $.variadic_parameter,
+          seq(parameter, optional($.variadic_parameter)),
+          prec.dynamic(
+            PREC.CERTAIN_DECLARATION,
+            seq(alias($._non_pack_unnamed_parameter, $.parameter_declaration), $.variadic_parameter)
+          ),
+          alias(sym('preproc_if_in_parameter_clause'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_parameter_clause'), sym('preproc_ifdef'))
+        )
       );
     },
 

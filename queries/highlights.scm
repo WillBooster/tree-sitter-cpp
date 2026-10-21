@@ -83,6 +83,10 @@
 [(operator_name "operator" @keyword)
  (operator_cast "operator" @keyword)]
 
+; Operators
+
+[".*" "->*" "<=>"] @operator
+
 ; Strings
 
 (raw_string_literal) @string

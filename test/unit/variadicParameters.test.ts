@@ -61,7 +61,13 @@ template<class... size_t> void libraryNamedPack(size_t...);
 test('rejects parameters after a variadic ellipsis and a leading comma', () => {
   const parser = new Parser().setLanguage(language);
   try {
-    for (const source of ['void f(..., int value);', 'void f(int, ..., ...);', 'void f(, ...);']) {
+    for (const source of [
+      'void f(..., int value);',
+      'void f(int, ..., ...);',
+      'void f(, ...);',
+      'void f(\n#ifdef V\n..., int value\n#else\nint value\n#endif\n);',
+      'void f(\n#ifdef V\n...\n#else\nint value\n#endif\n, int after);',
+    ]) {
       const tree = parser.parse(source)!;
       try {
         expect(tree.rootNode.hasError, source).toBe(true);
@@ -168,6 +174,77 @@ test('recovers conditional parameter lists without consuming following definitio
       }
     }
   } finally {
+    parser.delete();
+  }
+});
+
+test('keeps conditional varargs within the complete function declaration', () => {
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(
+    language,
+    '(declaration declarator: (function_declarator declarator: (identifier) @name)) @declaration'
+  );
+  const conditional = '#ifdef VARARGS\n  const char *fmt, ...\n#else\n  const char *fmt\n#endif\n';
+  const definitions = ['int after1(int value) { return value; }', 'int after2(int value) { return value; }'];
+  const suffix = ');\n' + definitions.join('\n') + '\n';
+  try {
+    for (const prefix of ['int log_message(\n', 'int log_message(int first,\n']) {
+      let previous = conditional;
+      let tree = parser.parse(prefix + previous + suffix)!;
+      try {
+        for (const parameters of [conditional, 'const char *fmt, ...\n', 'const char *fmt\n', conditional]) {
+          tree.edit(
+            new Edit({
+              startIndex: prefix.length,
+              oldEndIndex: prefix.length + previous.length,
+              newEndIndex: prefix.length + parameters.length,
+              startPosition: { row: 1, column: 0 },
+              oldEndPosition: { row: previous.split('\n').length, column: 0 },
+              newEndPosition: { row: parameters.split('\n').length, column: 0 },
+            })
+          );
+          const source = prefix + parameters + suffix;
+          const next = parser.parse(source, tree)!;
+          tree.delete();
+          tree = next;
+          const fresh = parser.parse(source)!;
+          try {
+            expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+            expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
+            const captures = query.captures(tree.rootNode);
+            expect(
+              captures
+                .filter(({ name }) => name === 'name')
+                .map(({ node }) => [node.text, node.startIndex, node.endIndex])
+            ).toEqual([['log_message', 4, 15]]);
+            const declaration = prefix + parameters + ');';
+            expect(
+              captures
+                .filter(({ name }) => name === 'declaration')
+                .map(({ node }) => [node.text, node.startIndex, node.endIndex])
+            ).toEqual([[declaration, 0, declaration.length]]);
+            expect(
+              tree.rootNode
+                .descendantsOfType('function_definition')
+                .map((node) => [node.text, node.startIndex, node.endIndex])
+            ).toEqual(
+              definitions.map((definition) => [
+                definition,
+                source.indexOf(definition),
+                source.indexOf(definition) + definition.length,
+              ])
+            );
+          } finally {
+            fresh.delete();
+          }
+          previous = parameters;
+        }
+      } finally {
+        tree.delete();
+      }
+    }
+  } finally {
+    query.delete();
     parser.delete();
   }
 });
