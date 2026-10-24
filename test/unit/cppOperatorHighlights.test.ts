@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+
+import { type Node, Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
-import { Parser, Query, type Node } from '@willbooster/web-tree-sitter';
 
 import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';

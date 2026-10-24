@@ -1,12 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { Edit, type Node, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
-import { Edit, Parser, Query, type Node, type Tree } from '@willbooster/web-tree-sitter';
-
 import treeSitterJson from '../../tree-sitter.json';
-
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const Root = path.join(import.meta.dirname, '../..');

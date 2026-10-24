@@ -8,9 +8,7 @@
     "maxNodeModuleJsDepth": 1,
     "noEmit": true,
     "noUncheckedIndexedAccess": true,
-    "paths": {
-      "undici-types": ["./node_modules/undici-types/index.d.ts"]
-    },
+    "paths": {},
     "resolveJsonModule": true,
     "rootDir": ".",
     "types": ["bun", "vitest/globals"]
