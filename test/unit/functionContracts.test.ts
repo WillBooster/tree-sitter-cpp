@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+
 import { type Language, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { beforeAll, expect, test } from 'vitest';
 

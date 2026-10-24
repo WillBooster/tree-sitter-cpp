@@ -1,6 +1,5 @@
-import { expect, test } from 'vitest';
-
 import { Parser } from '@willbooster/web-tree-sitter';
+import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 

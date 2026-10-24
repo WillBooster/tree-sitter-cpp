@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+
+import { Edit, type Node, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
-import { Edit, Parser, Query, type Node, type Tree } from '@willbooster/web-tree-sitter';
+
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const root = path.resolve(import.meta.dirname, '../..');

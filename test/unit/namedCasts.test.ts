@@ -1,7 +1,9 @@
+import fs from 'node:fs';
+
 import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
+
 import { loadCurrentWasmBuild } from './wasmBuild';
-import fs from 'node:fs';
 
 await Parser.init();
 const language = await loadCurrentWasmBuild();

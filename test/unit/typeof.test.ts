@@ -1,8 +1,10 @@
+import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import assert from 'node:assert/strict';
-import { type Language, Parser, Query, Edit, type Node, type Tree } from '@willbooster/web-tree-sitter';
+
+import { Edit, type Language, type Node, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { afterAll, beforeAll, test } from 'vitest';
+
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 const root = path.resolve(import.meta.dirname, '../..');
 const snapshot = (node: Node): unknown => ({
