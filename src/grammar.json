@@ -32033,210 +32033,829 @@
     }
   ],
   "conflicts": [
-    ["attribute", "_scope_resolution"],
-    ["expression", "contract_specifier"],
-    ["expression", "explicit_object_parameter_declaration"],
-    ["_declarator", "attributed_declarator", "expression"],
-    ["_declarator", "attributed_declarator", "type_specifier", "expression"],
-    ["preproc_include_argument"],
-    ["_preproc_include_token", "preproc_argument_list"],
-    ["_preproc_include_path", "preproc_include_argument"],
-    ["compound_statement", "initializer_list"],
-    ["comma_expression", "_initializer_element"],
-    ["comma_expression", "initializer_pair"],
-    ["_block_item", "_initializer_directive"],
-    ["preproc_if", "preproc_if_in_initializer_list"],
-    ["preproc_ifdef", "preproc_ifdef_in_initializer_list"],
-    ["preproc_else", "preproc_else_in_initializer_list"],
-    ["preproc_elif", "preproc_elif_in_initializer_list"],
-    ["preproc_elifdef", "preproc_elifdef_in_initializer_list"],
-    ["type_specifier", "expression", "va_arg_expression", "macro_type_specifier"],
-    ["va_arg_expression", "expression"],
-    ["type_definition", "_declaration_modifiers"],
-    ["type_definition", "type_specifier"],
-    ["type_definition", "type_qualifier", "extension_expression"],
-    ["type_definition", "type_qualifier"],
-    ["_declaration_modifiers", "_empty_declaration"],
-    ["declaration", "storage_class_specifier"],
-    ["sized_type_specifier", "enum_specifier"],
-    ["type_specifier", "_declarator"],
-    ["type_specifier", "_declarator", "macro_type_specifier"],
-    ["type_specifier", "expression"],
-    ["type_specifier", "expression", "macro_type_specifier"],
-    ["type_specifier", "macro_type_specifier"],
-    ["type_specifier", "sized_type_specifier"],
-    ["type_specifier", "_sized_bit_int_specifier"],
-    ["sized_type_specifier"],
-    ["_sized_bit_int_specifier"],
-    ["sized_type_specifier", "_sized_bit_int_specifier"],
-    ["_type_declarator", "sized_type_specifier", "_sized_bit_int_specifier"],
-    ["type_qualifier", "atomic_type_specifier"],
-    ["type_definition", "_type_declarator"],
-    ["type_definition", "sized_type_specifier"],
-    ["type_definition", "_sized_bit_int_specifier"],
-    ["attributed_statement"],
-    ["case_statement"],
-    ["_single_attributed_statement"],
-    ["_declaration_modifiers", "_case_body_attributed_statement", "_case_label_attributes"],
-    ["_declaration_modifiers", "attributed_statement", "case_statement"],
-    ["enum_specifier"],
-    ["preproc_if_in_enumerator_list", "preproc_if_in_enumerator_list_no_comma"],
-    ["preproc_ifdef_in_enumerator_list", "preproc_ifdef_in_enumerator_list_no_comma"],
-    ["preproc_else_in_enumerator_list", "preproc_else_in_enumerator_list_no_comma"],
-    ["preproc_elif_in_enumerator_list", "preproc_elif_in_enumerator_list_no_comma"],
-    ["preproc_elifdef_in_enumerator_list", "preproc_elifdef_in_enumerator_list_no_comma"],
-    ["type_specifier", "_old_style_parameter_list"],
-    ["parameter_list", "_old_style_parameter_list"],
-    ["function_declarator", "_function_declaration_declarator"],
-    ["pointer_declarator"],
-    ["pointer_field_declarator"],
-    ["pointer_type_declarator"],
-    ["abstract_pointer_declarator"],
-    ["_top_level_item", "_top_level_statement"],
-    ["type_specifier", "_top_level_expression_statement"],
-    ["type_qualifier", "extension_expression"],
-    ["storage_class_specifier", "type_specifier"],
-    ["storage_class_specifier", "type_specifier", "expression"],
-    ["storage_class_specifier", "expression"],
-    ["attributed_declarator"],
-    ["attributed_declarator", "_declarator"],
-    ["attributed_declarator", "_declarator", "type_specifier"],
-    ["attributed_field_declarator"],
-    ["attributed_field_declarator", "_field_declarator"],
-    ["attributed_type_declarator"],
-    ["attributed_type_declarator", "_type_declarator"],
-    ["_declaration_specifiers"],
-    ["_compound_literal_storage_class_specifier", "type_specifier"],
-    ["_compound_literal_constexpr_specifier", "type_qualifier"],
-    ["preproc_if_in_parameter_prefix", "preproc_if_in_parameter_group"],
-    ["preproc_elif_in_parameter_prefix", "preproc_elif_in_parameter_group"],
-    ["preproc_ifdef_in_parameter_prefix", "preproc_ifdef_in_parameter_group"],
-    ["preproc_elifdef_in_parameter_prefix", "preproc_elifdef_in_parameter_group"],
-    ["preproc_if_in_parameter_clause", "preproc_if_in_parameter_prefix", "preproc_if_in_parameter_group"],
-    ["preproc_else_in_parameter_prefix", "preproc_else_in_parameter_group"],
-    ["preproc_elif_in_parameter_clause", "preproc_elif_in_parameter_prefix", "preproc_elif_in_parameter_group"],
-    ["preproc_ifdef_in_parameter_clause", "preproc_ifdef_in_parameter_prefix", "preproc_ifdef_in_parameter_group"],
+    [
+      "attribute",
+      "_scope_resolution"
+    ],
+    [
+      "expression",
+      "contract_specifier"
+    ],
+    [
+      "expression",
+      "explicit_object_parameter_declaration"
+    ],
+    [
+      "_declarator",
+      "attributed_declarator",
+      "expression"
+    ],
+    [
+      "_declarator",
+      "attributed_declarator",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "preproc_include_argument"
+    ],
+    [
+      "_preproc_include_token",
+      "preproc_argument_list"
+    ],
+    [
+      "_preproc_include_path",
+      "preproc_include_argument"
+    ],
+    [
+      "compound_statement",
+      "initializer_list"
+    ],
+    [
+      "comma_expression",
+      "_initializer_element"
+    ],
+    [
+      "comma_expression",
+      "initializer_pair"
+    ],
+    [
+      "_block_item",
+      "_initializer_directive"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_initializer_list"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_initializer_list"
+    ],
+    [
+      "preproc_else",
+      "preproc_else_in_initializer_list"
+    ],
+    [
+      "preproc_elif",
+      "preproc_elif_in_initializer_list"
+    ],
+    [
+      "preproc_elifdef",
+      "preproc_elifdef_in_initializer_list"
+    ],
+    [
+      "type_specifier",
+      "expression",
+      "va_arg_expression",
+      "macro_type_specifier"
+    ],
+    [
+      "va_arg_expression",
+      "expression"
+    ],
+    [
+      "type_definition",
+      "_declaration_modifiers"
+    ],
+    [
+      "type_definition",
+      "type_specifier"
+    ],
+    [
+      "type_definition",
+      "type_qualifier",
+      "extension_expression"
+    ],
+    [
+      "type_definition",
+      "type_qualifier"
+    ],
+    [
+      "_declaration_modifiers",
+      "_empty_declaration"
+    ],
+    [
+      "declaration",
+      "storage_class_specifier"
+    ],
+    [
+      "sized_type_specifier",
+      "enum_specifier"
+    ],
+    [
+      "type_specifier",
+      "_declarator"
+    ],
+    [
+      "type_specifier",
+      "_declarator",
+      "macro_type_specifier"
+    ],
+    [
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "type_specifier",
+      "expression",
+      "macro_type_specifier"
+    ],
+    [
+      "type_specifier",
+      "macro_type_specifier"
+    ],
+    [
+      "type_specifier",
+      "sized_type_specifier"
+    ],
+    [
+      "type_specifier",
+      "_sized_bit_int_specifier"
+    ],
+    [
+      "sized_type_specifier"
+    ],
+    [
+      "_sized_bit_int_specifier"
+    ],
+    [
+      "sized_type_specifier",
+      "_sized_bit_int_specifier"
+    ],
+    [
+      "_type_declarator",
+      "sized_type_specifier",
+      "_sized_bit_int_specifier"
+    ],
+    [
+      "type_qualifier",
+      "atomic_type_specifier"
+    ],
+    [
+      "type_definition",
+      "_type_declarator"
+    ],
+    [
+      "type_definition",
+      "sized_type_specifier"
+    ],
+    [
+      "type_definition",
+      "_sized_bit_int_specifier"
+    ],
+    [
+      "attributed_statement"
+    ],
+    [
+      "case_statement"
+    ],
+    [
+      "_single_attributed_statement"
+    ],
+    [
+      "_declaration_modifiers",
+      "_case_body_attributed_statement",
+      "_case_label_attributes"
+    ],
+    [
+      "_declaration_modifiers",
+      "attributed_statement",
+      "case_statement"
+    ],
+    [
+      "enum_specifier"
+    ],
+    [
+      "preproc_if_in_enumerator_list",
+      "preproc_if_in_enumerator_list_no_comma"
+    ],
+    [
+      "preproc_ifdef_in_enumerator_list",
+      "preproc_ifdef_in_enumerator_list_no_comma"
+    ],
+    [
+      "preproc_else_in_enumerator_list",
+      "preproc_else_in_enumerator_list_no_comma"
+    ],
+    [
+      "preproc_elif_in_enumerator_list",
+      "preproc_elif_in_enumerator_list_no_comma"
+    ],
+    [
+      "preproc_elifdef_in_enumerator_list",
+      "preproc_elifdef_in_enumerator_list_no_comma"
+    ],
+    [
+      "type_specifier",
+      "_old_style_parameter_list"
+    ],
+    [
+      "parameter_list",
+      "_old_style_parameter_list"
+    ],
+    [
+      "function_declarator",
+      "_function_declaration_declarator"
+    ],
+    [
+      "pointer_declarator"
+    ],
+    [
+      "pointer_field_declarator"
+    ],
+    [
+      "pointer_type_declarator"
+    ],
+    [
+      "abstract_pointer_declarator"
+    ],
+    [
+      "_top_level_item",
+      "_top_level_statement"
+    ],
+    [
+      "type_specifier",
+      "_top_level_expression_statement"
+    ],
+    [
+      "type_qualifier",
+      "extension_expression"
+    ],
+    [
+      "storage_class_specifier",
+      "type_specifier"
+    ],
+    [
+      "storage_class_specifier",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "storage_class_specifier",
+      "expression"
+    ],
+    [
+      "attributed_declarator"
+    ],
+    [
+      "attributed_declarator",
+      "_declarator"
+    ],
+    [
+      "attributed_declarator",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "attributed_field_declarator"
+    ],
+    [
+      "attributed_field_declarator",
+      "_field_declarator"
+    ],
+    [
+      "attributed_type_declarator"
+    ],
+    [
+      "attributed_type_declarator",
+      "_type_declarator"
+    ],
+    [
+      "_declaration_specifiers"
+    ],
+    [
+      "_compound_literal_storage_class_specifier",
+      "type_specifier"
+    ],
+    [
+      "_compound_literal_constexpr_specifier",
+      "type_qualifier"
+    ],
+    [
+      "preproc_if_in_parameter_prefix",
+      "preproc_if_in_parameter_group"
+    ],
+    [
+      "preproc_elif_in_parameter_prefix",
+      "preproc_elif_in_parameter_group"
+    ],
+    [
+      "preproc_ifdef_in_parameter_prefix",
+      "preproc_ifdef_in_parameter_group"
+    ],
+    [
+      "preproc_elifdef_in_parameter_prefix",
+      "preproc_elifdef_in_parameter_group"
+    ],
+    [
+      "preproc_if_in_parameter_clause",
+      "preproc_if_in_parameter_prefix",
+      "preproc_if_in_parameter_group"
+    ],
+    [
+      "preproc_else_in_parameter_prefix",
+      "preproc_else_in_parameter_group"
+    ],
+    [
+      "preproc_elif_in_parameter_clause",
+      "preproc_elif_in_parameter_prefix",
+      "preproc_elif_in_parameter_group"
+    ],
+    [
+      "preproc_ifdef_in_parameter_clause",
+      "preproc_ifdef_in_parameter_prefix",
+      "preproc_ifdef_in_parameter_group"
+    ],
     [
       "preproc_elifdef_in_parameter_clause",
       "preproc_elifdef_in_parameter_prefix",
       "preproc_elifdef_in_parameter_group"
     ],
-    ["_non_variadic_parameter_group", "_parameter_clause"],
-    ["preproc_else_in_parameter_clause", "preproc_else_in_parameter_prefix", "preproc_else_in_parameter_group"],
-    ["parameter_declaration", "variadic_parameter_declaration"],
-    ["sized_type_specifier", "_non_pack_sized_type"],
-    ["sized_type_specifier", "expression", "_non_pack_sized_type"],
-    ["sized_type_specifier", "expression", "call_expression", "_non_pack_sized_type"],
-    ["primitive_type", "_non_pack_unnamed_parameter"],
-    ["primitive_type", "_non_pack_sized_type"],
-    ["_class_declaration", "_instantiated_class_name"],
-    ["_field_initializer_sequence"],
-    ["_field_initializer_conditionals"],
-    ["preproc_elifdef_in_initializer_list", "preproc_elifdef_in_block"],
-    ["preproc_if_in_initializer_list", "preproc_if_in_block"],
-    ["preproc_elif_in_initializer_list", "preproc_elif_in_block"],
-    ["preproc_else_in_initializer_list", "preproc_else_in_block"],
-    ["preproc_ifdef_in_initializer_list", "preproc_ifdef_in_block"],
-    ["comma_expression", "_initializer_element"],
-    ["_block_item", "_initializer_directive"],
-    ["type_specifier", "expression", "template_type"],
-    ["type_specifier", "expression", "va_arg_expression"],
-    ["_declarator", "type_specifier", "typeof_specifier", "expression"],
-    ["typeof_specifier", "expression"],
-    ["typeof_specifier", "type_specifier"],
-    ["type_specifier", "template_type"],
-    ["type_specifier", "optional_type_parameter_declaration"],
-    ["type_specifier", "typeof_specifier", "expression"],
-    ["_type_declarator", "typeof_specifier"],
-    ["_declarator", "type_specifier", "typeof_specifier"],
-    ["_declarator", "expression", "va_arg_expression"],
-    ["type_definition", "_declaration_specifiers", "_built_in_declaration_specifiers", "_constructor_specifiers"],
-    ["type_definition", "type_specifier", "_built_in_declaration_specifiers"],
-    ["storage_class_specifier", "expression"],
-    ["sized_type_specifier", "_sized_bit_int_specifier", "_top_level_expression_statement"],
-    ["sized_type_specifier", "_sized_bit_int_specifier", "expression"],
-    ["sized_type_specifier", "_sized_bit_int_specifier", "expression", "call_expression"],
-    ["expression", "template_type"],
-    ["_declarator", "type_specifier", "expression", "va_arg_expression"],
-    ["pack_index_expression", "pack_index_type"],
-    ["_declaration_modifiers", "friend_declaration"],
-    ["type_qualifier", "friend_declaration"],
-    ["_declaration_modifiers", "friend_declaration", "using_declaration"],
-    ["_declaration_modifiers", "attributed_statement", "case_statement", "using_declaration"],
-    ["attributed_statement", "case_statement", "using_declaration"],
-    ["attributed_statement", "case_statement"],
-    ["_declaration_modifiers", "_single_case_statement", "_single_attributed_statement"],
-    ["_single_case_statement", "_single_attributed_statement"],
-    ["_declaration_modifiers", "_case_body_attributed_statement"],
-    ["template_function", "template_type"],
-    ["template_function", "template_type", "expression"],
-    ["template_function", "template_type", "qualified_identifier"],
-    ["template_function", "template_type", "qualified_identifier", "qualified_type_identifier"],
-    ["template_type", "qualified_type_identifier"],
-    ["qualified_type_identifier", "qualified_identifier"],
-    ["comma_expression", "initializer_list"],
-    ["expression", "_declarator"],
-    ["expression", "structured_binding_declarator"],
-    ["expression", "_declarator", "type_specifier"],
-    ["expression", "identifier_parameter_pack_expansion"],
-    ["expression", "_lambda_capture_identifier"],
-    ["expression", "_lambda_capture"],
-    ["expression", "structured_binding_declarator", "_lambda_capture_identifier"],
-    ["structured_binding_declarator", "_lambda_capture_identifier"],
-    ["parameter_list", "argument_list"],
-    ["type_specifier", "call_expression"],
-    ["sized_type_specifier", "expression", "call_expression"],
-    ["sized_type_specifier", "expression"],
-    ["sized_type_specifier", "_top_level_expression_statement"],
-    ["expression", "call_expression"],
-    ["_binary_fold_operator", "_fold_operator"],
-    ["_function_declarator_core"],
-    ["_trailing_return_type_descriptor"],
-    ["_trailing_abstract_pointer_declarator"],
-    ["_trailing_abstract_reference_declarator"],
-    ["_sizeof_reference_pointer_declarator"],
-    ["_sizeof_reference_qualified_pointer_declarator"],
-    ["_declarator", "parenthesized_argument_initialized_reference_declarator"],
-    ["_declarator", "argument_initialized_rvalue_reference_declarator"],
-    ["_declarator", "parenthesized_argument_initialized_pointer_declarator"],
-    ["function_definition_pointer_declarator"],
-    ["argument_initialized_pointer_declarator"],
-    ["parenthesized_argument_initialized_pointer_declarator"],
-    ["required_parentheses_pointer_declarator"],
-    ["direct_initialized_pointer_declarator"],
-    ["variadic_pointer_declarator"],
-    ["qualified_pointer_declarator"],
-    ["abstract_qualified_pointer_declarator"],
-    ["qualified_pointer_type_declarator"],
-    ["qualified_pointer_field_declarator"],
-    ["_trailing_abstract_qualified_pointer_declarator"],
-    ["null", "expression_keyword_parameter"],
-    ["expression", "expression_keyword_parameter"],
-    ["expression_keyword_parameter", "operator_argument"],
-    ["_declarator", "_argument_initialized_name"],
-    ["init_declarator", "_argument_initialized_declarator"],
-    ["_argument_initialized_declarator", "later_keyword_argument_init_declarator"],
-    ["expression", "parenthesized_qualified_identifier"],
-    ["initializer_pair", "comma_expression"],
-    ["expression_statement", "_for_statement_body"],
-    ["init_statement", "_for_statement_body"],
-    ["field_expression", "template_method", "template_type"],
-    ["field_expression", "template_method"],
-    ["sizeof_operand_field_expression", "template_method", "template_type"],
-    ["sizeof_operand_field_expression", "template_method"],
-    ["qualified_field_identifier", "template_method", "template_type"],
-    ["type_specifier", "template_type", "template_function", "expression"],
-    ["splice_type_specifier", "splice_expression"],
-    ["destructor_name", "_template_destructor_name"],
-    ["_declarator", "parenthesized_pointer_declarator"],
-    ["_declarator", "built_in_parenthesized_declarator"],
-    ["required_parentheses_function_declarator", "_direct_initialized_parenthesized_declarator"],
-    ["built_in_parenthesized_function_declarator", "_direct_initialized_declarator"],
-    ["_declaration_specifiers", "_built_in_declaration_specifiers", "_constructor_specifiers"],
-    ["type_specifier", "_built_in_declaration_specifiers"],
-    ["type_specifier", "call_expression", "_built_in_declaration_specifiers"],
-    ["type_specifier", "call_expression", "built_in_function_type_descriptor"],
-    ["_declarator", "_function_definition_declarator"]
+    [
+      "_non_variadic_parameter_group",
+      "_parameter_clause"
+    ],
+    [
+      "preproc_else_in_parameter_clause",
+      "preproc_else_in_parameter_prefix",
+      "preproc_else_in_parameter_group"
+    ],
+    [
+      "parameter_declaration",
+      "variadic_parameter_declaration"
+    ],
+    [
+      "sized_type_specifier",
+      "_non_pack_sized_type"
+    ],
+    [
+      "sized_type_specifier",
+      "expression",
+      "_non_pack_sized_type"
+    ],
+    [
+      "sized_type_specifier",
+      "expression",
+      "call_expression",
+      "_non_pack_sized_type"
+    ],
+    [
+      "primitive_type",
+      "_non_pack_unnamed_parameter"
+    ],
+    [
+      "primitive_type",
+      "_non_pack_sized_type"
+    ],
+    [
+      "_class_declaration",
+      "_instantiated_class_name"
+    ],
+    [
+      "_field_initializer_sequence"
+    ],
+    [
+      "_field_initializer_conditionals"
+    ],
+    [
+      "preproc_elifdef_in_initializer_list",
+      "preproc_elifdef_in_block"
+    ],
+    [
+      "preproc_if_in_initializer_list",
+      "preproc_if_in_block"
+    ],
+    [
+      "preproc_elif_in_initializer_list",
+      "preproc_elif_in_block"
+    ],
+    [
+      "preproc_else_in_initializer_list",
+      "preproc_else_in_block"
+    ],
+    [
+      "preproc_ifdef_in_initializer_list",
+      "preproc_ifdef_in_block"
+    ],
+    [
+      "comma_expression",
+      "_initializer_element"
+    ],
+    [
+      "_block_item",
+      "_initializer_directive"
+    ],
+    [
+      "type_specifier",
+      "expression",
+      "template_type"
+    ],
+    [
+      "type_specifier",
+      "expression",
+      "va_arg_expression"
+    ],
+    [
+      "_declarator",
+      "type_specifier",
+      "typeof_specifier",
+      "expression"
+    ],
+    [
+      "typeof_specifier",
+      "expression"
+    ],
+    [
+      "typeof_specifier",
+      "type_specifier"
+    ],
+    [
+      "type_specifier",
+      "template_type"
+    ],
+    [
+      "type_specifier",
+      "optional_type_parameter_declaration"
+    ],
+    [
+      "type_specifier",
+      "typeof_specifier",
+      "expression"
+    ],
+    [
+      "_type_declarator",
+      "typeof_specifier"
+    ],
+    [
+      "_declarator",
+      "type_specifier",
+      "typeof_specifier"
+    ],
+    [
+      "_declarator",
+      "expression",
+      "va_arg_expression"
+    ],
+    [
+      "type_definition",
+      "_declaration_specifiers",
+      "_built_in_declaration_specifiers",
+      "_constructor_specifiers"
+    ],
+    [
+      "type_definition",
+      "type_specifier",
+      "_built_in_declaration_specifiers"
+    ],
+    [
+      "storage_class_specifier",
+      "expression"
+    ],
+    [
+      "sized_type_specifier",
+      "_sized_bit_int_specifier",
+      "_top_level_expression_statement"
+    ],
+    [
+      "sized_type_specifier",
+      "_sized_bit_int_specifier",
+      "expression"
+    ],
+    [
+      "sized_type_specifier",
+      "_sized_bit_int_specifier",
+      "expression",
+      "call_expression"
+    ],
+    [
+      "expression",
+      "template_type"
+    ],
+    [
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "va_arg_expression"
+    ],
+    [
+      "pack_index_expression",
+      "pack_index_type"
+    ],
+    [
+      "_declaration_modifiers",
+      "friend_declaration"
+    ],
+    [
+      "type_qualifier",
+      "friend_declaration"
+    ],
+    [
+      "_declaration_modifiers",
+      "friend_declaration",
+      "using_declaration"
+    ],
+    [
+      "_declaration_modifiers",
+      "attributed_statement",
+      "case_statement",
+      "using_declaration"
+    ],
+    [
+      "attributed_statement",
+      "case_statement",
+      "using_declaration"
+    ],
+    [
+      "attributed_statement",
+      "case_statement"
+    ],
+    [
+      "_declaration_modifiers",
+      "_single_case_statement",
+      "_single_attributed_statement"
+    ],
+    [
+      "_single_case_statement",
+      "_single_attributed_statement"
+    ],
+    [
+      "_declaration_modifiers",
+      "_case_body_attributed_statement"
+    ],
+    [
+      "template_function",
+      "template_type"
+    ],
+    [
+      "template_function",
+      "template_type",
+      "expression"
+    ],
+    [
+      "template_function",
+      "template_type",
+      "qualified_identifier"
+    ],
+    [
+      "template_function",
+      "template_type",
+      "qualified_identifier",
+      "qualified_type_identifier"
+    ],
+    [
+      "template_type",
+      "qualified_type_identifier"
+    ],
+    [
+      "qualified_type_identifier",
+      "qualified_identifier"
+    ],
+    [
+      "comma_expression",
+      "initializer_list"
+    ],
+    [
+      "expression",
+      "_declarator"
+    ],
+    [
+      "expression",
+      "structured_binding_declarator"
+    ],
+    [
+      "expression",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "expression",
+      "identifier_parameter_pack_expansion"
+    ],
+    [
+      "expression",
+      "_lambda_capture_identifier"
+    ],
+    [
+      "expression",
+      "_lambda_capture"
+    ],
+    [
+      "expression",
+      "structured_binding_declarator",
+      "_lambda_capture_identifier"
+    ],
+    [
+      "structured_binding_declarator",
+      "_lambda_capture_identifier"
+    ],
+    [
+      "parameter_list",
+      "argument_list"
+    ],
+    [
+      "type_specifier",
+      "call_expression"
+    ],
+    [
+      "sized_type_specifier",
+      "expression",
+      "call_expression"
+    ],
+    [
+      "sized_type_specifier",
+      "expression"
+    ],
+    [
+      "sized_type_specifier",
+      "_top_level_expression_statement"
+    ],
+    [
+      "expression",
+      "call_expression"
+    ],
+    [
+      "_binary_fold_operator",
+      "_fold_operator"
+    ],
+    [
+      "_function_declarator_core"
+    ],
+    [
+      "_trailing_return_type_descriptor"
+    ],
+    [
+      "_trailing_abstract_pointer_declarator"
+    ],
+    [
+      "_trailing_abstract_reference_declarator"
+    ],
+    [
+      "_sizeof_reference_pointer_declarator"
+    ],
+    [
+      "_sizeof_reference_qualified_pointer_declarator"
+    ],
+    [
+      "_declarator",
+      "parenthesized_argument_initialized_reference_declarator"
+    ],
+    [
+      "_declarator",
+      "argument_initialized_rvalue_reference_declarator"
+    ],
+    [
+      "_declarator",
+      "parenthesized_argument_initialized_pointer_declarator"
+    ],
+    [
+      "function_definition_pointer_declarator"
+    ],
+    [
+      "argument_initialized_pointer_declarator"
+    ],
+    [
+      "parenthesized_argument_initialized_pointer_declarator"
+    ],
+    [
+      "required_parentheses_pointer_declarator"
+    ],
+    [
+      "direct_initialized_pointer_declarator"
+    ],
+    [
+      "variadic_pointer_declarator"
+    ],
+    [
+      "qualified_pointer_declarator"
+    ],
+    [
+      "abstract_qualified_pointer_declarator"
+    ],
+    [
+      "qualified_pointer_type_declarator"
+    ],
+    [
+      "qualified_pointer_field_declarator"
+    ],
+    [
+      "_trailing_abstract_qualified_pointer_declarator"
+    ],
+    [
+      "null",
+      "expression_keyword_parameter"
+    ],
+    [
+      "expression",
+      "expression_keyword_parameter"
+    ],
+    [
+      "expression_keyword_parameter",
+      "operator_argument"
+    ],
+    [
+      "_declarator",
+      "_argument_initialized_name"
+    ],
+    [
+      "init_declarator",
+      "_argument_initialized_declarator"
+    ],
+    [
+      "_argument_initialized_declarator",
+      "later_keyword_argument_init_declarator"
+    ],
+    [
+      "expression",
+      "parenthesized_qualified_identifier"
+    ],
+    [
+      "initializer_pair",
+      "comma_expression"
+    ],
+    [
+      "expression_statement",
+      "_for_statement_body"
+    ],
+    [
+      "init_statement",
+      "_for_statement_body"
+    ],
+    [
+      "field_expression",
+      "template_method",
+      "template_type"
+    ],
+    [
+      "field_expression",
+      "template_method"
+    ],
+    [
+      "sizeof_operand_field_expression",
+      "template_method",
+      "template_type"
+    ],
+    [
+      "sizeof_operand_field_expression",
+      "template_method"
+    ],
+    [
+      "qualified_field_identifier",
+      "template_method",
+      "template_type"
+    ],
+    [
+      "type_specifier",
+      "template_type",
+      "template_function",
+      "expression"
+    ],
+    [
+      "splice_type_specifier",
+      "splice_expression"
+    ],
+    [
+      "destructor_name",
+      "_template_destructor_name"
+    ],
+    [
+      "_declarator",
+      "parenthesized_pointer_declarator"
+    ],
+    [
+      "_declarator",
+      "built_in_parenthesized_declarator"
+    ],
+    [
+      "required_parentheses_function_declarator",
+      "_direct_initialized_parenthesized_declarator"
+    ],
+    [
+      "built_in_parenthesized_function_declarator",
+      "_direct_initialized_declarator"
+    ],
+    [
+      "_declaration_specifiers",
+      "_built_in_declaration_specifiers",
+      "_constructor_specifiers"
+    ],
+    [
+      "type_specifier",
+      "_built_in_declaration_specifiers"
+    ],
+    [
+      "type_specifier",
+      "call_expression",
+      "_built_in_declaration_specifiers"
+    ],
+    [
+      "type_specifier",
+      "call_expression",
+      "built_in_function_type_descriptor"
+    ],
+    [
+      "_declarator",
+      "_function_definition_declarator"
+    ]
   ],
   "precedences": [
     [
