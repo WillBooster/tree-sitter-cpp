@@ -1,0 +1,11 @@
+struct Item { int value; };
+struct Holder { Item value; };
+class Holder object{Item{1}};
+class Holder defaultItem{Item{}};
+class Holder designated{.value = Item{2}};
+class Holder nested{{3}};
+class Holder invoked{[] { return Item{4}; }()};
+class Holder parenthesized{(Item{5})};
+class Holder innerDesignated{Item{.value = 6}};
+class Holder copied = {Item{7}};
+class Holder empty{};

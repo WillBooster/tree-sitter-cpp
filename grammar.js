@@ -150,6 +150,7 @@ module.exports = grammar(C, {
   ],
 
   conflicts: ($, original) => [
+    [$._class_declaration_item, $._class_name],
     [$.attribute, $._scope_resolution],
     [$.expression, $.contract_specifier],
     [$.expression, $.explicit_object_parameter_declaration],
@@ -496,11 +497,32 @@ module.exports = grammar(C, {
               optional($.virtual_specifier),
               optional($.base_class_clause),
               field('body', $.field_declaration_list)
+            ),
+            seq(
+              repeat1($.identifier),
+              field('name', $._class_name),
+              optional($.virtual_specifier),
+              optional($.base_class_clause),
+              field('body', alias($._macro_class_body, $.field_declaration_list))
             )
           ),
           optional($.attribute_specifier)
         )
       ),
+
+    _macro_class_body: ($) => prec.dynamic(-1, seq('{', repeat($._macro_class_body_item), '}')),
+
+    _macro_class_body_item: ($) =>
+      choice(
+        prec.dynamic(2, choice($.field_declaration, ...cppClassMembers($))),
+        $.preproc_def,
+        $.preproc_function_def,
+        $.preproc_call,
+        alias(sym('preproc_if_in_macro_class_body'), sym('preproc_if')),
+        alias(sym('preproc_ifdef_in_macro_class_body'), sym('preproc_ifdef'))
+      ),
+
+    ...preprocIf('_in_macro_class_body', () => sym('_macro_class_body_item')),
 
     class_specifier: ($) => seq('class', $._class_declaration),
 
@@ -1247,24 +1269,7 @@ module.exports = grammar(C, {
         )
       ),
 
-    _field_declaration_list_item: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        $.template_declaration,
-        alias($.inline_method_definition, $.function_definition),
-        alias($.constructor_or_destructor_definition, $.function_definition),
-        alias($.constructor_or_destructor_declaration, $.declaration),
-        alias($.operator_cast_definition, $.function_definition),
-        alias($.operator_cast_declaration, $.declaration),
-        $.friend_declaration,
-        seq($.access_specifier, ':'),
-        $.alias_declaration,
-        $.using_declaration,
-        $.type_definition,
-        $.static_assert_declaration,
-        $.consteval_block_declaration,
-        ';'
-      ),
+    _field_declaration_list_item: ($, original = missingOriginalRule()) => choice(original, ...cppClassMembers($)),
 
     field_declaration: ($) =>
       seq(
@@ -2732,6 +2737,29 @@ module.exports = grammar(C, {
       ),
   },
 });
+
+/**
+ * @param {NoInfer<GrammarSymbols<'template_declaration' | 'inline_method_definition' | 'function_definition' | 'constructor_or_destructor_definition' | 'constructor_or_destructor_declaration' | 'declaration' | 'operator_cast_definition' | 'operator_cast_declaration' | 'friend_declaration' | 'access_specifier' | 'alias_declaration' | 'using_declaration' | 'type_definition' | 'static_assert_declaration' | 'consteval_block_declaration'>>} $
+ * @returns {RuleOrLiteral[]}
+ */
+function cppClassMembers($) {
+  return [
+    $.template_declaration,
+    alias($.inline_method_definition, $.function_definition),
+    alias($.constructor_or_destructor_definition, $.function_definition),
+    alias($.constructor_or_destructor_declaration, $.declaration),
+    alias($.operator_cast_definition, $.function_definition),
+    alias($.operator_cast_declaration, $.declaration),
+    $.friend_declaration,
+    seq($.access_specifier, ':'),
+    $.alias_declaration,
+    $.using_declaration,
+    $.type_definition,
+    $.static_assert_declaration,
+    $.consteval_block_declaration,
+    ';',
+  ];
+}
 
 /**
  * @param {NoInfer<GrammarSymbols<'identifier' | 'co_await_expression' | 'requires_expression' | 'requires_clause' | 'template_function' | 'qualified_identifier' | 'new_expression' | 'delete_expression' | 'lambda_expression' | 'pack_index_expression' | 'this' | 'user_defined_literal' | 'fold_expression' | 'reflect_expression' | 'splice_expression'>>} $

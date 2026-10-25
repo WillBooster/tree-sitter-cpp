@@ -215,11 +215,6 @@ examples/leveldb/include/leveldb/dumpfile.h
 examples/leveldb/include/leveldb/env.h
 examples/leveldb/include/leveldb/filter_policy.h
 examples/leveldb/include/leveldb/iterator.h
-examples/leveldb/include/leveldb/slice.h
-examples/leveldb/include/leveldb/status.h
-examples/leveldb/include/leveldb/table.h
-examples/leveldb/include/leveldb/table_builder.h
-examples/leveldb/include/leveldb/write_batch.h
 examples/leveldb/port/port_example.h
 examples/leveldb/port/port_stdcxx.h
 examples/leveldb/util/cache.cc
