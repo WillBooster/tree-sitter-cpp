@@ -150,3 +150,26 @@ test('retains macro function fields and query ranges after body edits', () => {
     parser.delete();
   }
 });
+
+test('retains nested template argument types inside function bodies', () => {
+  const nestedSource = fs.readFileSync(new URL('../fixtures/nestedTemplateStatements.cpp', import.meta.url), 'utf8');
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(
+    language,
+    '(template_argument_list (type_descriptor type: (qualified_identifier name: (template_type) @nested)))'
+  );
+  const tree = parser.parse(nestedSource)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual([
+      'vector<std::string>',
+      'set<std::string>',
+      'unordered_set<std::string>',
+      'bar<baz::qux>',
+    ]);
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});
