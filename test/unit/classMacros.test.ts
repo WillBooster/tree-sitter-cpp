@@ -173,3 +173,72 @@ test('retains nested template argument types inside function bodies', () => {
     parser.delete();
   }
 });
+
+test('keeps nonempty elaborated-type variable initializers as declarations', () => {
+  const input = fs.readFileSync(new URL('../fixtures/elaboratedInitializers.cpp', import.meta.url), 'utf8');
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(
+    language,
+    '(declaration type: (class_specifier) declarator: (init_declarator declarator: (identifier) @variable value: (initializer_list)))'
+  );
+  const tree = parser.parse(input)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual([
+      'object',
+      'defaultItem',
+      'designated',
+      'nested',
+      'invoked',
+      'parenthesized',
+      'innerDesignated',
+      'copied',
+      'empty',
+    ]);
+    expect(tree.rootNode.descendantsOfType('class_specifier').some((node) => node.childForFieldName('body'))).toBe(
+      false
+    );
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});
+
+test('retains nested template expression types and ranges inside function bodies', () => {
+  const input = fs.readFileSync(new URL('../fixtures/nestedTemplateExpressions.cpp', import.meta.url), 'utf8');
+  const first = 'std::cout << std::is_same<Plain, A<Nested<C>>>::value;';
+  const second = 'std::cout << std::is_same<ns::A<std::vector<std::uint8_t>>, Plain>::value;';
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(
+    language,
+    `(template_argument_list (type_descriptor type: (template_type) @nested))
+(template_argument_list (type_descriptor type: (qualified_identifier name: (template_type) @nested)))`
+  );
+  try {
+    for (const [removed, expected] of [
+      [second, ['A<Nested<C>>', 'Nested<C>']],
+      [first, ['A<std::vector<std::uint8_t>>']],
+    ] as const) {
+      const current = input.replace(removed, '');
+      const tree = parser.parse(current)!;
+      try {
+        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+        expect(tree.rootNode.descendantsOfType('binary_expression')).toHaveLength(1);
+        expect(tree.rootNode.descendantsOfType('comma_expression')).toHaveLength(0);
+        const captures = query.captures(tree.rootNode);
+        expect(captures.map(({ node }) => node.text)).toEqual(expect.arrayContaining([...expected]));
+        for (const { node } of captures) {
+          const start = current.indexOf(node.text, current.indexOf('int main()'));
+          expect(node.startIndex).toBe(start);
+          expect(node.endIndex).toBe(start + node.text.length);
+        }
+      } finally {
+        tree.delete();
+      }
+    }
+  } finally {
+    query.delete();
+    parser.delete();
+  }
+});
