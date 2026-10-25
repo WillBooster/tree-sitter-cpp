@@ -1,0 +1,86 @@
+==================
+Attribute macros before a class definition name
+==================
+
+class API Derived : public Base {
+public:
+  int value;
+};
+class API Plain { int value; };
+struct API LOCAL Payload { int value; };
+union API Value { int value; };
+
+---
+
+(translation_unit
+  (class_specifier
+    (identifier)
+    name: (type_identifier)
+    (base_class_clause
+      (access_specifier)
+      (type_identifier))
+    body: (field_declaration_list
+      (access_specifier)
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))))
+  (class_specifier
+    (identifier)
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))))
+  (struct_specifier
+    (identifier)
+    (identifier)
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))))
+  (union_specifier
+    (identifier)
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier)))))
+
+==================
+Elaborated types with braced variable initialization
+==================
+
+struct Type {};
+class Type object{};
+class Type copied = {};
+class Type *makeType();
+class Forward;
+
+---
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list))
+  (declaration
+    type: (class_specifier
+      name: (type_identifier))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (initializer_list)))
+  (declaration
+    type: (class_specifier
+      name: (type_identifier))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (initializer_list)))
+  (declaration
+    type: (class_specifier
+      name: (type_identifier))
+    declarator: (pointer_declarator
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list))))
+  (class_specifier
+    name: (type_identifier)))

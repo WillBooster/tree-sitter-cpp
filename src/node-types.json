@@ -1658,6 +1658,10 @@
           "named": true
         },
         {
+          "type": "identifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -3873,10 +3877,6 @@
         "multiple": false,
         "required": true,
         "types": [
-          {
-            "type": "_declarator",
-            "named": true
-          },
           {
             "type": "_field_declarator",
             "named": true
@@ -7624,6 +7624,10 @@
           "named": true
         },
         {
+          "type": "identifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -8671,6 +8675,10 @@
         },
         {
           "type": "base_class_clause",
+          "named": true
+        },
+        {
+          "type": "identifier",
           "named": true
         },
         {

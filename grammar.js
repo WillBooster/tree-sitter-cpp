@@ -150,6 +150,9 @@ module.exports = grammar(C, {
   ],
 
   conflicts: ($, original) => [
+    [$._class_declaration_item, $._class_name],
+    [$._declarator, $.attributed_declarator, $._function_definition_declarator],
+    [$.function_definition_qualified_pointer_declarator],
     [$.attribute, $._scope_resolution],
     [$.expression, $.contract_specifier],
     [$.expression, $.explicit_object_parameter_declaration],
@@ -496,6 +499,16 @@ module.exports = grammar(C, {
               optional($.virtual_specifier),
               optional($.base_class_clause),
               field('body', $.field_declaration_list)
+            ),
+            prec.dynamic(
+              -1,
+              seq(
+                repeat1($.identifier),
+                field('name', $._class_name),
+                optional($.virtual_specifier),
+                optional($.base_class_clause),
+                field('body', $.field_declaration_list)
+              )
             )
           ),
           optional($.attribute_specifier)
@@ -522,9 +535,11 @@ module.exports = grammar(C, {
       choice(
         {
           type: 'SEQ',
-          members: ruleMembers(original, 'SEQ').map((e) =>
-            e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
-          ),
+          members: ruleMembers(original, 'SEQ').map((e) => {
+            if (e.type !== 'FIELD') return e;
+            if (e.name === 'declarator') return field('declarator', $._function_definition_declarator);
+            return e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e;
+          }),
         },
         // Only declarators that end in a parameter list take `= default;` or `= delete;`; offering the clause after any
         // declarator would make `default` a keyword in every initializer, e.g. in `int c = default + 1;` when `default`
@@ -542,8 +557,24 @@ module.exports = grammar(C, {
     _function_definition_declarator: ($) =>
       choice(
         $.function_declarator,
+        alias($.function_definition_parenthesized_declarator, $.parenthesized_declarator),
+        alias($.function_definition_array_declarator, $.array_declarator),
+        alias($.function_definition_qualified_pointer_declarator, $.qualified_identifier),
         alias($.function_definition_pointer_declarator, $.pointer_declarator),
         alias($.function_definition_reference_declarator, $.reference_declarator)
+      ),
+    function_definition_parenthesized_declarator: ($) =>
+      prec.dynamic(
+        PREC.PAREN_DECLARATOR,
+        seq('(', optional($.ms_call_modifier), $._function_definition_declarator, ')')
+      ),
+    function_definition_array_declarator: ($) =>
+      withDeclarator(C.grammar.rules.array_declarator, $._function_definition_declarator),
+    function_definition_qualified_pointer_declarator: ($) =>
+      pointerToMember(
+        $,
+        $.function_definition_qualified_pointer_declarator,
+        alias($.function_definition_pointer_declarator, $.pointer_declarator)
       ),
     function_definition_pointer_declarator: ($) => withPointerDeclarator($, $._function_definition_declarator),
     function_definition_reference_declarator: ($) =>
