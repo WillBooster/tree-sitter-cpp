@@ -3878,6 +3878,10 @@
         "required": true,
         "types": [
           {
+            "type": "_declarator",
+            "named": true
+          },
+          {
             "type": "_field_declarator",
             "named": true
           },

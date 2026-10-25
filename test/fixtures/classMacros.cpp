@@ -17,3 +17,11 @@ int (&returnReference())[3] { static int values[3]; return values; }
 int (*returnArrayPointer())[3] { return nullptr; }
 struct Member { int value; };
 int Member::* memberPointer() { return &Member::value; }
+#define PRIMITIVE_FUNCTION primitiveFunction()
+int PRIMITIVE_FUNCTION { return 1; }
+#define USER_FUNCTION userFunction()
+Type USER_FUNCTION { return Type{}; }
+#define ELABORATED_FUNCTION elaboratedFunction()
+class Type ELABORATED_FUNCTION { return Type{}; }
+Type ordinaryFunction() { return Type{}; }
+class Type ordinaryElaboratedFunction() { return {}; }

@@ -4483,8 +4483,21 @@
               "type": "FIELD",
               "name": "declarator",
               "content": {
-                "type": "SYMBOL",
-                "name": "_function_definition_declarator"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "_function_definition_declarator"
+                  },
+                  {
+                    "type": "PREC_DYNAMIC",
+                    "value": -2,
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_declarator"
+                    }
+                  }
+                ]
               }
             },
             {

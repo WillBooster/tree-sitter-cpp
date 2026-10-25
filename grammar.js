@@ -537,7 +537,8 @@ module.exports = grammar(C, {
           type: 'SEQ',
           members: ruleMembers(original, 'SEQ').map((e) => {
             if (e.type !== 'FIELD') return e;
-            if (e.name === 'declarator') return field('declarator', $._function_definition_declarator);
+            if (e.name === 'declarator')
+              return field('declarator', choice($._function_definition_declarator, prec.dynamic(-2, $._declarator)));
             return e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e;
           }),
         },

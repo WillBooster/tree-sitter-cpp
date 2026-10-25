@@ -25,10 +25,23 @@ test('preserves macro class definitions, ordinary declarators, and class tags af
       tree.rootNode.descendantsOfType('init_declarator').map((node) => node.childForFieldName('declarator')?.text)
     ).toEqual(['object', 'copied']);
     expect(
-      tree.rootNode
-        .descendantsOfType('function_definition')
-        .map((node) => node.childForFieldName('declarator')?.descendantsOfType('identifier')[0]?.text)
-    ).toEqual(['parenthesized', 'nested', 'returnPointer', 'returnReference', 'returnArrayPointer', 'memberPointer']);
+      tree.rootNode.descendantsOfType('function_definition').map((node) => {
+        const declarator = node.childForFieldName('declarator')!;
+        return declarator.type === 'identifier' ? declarator.text : declarator.descendantsOfType('identifier')[0]?.text;
+      })
+    ).toEqual([
+      'parenthesized',
+      'nested',
+      'returnPointer',
+      'returnReference',
+      'returnArrayPointer',
+      'memberPointer',
+      'PRIMITIVE_FUNCTION',
+      'USER_FUNCTION',
+      'ELABORATED_FUNCTION',
+      'ordinaryFunction',
+      'ordinaryElaboratedFunction',
+    ]);
     const startIndex = source.indexOf('Derived');
     tree.edit(
       new Edit({
@@ -54,6 +67,12 @@ test('preserves macro class definitions, ordinary declarators, and class tags af
       expect(definitions).toContain('Plain');
       expect(definitions).toContain('Payload');
       expect(definitions).not.toContain('API');
+      const functionNames = tags
+        .captures(edited.rootNode)
+        .filter(({ name }) => name === 'definition.function')
+        .map(({ node }) => node.childForFieldName('declarator')?.text);
+      expect(functionNames).toContain('ordinaryFunction');
+      expect(functionNames).toContain('ordinaryElaboratedFunction');
     } finally {
       fresh.delete();
       edited.delete();
@@ -61,6 +80,73 @@ test('preserves macro class definitions, ordinary declarators, and class tags af
   } finally {
     tree.delete();
     tags.delete();
+    parser.delete();
+  }
+});
+
+test('retains macro function fields and query ranges after body edits', () => {
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(
+    language,
+    '(function_definition type: (_) @type declarator: (identifier) @declarator body: (compound_statement) @body) @function'
+  );
+  const tree = parser.parse(source)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    const functions = tree.rootNode
+      .descendantsOfType('function_definition')
+      .filter((node) => node.childForFieldName('declarator')?.type === 'identifier');
+    expect(
+      functions.map((node) => ['type', 'declarator', 'body'].map((field) => node.childForFieldName(field)?.text))
+    ).toEqual([
+      ['int', 'PRIMITIVE_FUNCTION', '{ return 1; }'],
+      ['Type', 'USER_FUNCTION', '{ return Type{}; }'],
+      ['class Type', 'ELABORATED_FUNCTION', '{ return Type{}; }'],
+    ]);
+    for (const node of functions) {
+      const type = node.childForFieldName('type')!;
+      const declarator = node.childForFieldName('declarator')!;
+      const body = node.childForFieldName('body')!;
+      const start = source.indexOf(`${type.text} ${declarator.text} ${body.text}`);
+      expect(node.startIndex).toBe(start);
+      expect(declarator.startIndex).toBe(start + type.text.length + 1);
+      expect(declarator.endIndex).toBe(declarator.startIndex + declarator.text.length);
+      expect(body.startIndex).toBe(declarator.endIndex + 1);
+      expect(node.endIndex).toBe(body.startIndex + body.text.length);
+    }
+    const startIndex = source.indexOf('return 1;') + 'return '.length;
+    tree.edit(
+      new Edit({
+        startIndex,
+        oldEndIndex: startIndex + 1,
+        newEndIndex: startIndex + 1,
+        startPosition: { row: 20, column: 32 },
+        oldEndPosition: { row: 20, column: 33 },
+        newEndPosition: { row: 20, column: 33 },
+      })
+    );
+    const editedSource = source.replace('return 1;', 'return 2;');
+    const edited = parser.parse(editedSource, tree)!;
+    const fresh = parser.parse(editedSource)!;
+    try {
+      expect(edited.rootNode.hasError, edited.rootNode.toString()).toBe(false);
+      expect(edited.rootNode.toString()).toBe(fresh.rootNode.toString());
+      const captures = (parsed: typeof tree): [string, string, number, number][] =>
+        query.captures(parsed.rootNode).map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
+      expect(captures(edited)).toEqual(captures(fresh));
+      expect(
+        query
+          .captures(edited.rootNode)
+          .filter(({ name }) => name === 'body')
+          .map(({ node }) => node.text)
+      ).toEqual(['{ return 2; }', '{ return Type{}; }', '{ return Type{}; }']);
+    } finally {
+      fresh.delete();
+      edited.delete();
+    }
+  } finally {
+    tree.delete();
+    query.delete();
     parser.delete();
   }
 });
