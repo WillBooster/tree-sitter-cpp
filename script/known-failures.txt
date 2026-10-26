@@ -1,12 +1,9 @@
 examples/fmt/include/fmt/args.h
 examples/fmt/include/fmt/chrono.h
-examples/fmt/include/fmt/color.h
-examples/fmt/include/fmt/compile.h
 examples/fmt/include/fmt/core.h
 examples/fmt/include/fmt/fmt-c.h
 examples/fmt/include/fmt/format-inl.h
 examples/fmt/include/fmt/format.h
-examples/fmt/include/fmt/os.h
 examples/fmt/include/fmt/ostream.h
 examples/fmt/include/fmt/printf.h
 examples/fmt/include/fmt/ranges.h

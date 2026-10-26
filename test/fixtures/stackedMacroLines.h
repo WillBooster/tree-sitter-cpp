@@ -1,0 +1,1 @@
+#define STACKED_MACRO_HEADER 1
