@@ -13968,20 +13968,82 @@
       "type": "CHOICE",
       "members": [
         {
+          "type": "SYMBOL",
+          "name": "_single_unattributed_non_case_statement"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_single_attributed_statement"
+          },
+          "named": true,
+          "value": "attributed_statement"
+        }
+      ]
+    },
+    "_single_unattributed_non_case_statement": {
+      "type": "CHOICE",
+      "members": [
+        {
           "type": "CHOICE",
           "members": [
             {
               "type": "SYMBOL",
-              "name": "_single_unattributed_non_case_statement"
+              "name": "expression_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "switch_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "return_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "break_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "continue_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "goto_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "seh_try_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "seh_leave_statement"
             },
             {
               "type": "ALIAS",
               "content": {
                 "type": "SYMBOL",
-                "name": "_single_attributed_statement"
+                "name": "_single_labeled_statement"
               },
               "named": true,
-              "value": "attributed_statement"
+              "value": "labeled_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "if_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "while_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "do_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "for_statement"
             }
           ]
         },
@@ -14008,68 +14070,6 @@
         {
           "type": "SYMBOL",
           "name": "throw_statement"
-        }
-      ]
-    },
-    "_single_unattributed_non_case_statement": {
-      "type": "CHOICE",
-      "members": [
-        {
-          "type": "SYMBOL",
-          "name": "expression_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "switch_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "return_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "break_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "continue_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "goto_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "seh_try_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "seh_leave_statement"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "_single_labeled_statement"
-          },
-          "named": true,
-          "value": "labeled_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "if_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "while_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "do_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "for_statement"
         }
       ]
     },

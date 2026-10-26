@@ -1905,7 +1905,7 @@ module.exports = grammar(C, {
 
     _unlabeled_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
-    _single_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
+    _single_unattributed_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
     switch_statement: ($) => seq('switch', field('condition', $.condition_clause), field('body', $.compound_statement)),
 

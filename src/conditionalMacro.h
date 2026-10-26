@@ -3,21 +3,26 @@
 
 #include "functionMacro.h"
 
-static bool conditional_macro_body(TSLexer *lexer, bool *escaped);
+typedef struct {
+    TSSymbol ifdef, ifndef, leading_ifdef, leading_ifndef;
+    // Optional, unordered ASCII words of at most FUNCTION_MACRO_KEYWORD_MAX_LENGTH bytes.
+    // Excludes unknown type aliases and marker names; recognized C type/modifier prefixes are unchanged.
+    const char *const *reserved_words;
+    unsigned reserved_word_count;
+} ConditionalMacroSymbols;
+
+static bool conditional_macro_body(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 static bool conditional_macro_word(TSLexer *lexer, MacroName *name, bool escaped);
 static bool conditional_macro_spacing(TSLexer *lexer, bool *separated, bool *escaped);
 static bool conditional_macro_next_line(TSLexer *lexer, bool *escaped);
 static bool conditional_macro_directive(TSLexer *lexer, MacroName *name);
-static bool conditional_macro_marker_line(TSLexer *lexer, bool *escaped);
+static bool conditional_macro_marker_line(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 static bool conditional_macro_closing(TSLexer *lexer);
-static bool conditional_macro_type_prefix(TSLexer *lexer, bool escaped);
+static bool conditional_macro_type_prefix(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool escaped);
 static bool conditional_macro_skip_lines(TSLexer *lexer, bool *escaped);
+static bool conditional_macro_reserved_word(const ConditionalMacroSymbols *symbols, const char *word);
 static bool conditional_macro_modifier_group(TSLexer *lexer, const char *word, bool *escaped);
 static bool conditional_macro_attribute_declaration(TSLexer *lexer, bool *escaped);
-
-typedef struct {
-    TSSymbol ifdef, ifndef, leading_ifdef, leading_ifndef;
-} ConditionalMacroSymbols;
 
 static bool scan_conditional_macro(TSLexer *lexer, const ConditionalMacroSymbols *symbols, const bool *valid_symbols) {
     char directive[7] = {0};
@@ -33,8 +38,8 @@ static bool scan_conditional_macro(TSLexer *lexer, const ConditionalMacroSymbols
     lexer->mark_end(lexer);
 
     bool escaped = false;
-    if (!conditional_macro_body(lexer, &escaped)) return false;
-    if (leading && conditional_macro_type_prefix(lexer, escaped)) {
+    if (!conditional_macro_body(lexer, symbols, &escaped)) return false;
+    if (leading && conditional_macro_type_prefix(lexer, symbols, escaped)) {
         lexer->result_symbol = leading_symbol;
         return true;
     }
@@ -42,12 +47,12 @@ static bool scan_conditional_macro(TSLexer *lexer, const ConditionalMacroSymbols
     return generic;
 }
 
-static bool conditional_macro_body(TSLexer *lexer, bool *escaped) {
+static bool conditional_macro_body(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     bool separated = false;
     MacroName condition = {.ascii = true};
     if (!conditional_macro_spacing(lexer, &separated, escaped) || !separated ||
         !conditional_macro_word(lexer, &condition, *escaped) || !conditional_macro_next_line(lexer, escaped)) return false;
-    if (!conditional_macro_marker_line(lexer, escaped) || !conditional_macro_closing(lexer)) return false;
+    if (!conditional_macro_marker_line(lexer, symbols, escaped) || !conditional_macro_closing(lexer)) return false;
     return conditional_macro_skip_lines(lexer, escaped) && !lexer->eof(lexer) && lexer->lookahead != '#';
 }
 
@@ -68,14 +73,14 @@ typedef enum {
     CONDITIONAL_INVALID,
 } ConditionalMacroPrefix;
 
-static ConditionalMacroPrefix conditional_macro_prefix_kind(const MacroName *name, const char *word);
+static ConditionalMacroPrefix conditional_macro_prefix_kind(const ConditionalMacroSymbols *symbols, const MacroName *name, const char *word);
 
-static ConditionalMacroPrefix conditional_macro_prefix(TSLexer *lexer, bool *escaped);
+static ConditionalMacroPrefix conditional_macro_prefix(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 
-static bool conditional_macro_type_prefix(TSLexer *lexer, bool escaped) {
+static bool conditional_macro_type_prefix(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool escaped) {
     ConditionalMacroPrefix kind;
     do {
-        kind = conditional_macro_prefix(lexer, &escaped);
+        kind = conditional_macro_prefix(lexer, symbols, &escaped);
     } while (kind == CONDITIONAL_MODIFIER);
     if (kind == CONDITIONAL_TYPE) return true;
     if (kind != CONDITIONAL_ALIAS) return false;
@@ -84,14 +89,14 @@ static bool conditional_macro_type_prefix(TSLexer *lexer, bool escaped) {
     return conditional_macro_word(lexer, &declarator, escaped);
 }
 
-static ConditionalMacroPrefix conditional_macro_prefix(TSLexer *lexer, bool *escaped) {
+static ConditionalMacroPrefix conditional_macro_prefix(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     if (lexer->lookahead == '[') {
         return conditional_macro_attribute_declaration(lexer, escaped) ? CONDITIONAL_MODIFIER : CONDITIONAL_INVALID;
     }
     char word[FUNCTION_MACRO_KEYWORD_MAX_LENGTH + 1] = {0};
     MacroName type = {.word = word, .capacity = sizeof(word) - 1, .ascii = true};
     if (!conditional_macro_word(lexer, &type, *escaped)) return CONDITIONAL_INVALID;
-    ConditionalMacroPrefix kind = conditional_macro_prefix_kind(&type, word);
+    ConditionalMacroPrefix kind = conditional_macro_prefix_kind(symbols, &type, word);
     if (kind == CONDITIONAL_TYPE) return kind;
     if (!conditional_macro_skip_lines(lexer, escaped)) return CONDITIONAL_INVALID;
     if (kind == CONDITIONAL_TYPE_MODIFIER && lexer->lookahead == '(') return CONDITIONAL_TYPE;
@@ -101,9 +106,12 @@ static ConditionalMacroPrefix conditional_macro_prefix(TSLexer *lexer, bool *esc
     return kind;
 }
 
-static ConditionalMacroPrefix conditional_macro_prefix_kind(const MacroName *name, const char *word) {
+static ConditionalMacroPrefix conditional_macro_prefix_kind(const ConditionalMacroSymbols *symbols, const MacroName *name, const char *word) {
     if (name->ascii && strcmp(word, pragma_word) == 0) return CONDITIONAL_MODIFIER;
-    if (!name->ascii || !function_macro_keyword(word)) return CONDITIONAL_ALIAS;
+    if (!name->ascii) return CONDITIONAL_ALIAS;
+    if (!function_macro_keyword(word)) {
+        return conditional_macro_reserved_word(symbols, word) ? CONDITIONAL_RESERVED : CONDITIONAL_ALIAS;
+    }
     bool type = function_macro_word_in(word, function_macro_type_keywords,
         sizeof(function_macro_type_keywords) / sizeof(function_macro_type_keywords[0]));
     bool modifier = (!type && function_macro_object_prefix_keyword(word)) ||
@@ -111,6 +119,14 @@ static ConditionalMacroPrefix conditional_macro_prefix_kind(const MacroName *nam
             sizeof(function_macro_declaration_modifiers) / sizeof(function_macro_declaration_modifiers[0]));
     if (type) return modifier ? CONDITIONAL_TYPE_MODIFIER : CONDITIONAL_TYPE;
     return modifier ? CONDITIONAL_MODIFIER : CONDITIONAL_RESERVED;
+}
+
+static bool conditional_macro_reserved_word(const ConditionalMacroSymbols *symbols, const char *word) {
+    if (!symbols->reserved_words) return false;
+    for (unsigned i = 0; i < symbols->reserved_word_count; i++) {
+        if (strcmp(word, symbols->reserved_words[i]) == 0) return true;
+    }
+    return false;
 }
 
 static bool conditional_macro_modifier_group(TSLexer *lexer, const char *word, bool *escaped) {
@@ -140,11 +156,11 @@ static bool conditional_macro_skip_lines(TSLexer *lexer, bool *escaped) {
     }
 }
 
-static bool conditional_macro_marker_line(TSLexer *lexer, bool *escaped) {
+static bool conditional_macro_marker_line(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     char word[FUNCTION_MACRO_KEYWORD_MAX_LENGTH + 1] = {0};
     MacroName marker = {.word = word, .capacity = sizeof(word) - 1, .ascii = true};
     if (!conditional_macro_word(lexer, &marker, *escaped) ||
-        (marker.ascii && function_macro_keyword(word))) return false;
+        (marker.ascii && (function_macro_keyword(word) || conditional_macro_reserved_word(symbols, word)))) return false;
     return conditional_macro_next_line(lexer, escaped);
 }
 

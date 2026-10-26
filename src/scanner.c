@@ -137,6 +137,7 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
 }
 
 static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols) {
+    static const char *const reserved[] = {"namespace", "using", "export", "module", "import"};
     bool leading = valid_symbols[LEADING_CONDITIONAL_MARKER_IFDEF] || valid_symbols[LEADING_CONDITIONAL_MARKER_IFNDEF];
     bool conditional = leading || valid_symbols[CONDITIONAL_MARKER_IFDEF] || valid_symbols[CONDITIONAL_MARKER_IFNDEF];
     if (conditional) {
@@ -144,6 +145,7 @@ static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols) {
         const ConditionalMacroSymbols symbols = {
             .ifdef = CONDITIONAL_MARKER_IFDEF, .ifndef = CONDITIONAL_MARKER_IFNDEF,
             .leading_ifdef = LEADING_CONDITIONAL_MARKER_IFDEF, .leading_ifndef = LEADING_CONDITIONAL_MARKER_IFNDEF,
+            .reserved_words = reserved, .reserved_word_count = sizeof(reserved) / sizeof(reserved[0]),
         };
         if (lexer->lookahead == '#') return scan_conditional_macro(lexer, &symbols, valid_symbols);
     }
