@@ -147,6 +147,8 @@ module.exports = grammar(C, {
     sym('_template_close'),
     sym('_split_template_close'),
     ...original,
+    sym('_macro_call_end'),
+    sym('_macro_identifier_end'),
   ],
 
   conflicts: ($, original) => [
@@ -437,6 +439,15 @@ module.exports = grammar(C, {
   ],
 
   rules: {
+    _top_level_expression_statement: ($, original = missingOriginalRule()) =>
+      choice(
+        original,
+        prec.dynamic(
+          -1,
+          choice(seq($.call_expression, sym('_macro_call_end')), seq($.identifier, sym('_macro_identifier_end')))
+        )
+      ),
+
     _top_level_item: ($, original = missingOriginalRule()) =>
       choice(
         ...ruleMembers(original, 'CHOICE').filter(

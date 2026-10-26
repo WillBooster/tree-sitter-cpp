@@ -13683,23 +13683,63 @@
       ]
     },
     "_top_level_expression_statement": {
-      "type": "SEQ",
+      "type": "CHOICE",
       "members": [
         {
-          "type": "CHOICE",
+          "type": "SEQ",
           "members": [
             {
-              "type": "SYMBOL",
-              "name": "_expression_not_binary"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_expression_not_binary"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
             },
             {
-              "type": "BLANK"
+              "type": "STRING",
+              "value": ";"
             }
           ]
         },
         {
-          "type": "STRING",
-          "value": ";"
+          "type": "PREC_DYNAMIC",
+          "value": -1,
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "call_expression"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "_macro_call_end"
+                  }
+                ]
+              },
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "identifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "_macro_identifier_end"
+                  }
+                ]
+              }
+            ]
+          }
         }
       ]
     },
@@ -39117,6 +39157,14 @@
     {
       "type": "SYMBOL",
       "name": "_leading_conditional_marker_ifndef"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_macro_call_end"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_macro_identifier_end"
     }
   ],
   "inline": [

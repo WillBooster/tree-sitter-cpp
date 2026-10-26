@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, MACRO_CALL_END, MACRO_IDENTIFIER_END };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
@@ -100,6 +100,9 @@ void *tree_sitter_cpp_external_scanner_create() {
     return scanner;
 }
 
+static bool scan_macro_statement_end(TSLexer *lexer, const bool *valid_symbols);
+static bool skip_macro_boundary_trivia(TSLexer *lexer, bool *newline);
+static bool skip_cpp_comment(TSLexer *lexer, bool *newline);
 static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_pack_index_operator(TSLexer *lexer);
@@ -114,6 +117,10 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
 
     if (valid_symbols[RAW_STRING_DELIMITER] || valid_symbols[RAW_STRING_CONTENT]) {
         return scan_raw_string_token(scanner, lexer, valid_symbols);
+    }
+
+    if (valid_symbols[MACRO_CALL_END] || valid_symbols[MACRO_IDENTIFIER_END]) {
+        return scan_macro_statement_end(lexer, valid_symbols);
     }
 
     bool pending_close = scanner->pending_template_close;
@@ -134,6 +141,72 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
         return scan_template_close(scanner, lexer, valid_symbols, pending_close);
     }
     return scan_declaration_macro(lexer, valid_symbols);
+}
+
+static bool scan_macro_statement_end(TSLexer *lexer, const bool *valid_symbols) {
+    lexer->mark_end(lexer);
+    bool newline = false;
+    if (!skip_macro_boundary_trivia(lexer, &newline)) return false;
+    if (lexer->eof(lexer)) {
+        lexer->result_symbol = valid_symbols[MACRO_CALL_END] ? MACRO_CALL_END : MACRO_IDENTIFIER_END;
+        return true;
+    }
+    if (!newline) return false;
+    if (valid_symbols[MACRO_CALL_END] && !strchr("([{.;,:?+-*/%&|^!=<>~", lexer->lookahead)) {
+        lexer->result_symbol = MACRO_CALL_END;
+        return true;
+    }
+    if (!valid_symbols[MACRO_IDENTIFIER_END]) return false;
+    bool boundary = lexer->lookahead == '#' || lexer->lookahead == '}';
+    char word[FUNCTION_MACRO_KEYWORD_MAX_LENGTH + 1] = {0};
+    MacroName name = {.word = word, .capacity = sizeof(word) - 1, .ascii = true, .lookahead_only = true};
+    if (!boundary && scan_macro_name(lexer, &name) && name.ascii) {
+        static const char *const starters[] = {"class", "concept", "decltype", "enum", "export", "namespace", "struct", "template", "union", "using"};
+        boundary = function_macro_word_in(word, starters, sizeof(starters) / sizeof(starters[0]));
+    }
+    if (!boundary) return false;
+    lexer->result_symbol = MACRO_IDENTIFIER_END;
+    return true;
+}
+
+static bool skip_macro_boundary_trivia(TSLexer *lexer, bool *newline) {
+    for (;;) {
+        while (iswspace(lexer->lookahead)) {
+            *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
+            advance(lexer);
+        }
+        if (lexer->lookahead == '\\') {
+            advance(lexer);
+            if (!scan_preproc_newline(lexer, false)) return false;
+        } else if (lexer->lookahead == '/') {
+            if (!skip_cpp_comment(lexer, newline)) return false;
+        } else {
+            return true;
+        }
+    }
+}
+
+static bool skip_cpp_comment(TSLexer *lexer, bool *newline) {
+    advance(lexer);
+    if (lexer->lookahead == '/') {
+        int32_t previous = 0;
+        while (!lexer->eof(lexer) && (lexer->lookahead != '\n' || previous == '\\')) {
+            if (lexer->lookahead != '\r') previous = lexer->lookahead;
+            advance(lexer);
+        }
+        return true;
+    }
+    if (lexer->lookahead != '*') return false;
+    advance(lexer);
+    bool star = false;
+    while (!lexer->eof(lexer)) {
+        int32_t c = lexer->lookahead;
+        *newline |= c == '\n' || c == '\r';
+        advance(lexer);
+        if (star && c == '/') return true;
+        star = c == '*';
+    }
+    return false;
 }
 
 static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols) {
@@ -265,41 +338,12 @@ static bool scan_pack_index_operator(TSLexer *lexer) {
 }
 
 static bool skip_pack_index_trivia(TSLexer *lexer) {
+    bool newline = false;
     for (;;) {
-        if (!skip_pack_index_whitespace(lexer, false)) {
-            return false;
-        }
-        if (lexer->lookahead != '/') {
-            break;
-        }
-        advance(lexer);
-        if (lexer->lookahead == '/') {
-            int32_t previous = 0;
-            while (!lexer->eof(lexer) && (lexer->lookahead != '\n' || previous == '\\')) {
-                if (lexer->lookahead != '\r') {
-                    previous = lexer->lookahead;
-                }
-                advance(lexer);
-            }
-        } else if (lexer->lookahead == '*') {
-            advance(lexer);
-            bool star = false;
-            for (;;) {
-                if (lexer->eof(lexer)) {
-                    return false;
-                }
-                int32_t c = lexer->lookahead;
-                advance(lexer);
-                if (star && c == '/') {
-                    break;
-                }
-                star = c == '*';
-            }
-        } else {
-            return false;
-        }
+        if (!skip_pack_index_whitespace(lexer, false)) return false;
+        if (lexer->lookahead != '/') return true;
+        if (!skip_cpp_comment(lexer, &newline)) return false;
     }
-    return true;
 }
 
 static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip) {
