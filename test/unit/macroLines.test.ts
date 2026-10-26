@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { Edit, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { testCommand } from './run';
 import { loadCurrentWasmBuild } from './wasmBuild';
 
 await Parser.init();
@@ -131,6 +132,92 @@ test('preserves macro EOF query ranges and fresh/incremental equivalence after i
         expect(tree.rootNode.hasError).toBe(false);
         expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
         expect(captures(tree)).toEqual(captures(fresh));
+      } finally {
+        fresh.delete();
+      }
+    }
+    expect(tree.rootNode.toString()).toBe(original);
+    expect(captures(tree)).toEqual(originalCaptures);
+  } finally {
+    tree.delete();
+    query.delete();
+    parser.delete();
+  }
+});
+
+testCommand(
+  'keeps native macro call boundaries before Unicode identifiers',
+  ['script/tree-sitter', 'parse', '--no-ranges', 'test/fixtures/unicodeMacroLines.cpp'],
+  60_000,
+  {
+    check(output) {
+      expect(output.match(/\(expression_statement\s/g)).toHaveLength(12);
+      expect(output.match(/\(call_expression\s/g)).toHaveLength(12);
+      expect(output.match(/\(declaration\s/g)).toHaveLength(1);
+    },
+  }
+);
+
+test('keeps Unicode neighboring calls and query ranges through identifier edits and undo', () => {
+  let source = fs.readFileSync(new URL('../fixtures/unicodeMacroLines.cpp', import.meta.url), 'utf8');
+  const parser = new Parser().setLanguage(language);
+  const query = new Query(
+    language,
+    '(expression_statement (call_expression function: (identifier) @function arguments: (argument_list) @arguments))'
+  );
+  let tree = parser.parse(source)!;
+  const captures = (parsed: Tree): [string, string, number, number][] =>
+    query.captures(parsed.rootNode).map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
+  const original = tree.rootNode.toString();
+  const originalCaptures = captures(tree);
+  try {
+    expect(tree.rootNode.hasError, original).toBe(false);
+    expect(originalCaptures.filter(([name]) => name === 'function').map(([, text]) => text)).toEqual([
+      'REGISTER',
+      '本体',
+      'REGISTER',
+      'Ļentry',
+      'REGISTER',
+      'Ĩentry',
+      'REGISTER',
+      '𐐨entry',
+      'REGISTER',
+      '数',
+      'REGISTER',
+      'ordinary',
+    ]);
+    let cursor = source.indexOf('REGISTER(Item)');
+    for (const [, text, start, end] of originalCaptures) {
+      const expected = source.indexOf(text, cursor);
+      expect([start, end]).toEqual([expected, expected + text.length]);
+      cursor = end;
+    }
+    expect(tree.rootNode.descendantsOfType('declaration').map((node) => node.text)).toEqual(['int following;']);
+    const start = source.indexOf('本体();');
+    const row = source.slice(0, start).split('\n').length - 1;
+    let previous = '本体';
+    for (const replacement of ['数体', '𐐨entry', '本体']) {
+      tree.edit(
+        new Edit({
+          startIndex: start,
+          oldEndIndex: start + previous.length,
+          newEndIndex: start + replacement.length,
+          startPosition: { row, column: 0 },
+          oldEndPosition: { row, column: previous.length },
+          newEndPosition: { row, column: replacement.length },
+        })
+      );
+      source = source.slice(0, start) + replacement + source.slice(start + previous.length);
+      previous = replacement;
+      const next = parser.parse(source, tree)!;
+      tree.delete();
+      tree = next;
+      const fresh = parser.parse(source)!;
+      try {
+        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+        expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
+        expect(captures(tree)).toEqual(captures(fresh));
+        expect(captures(tree).filter(([name]) => name === 'function')[1]?.[1]).toBe(replacement);
       } finally {
         fresh.delete();
       }

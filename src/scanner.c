@@ -166,7 +166,7 @@ static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const boo
         return true;
     }
     if (!newline) return false;
-    if (valid_symbols[MACRO_CALL_END] && !strchr("([{.;,:?+-*/%&|^!=<>~", lexer->lookahead)) {
+    if (valid_symbols[MACRO_CALL_END] && (lexer->lookahead >= 0x80 || !strchr("([{.;,:?+-*/%&|^!=<>~", lexer->lookahead))) {
         lexer->result_symbol = MACRO_CALL_END;
         return true;
     }
