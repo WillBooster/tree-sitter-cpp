@@ -27,7 +27,13 @@ fn main() {
         println!("cargo:rerun-if-changed={}", scanner_path.to_str().unwrap());
     }
 
-    for header in ["pragma.h", "identifier.h"] {
+    for header in [
+        "pragma.h",
+        "identifier.h",
+        "keywords.h",
+        "functionMacro.h",
+        "conditionalMacro.h",
+    ] {
         println!("cargo:rerun-if-changed={}", src_dir.join(header).display());
     }
 

@@ -48,7 +48,7 @@
     "@types/bun": "1.4.3",
     "@vitest/browser-playwright": "5.0.5",
     "@willbooster/oxlint-config": "1.4.9",
-    "@willbooster/tree-sitter-c": "9.0.1",
+    "@willbooster/tree-sitter-c": "18.0.1",
     "@willbooster/wb": "22.29.3",
     "@willbooster/web-tree-sitter": "15.0.0",
     "conventional-changelog-conventionalcommits": "10.4.1",

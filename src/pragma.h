@@ -3,8 +3,29 @@
 
 #include "tree_sitter/parser.h"
 #include "identifier.h"
+#include <string.h>
 
 static const char pragma_word[] = "_Pragma";
+
+typedef struct {
+    char *word;
+    unsigned capacity;
+    unsigned length;
+    bool ascii;
+    bool lookahead_only;
+} MacroName;
+
+typedef enum {
+    MACRO_NAME_END,
+    MACRO_NAME_CHARACTER,
+    MACRO_NAME_SPLICE,
+    MACRO_NAME_INVALID,
+} MacroNameCharacter;
+
+static bool scan_macro_name(TSLexer *lexer, MacroName *name);
+static void scan_macro_name_start(TSLexer *lexer, bool lookahead_only);
+static MacroNameCharacter scan_macro_name_character(TSLexer *lexer, bool continuation, MacroName *name);
+static bool scan_macro_name_ucn(TSLexer *lexer);
 
 static bool scan_pragma_spacing(TSLexer *lexer);
 static bool scan_pragma_suffix(TSLexer *lexer);
@@ -334,48 +355,68 @@ static bool pragma_space(int32_t c) {
 }
 
 static bool scan_function_macro_name(TSLexer *lexer, bool allow_pragma, TSSymbol pragma_symbol) {
-    bool has_name = false;
-    bool is_pragma = true;
-    unsigned pragma_length = 0;
-    for (;;) {
-        while (!has_name && pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
-        int32_t c = lexer->lookahead;
-        if (c == '\\') {
-            lexer->advance(lexer, false);
-            if (scan_preproc_newline(lexer, !has_name)) {
-                if (!has_name) continue;
-                if (!scan_preproc_splices(lexer)) return false;
-                break;
-            }
-            is_pragma = false;
-            unsigned digits = lexer->lookahead == 'u' ? 4 : lexer->lookahead == 'U' ? 8 : 0;
-            if (!digits) return false;
-            lexer->advance(lexer, false);
-            for (unsigned i = 0; i < digits; i++) {
-                c = lexer->lookahead;
-                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return false;
-                lexer->advance(lexer, false);
-            }
-        } else {
-            bool identifier = has_name
-                ? set_contains(preproc_identifier_continue, sizeof(preproc_identifier_continue) / sizeof(TSCharacterRange), c)
-                : set_contains(preproc_identifier_start, sizeof(preproc_identifier_start) / sizeof(TSCharacterRange), c);
-            if (!identifier) break;
-            if (is_pragma) {
-                if (pragma_length < sizeof(pragma_word) - 1 && c == pragma_word[pragma_length]) pragma_length++;
-                else is_pragma = false;
-            }
-            lexer->advance(lexer, false);
-        }
-        has_name = true;
-        lexer->mark_end(lexer);
-    }
-    bool adjacent = has_name && lexer->lookahead == '(';
-    if (allow_pragma && is_pragma && pragma_length == sizeof(pragma_word) - 1 && scan_pragma_suffix(lexer)) {
+    char word[sizeof(pragma_word)] = {0};
+    MacroName name = {.word = word, .capacity = sizeof(word) - 1, .ascii = true};
+    if (!scan_macro_name(lexer, &name)) return false;
+    bool adjacent = lexer->lookahead == '(';
+    if (allow_pragma && name.ascii && strcmp(word, pragma_word) == 0 && scan_pragma_suffix(lexer)) {
         lexer->result_symbol = pragma_symbol;
         return true;
     }
     return adjacent;
+}
+
+static bool scan_macro_name(TSLexer *lexer, MacroName *name) {
+    bool has_name = false;
+    for (;;) {
+        if (!has_name) scan_macro_name_start(lexer, name->lookahead_only);
+        MacroNameCharacter character = scan_macro_name_character(lexer, has_name, name);
+        if (character == MACRO_NAME_INVALID) return false;
+        if (character == MACRO_NAME_END) return has_name;
+        if (character == MACRO_NAME_SPLICE) {
+            if (!has_name) continue;
+            return scan_preproc_splices(lexer);
+        }
+        has_name = true;
+        if (!name->lookahead_only) lexer->mark_end(lexer);
+    }
+}
+
+static void scan_macro_name_start(TSLexer *lexer, bool lookahead_only) {
+    while (pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
+    if (lookahead_only) lexer->mark_end(lexer);
+}
+
+static MacroNameCharacter scan_macro_name_character(TSLexer *lexer, bool continuation, MacroName *name) {
+    int32_t c = lexer->lookahead;
+    if (c == '\\') {
+        lexer->advance(lexer, false);
+        if (scan_preproc_newline(lexer, !continuation)) return MACRO_NAME_SPLICE;
+        name->ascii = false;
+        return scan_macro_name_ucn(lexer) ? MACRO_NAME_CHARACTER : MACRO_NAME_INVALID;
+    }
+    bool accepted = continuation
+        ? set_contains(preproc_identifier_continue, sizeof(preproc_identifier_continue) / sizeof(TSCharacterRange), c)
+        : set_contains(preproc_identifier_start, sizeof(preproc_identifier_start) / sizeof(TSCharacterRange), c);
+    if (!accepted) return MACRO_NAME_END;
+    if (name->ascii) {
+        if (c < 128 && name->length < name->capacity) name->word[name->length++] = (char)c;
+        else name->ascii = false;
+    }
+    lexer->advance(lexer, false);
+    return MACRO_NAME_CHARACTER;
+}
+
+static bool scan_macro_name_ucn(TSLexer *lexer) {
+    unsigned digits = lexer->lookahead == 'u' ? 4 : lexer->lookahead == 'U' ? 8 : 0;
+    if (!digits) return false;
+    lexer->advance(lexer, false);
+    for (unsigned i = 0; i < digits; i++) {
+        int32_t c = lexer->lookahead;
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return false;
+        lexer->advance(lexer, false);
+    }
+    return true;
 }
 
 #endif

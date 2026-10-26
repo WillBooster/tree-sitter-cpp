@@ -1,12 +1,12 @@
 #include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
-#include "pragma.h"
+#include "conditionalMacro.h"
 
 #include <string.h>
 #include <stdint.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
@@ -101,6 +101,7 @@ void *tree_sitter_cpp_external_scanner_create() {
 }
 
 static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols);
+static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_pack_index_operator(TSLexer *lexer);
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
 static bool scan_raw_string_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
@@ -131,6 +132,38 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     }
     if ((valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE]) && lexer->lookahead == '>') {
         return scan_template_close(scanner, lexer, valid_symbols, pending_close);
+    }
+    return scan_declaration_macro(lexer, valid_symbols);
+}
+
+static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols) {
+    bool leading = valid_symbols[LEADING_CONDITIONAL_MARKER_IFDEF] || valid_symbols[LEADING_CONDITIONAL_MARKER_IFNDEF];
+    bool conditional = leading || valid_symbols[CONDITIONAL_MARKER_IFDEF] || valid_symbols[CONDITIONAL_MARKER_IFNDEF];
+    if (conditional) {
+        while (pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
+        const ConditionalMacroSymbols symbols = {
+            .ifdef = CONDITIONAL_MARKER_IFDEF, .ifndef = CONDITIONAL_MARKER_IFNDEF,
+            .leading_ifdef = LEADING_CONDITIONAL_MARKER_IFDEF, .leading_ifndef = LEADING_CONDITIONAL_MARKER_IFNDEF,
+        };
+        if (lexer->lookahead == '#') return scan_conditional_macro(lexer, &symbols, valid_symbols);
+    }
+    static const TSSymbol attribute_tokens[] = {
+        FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX,
+        TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START,
+    };
+    const MacroAttributeSymbols symbols = {
+        .pragma = PRAGMA_OPERATOR,
+        .object_start = TRAILING_OBJECT_DECLARATION_START,
+        .allow_pragma = valid_symbols[PRAGMA_OPERATOR],
+        .allow_object_start = valid_symbols[TRAILING_OBJECT_DECLARATION_START],
+    };
+    for (unsigned i = 0; i < sizeof(attribute_tokens) / sizeof(attribute_tokens[0]); i++) {
+        TSSymbol token = attribute_tokens[i];
+        if (!valid_symbols[token]) continue;
+        lexer->result_symbol = token;
+        return scan_function_attribute_guard(lexer,
+            token == FUNCTION_ATTRIBUTE_START || token == POST_TYPE_FUNCTION_ATTRIBUTE_START,
+            token != FUNCTION_ATTRIBUTE_START, token == TRAILING_MACRO_ATTRIBUTE_NAME, &symbols);
     }
     lexer->result_symbol = PRAGMA_OPERATOR;
     return valid_symbols[PRAGMA_OPERATOR] && scan_pragma(lexer);

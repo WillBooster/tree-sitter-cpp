@@ -17,6 +17,9 @@ export async function loadCurrentWasmBuild(): Promise<Language> {
     'src/tree_sitter/parser.h',
     'src/pragma.h',
     'src/identifier.h',
+    'src/keywords.h',
+    'src/functionMacro.h',
+    'src/conditionalMacro.h',
   ].map((name) => fs.statSync(path.join(Root, name)).mtimeMs);
   if (Math.max(generationInputMtime(Root), ...sources) > fs.statSync(wasmPath).mtimeMs) {
     throw new Error('generation inputs or src/ changed after the Wasm build was built; run `bun run build/ci`');
