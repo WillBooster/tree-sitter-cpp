@@ -5,7 +5,7 @@
     "alwaysStrict": true,
     "esModuleInterop": true,
     "importHelpers": false,
-    "maxNodeModuleJsDepth": 1,
+    "maxNodeModuleJsDepth": 2,
     "noEmit": true,
     "noUncheckedIndexedAccess": true,
     "paths": {},

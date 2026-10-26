@@ -10,7 +10,14 @@
       "highlights": ["queries/c/highlights.scm", "queries/highlights.scm"],
       "injections": "queries/injections.scm",
       "tags": "queries/tags.scm",
-      "injection-regex": "^(cc|cpp)$"
+      "injection-regex": "^(cc|cpp)$",
+      "external-files": [
+        "src/pragma.h",
+        "src/identifier.h",
+        "src/keywords.h",
+        "src/functionMacro.h",
+        "src/conditionalMacro.h"
+      ]
     }
   ],
   "metadata": {

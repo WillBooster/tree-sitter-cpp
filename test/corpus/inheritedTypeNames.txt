@@ -1,0 +1,114 @@
+=============================
+Interleaved C declaration specifiers and C++ type names
+=============================
+int static long global;
+struct Holder { int const long member; };
+long f(int const long argument) {
+  long static int local = argument;
+  return (unsigned const long)local + sizeof(int const long);
+}
+namespace ns { template<class T> struct Box {}; }
+class Type {};
+void g(Type value) {
+  (void)sizeof(class Type);
+  (void)sizeof(ns::Box<Type>);
+  (void)sizeof(decltype(value));
+}
+
+---
+
+(translation_unit
+  (declaration
+    (sized_type_specifier
+      (primitive_type)
+      (storage_class_specifier))
+    (identifier))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (sized_type_specifier
+          (primitive_type)
+          (type_qualifier))
+        (field_identifier))))
+  (function_definition
+    (sized_type_specifier)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (sized_type_specifier
+            (primitive_type)
+            (type_qualifier))
+          (identifier))))
+    (compound_statement
+      (declaration
+        (sized_type_specifier
+          (storage_class_specifier)
+          (primitive_type))
+        (init_declarator
+          (identifier)
+          (identifier)))
+      (return_statement
+        (binary_expression
+          (cast_expression
+            (type_descriptor
+              (sized_type_specifier
+                (type_qualifier)))
+            (identifier))
+          (sizeof_expression
+            (type_descriptor
+              (sized_type_specifier
+                (primitive_type)
+                (type_qualifier))))))))
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (template_declaration
+        (template_parameter_list
+          (type_parameter_declaration
+            (type_identifier)))
+        (struct_specifier
+          (type_identifier)
+          (field_declaration_list)))))
+  (class_specifier
+    (type_identifier)
+    (field_declaration_list))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))))
+    (compound_statement
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (sizeof_expression
+            (type_descriptor
+              (class_specifier
+                (type_identifier))))))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (sizeof_expression
+            (type_descriptor
+              (qualified_identifier
+                (namespace_identifier)
+                (template_type
+                  (type_identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (type_identifier)))))))))
+      (expression_statement
+        (cast_expression
+          (type_descriptor
+            (primitive_type))
+          (sizeof_expression
+            (type_descriptor
+              (decltype
+                (identifier)))))))))

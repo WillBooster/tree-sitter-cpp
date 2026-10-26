@@ -851,6 +851,10 @@
         {
           "type": "system_lib_string",
           "named": true
+        },
+        {
+          "type": "type_descriptor",
+          "named": true
         }
       ]
     }
@@ -1084,10 +1088,31 @@
   {
     "type": "attribute_specifier",
     "named": true,
-    "fields": {},
+    "fields": {
+      "arguments": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "argument_list",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": false,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "argument_list",
@@ -1882,6 +1907,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -1926,6 +1955,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -1935,6 +1968,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -2326,7 +2363,7 @@
     "fields": {
       "declarator": {
         "multiple": true,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "_declarator",
@@ -2365,6 +2402,14 @@
         "required": false,
         "types": [
           {
+            "type": "atomic_type_specifier",
+            "named": true
+          },
+          {
+            "type": "bit_int_specifier",
+            "named": true
+          },
+          {
             "type": "type_specifier",
             "named": true
           }
@@ -2402,7 +2447,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -2429,6 +2482,30 @@
           "named": true
         },
         {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "co_return_statement",
+          "named": true
+        },
+        {
+          "type": "co_yield_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -2437,7 +2514,19 @@
           "named": true
         },
         {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
           "type": "declaration",
+          "named": true
+        },
+        {
+          "type": "do_statement",
+          "named": true
+        },
+        {
+          "type": "expansion_statement",
           "named": true
         },
         {
@@ -2445,7 +2534,31 @@
           "named": true
         },
         {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
+          "type": "for_range_loop",
+          "named": true
+        },
+        {
+          "type": "for_statement",
+          "named": true
+        },
+        {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "global_module_fragment_declaration",
+          "named": true
+        },
+        {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "if_statement",
           "named": true
         },
         {
@@ -2453,7 +2566,19 @@
           "named": true
         },
         {
+          "type": "labeled_statement",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
+          "type": "module_declaration",
           "named": true
         },
         {
@@ -2493,11 +2618,23 @@
           "named": true
         },
         {
-          "type": "statement",
+          "type": "private_module_fragment_declaration",
+          "named": true
+        },
+        {
+          "type": "return_statement",
           "named": true
         },
         {
           "type": "static_assert_declaration",
+          "named": true
+        },
+        {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
           "named": true
         },
         {
@@ -2509,7 +2646,19 @@
           "named": true
         },
         {
+          "type": "throw_statement",
+          "named": true
+        },
+        {
+          "type": "try_statement",
+          "named": true
+        },
+        {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -2518,6 +2667,10 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]
@@ -2909,7 +3062,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -3002,6 +3163,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -3046,6 +3211,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -3055,6 +3224,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -3158,7 +3331,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -3206,6 +3387,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "macro_specifier",
           "named": true
         },
         {
@@ -3648,7 +3833,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -3931,11 +4124,19 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_call_modifier",
           "named": true
         },
         {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -4718,6 +4919,22 @@
     }
   },
   {
+    "type": "macro_specifier",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "module_declaration",
     "named": true,
     "fields": {
@@ -5181,7 +5398,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -5262,7 +5487,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -5396,7 +5629,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -5627,6 +5868,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_based_modifier",
           "named": true
         },
@@ -5636,6 +5881,10 @@
         },
         {
           "type": "ms_pointer_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -5908,6 +6157,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "module_declaration",
           "named": true
         },
@@ -5972,6 +6225,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -5981,6 +6238,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -6112,6 +6373,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "module_declaration",
           "named": true
         },
@@ -6176,6 +6441,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -6185,6 +6454,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -6287,6 +6560,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "module_declaration",
           "named": true
         },
@@ -6351,6 +6628,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -6360,6 +6641,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -6569,6 +6854,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "module_declaration",
           "named": true
         },
@@ -6633,6 +6922,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -6642,6 +6935,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -6773,6 +7070,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "module_declaration",
           "named": true
         },
@@ -6837,6 +7138,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -6846,6 +7151,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -7423,6 +7732,10 @@
       "required": false,
       "types": [
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "type_qualifier",
           "named": true
         }
@@ -7840,7 +8153,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -7848,7 +8169,15 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -7922,7 +8251,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -8216,6 +8553,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "module_declaration",
           "named": true
         },
@@ -8268,6 +8609,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "switch_statement",
           "named": true
         },
@@ -8289,6 +8634,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -8394,7 +8743,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -8884,7 +9241,15 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {

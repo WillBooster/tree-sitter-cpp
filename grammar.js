@@ -147,9 +147,135 @@ module.exports = grammar(C, {
     sym('_template_close'),
     sym('_split_template_close'),
     ...original,
+    sym('_macro_call_end'),
+    sym('_macro_identifier_end'),
   ],
 
   conflicts: ($, original) => [
+    [$.type_definition, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$.type_definition, $._built_in_declaration_specifiers],
+    [$.type_definition, $._macro_declaration_specifiers, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$._macro_declaration_specifiers, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$.type_definition, $._macro_declaration_specifiers, $._built_in_declaration_specifiers],
+    [sym('preproc_elif'), sym('preproc_elif_in_block')],
+    [sym('preproc_elifdef'), sym('preproc_elifdef_in_block')],
+    [sym('preproc_if'), sym('preproc_if_in_block')],
+    [$.pointer_declarator, $.abstract_pointer_declarator, $.variadic_pointer_declarator],
+    [sym('preproc_else'), sym('preproc_else_in_block')],
+    [sym('preproc_ifdef'), sym('preproc_ifdef_in_block')],
+    [$.declaration, $._statement_declaration],
+    [$._sized_type_identifier, $._enum_base_clause],
+    [$._non_pack_unnamed_parameter, $._non_pack_sized_type],
+    [$._function_declaration_declarator, $._function_attributes_start],
+    [$._statement_declaration_modifiers, $._declaration_specifiers],
+    [
+      $._declaration_modifiers,
+      $._statement_declaration_modifiers,
+      $._single_case_statement,
+      $._single_attributed_statement,
+    ],
+    [$._initialized_declarator, $.condition_declaration],
+    [$._non_pack_sized_type],
+    [$._declaration_modifiers, $._non_pack_sized_type],
+    [$.primitive_type, $._non_pack_unnamed_parameter, $._non_pack_sized_type],
+    [
+      $.pointer_declarator,
+      $._initialized_pointer_declarator,
+      $.argument_initialized_pointer_declarator,
+      $.parenthesized_argument_initialized_pointer_declarator,
+    ],
+    [$._declarator, $.macro_specifier, $._argument_initialized_name],
+    [$._type_name_specifier, $.template_type],
+    [$._declaration_specifiers, $._empty_declaration, $._statement_empty_declaration],
+    [$.statement, $._top_level_statement],
+    [$._top_level_item, $._non_case_statement, $._top_level_statement],
+    [$._non_case_statement, $._top_level_statement],
+    [$._top_level_item, $._block_item],
+    [$.sized_type_specifier, $._top_level_expression_statement, $.expression],
+    [$._top_level_expression_statement, $.expression],
+    [$.type_specifier, $._top_level_expression_statement, $.expression],
+    [$._top_level_expression_statement, $.expression_statement],
+    [$._declaration_specifiers, $._statement_declaration_specifiers],
+    [$.type_definition, $._declaration_modifiers, $._statement_declaration_modifiers],
+    [$._statement_type_definition, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$._statement_type_definition, $._declaration_modifiers, $._statement_declaration_modifiers],
+    [$._declaration_modifiers, $._case_body_attributed_statement, $._case_label_attributes],
+    [
+      $._declaration_modifiers,
+      $._statement_declaration_modifiers,
+      $._case_body_attributed_statement,
+      $._case_label_attributes,
+    ],
+    [$.type_definition, $._field_declaration_list_item],
+    [$.type_definition, $._declaration_modifiers, $._field_declaration_list_item],
+    [$._declarator, $.type_specifier, $.macro_specifier],
+    [$._declaration_specifiers, $._statement_empty_declaration],
+    [$._declaration_modifiers, $.attributed_statement, $.case_statement],
+    [$._type_name_specifier, $.typeof_specifier],
+    [$.type_definition, $._macro_declaration_specifiers, $._sized_bit_int_specifier],
+    [$._macro_declaration_specifiers, $._sized_bit_int_specifier],
+    [$._conditional_function_specifiers],
+    [$._type_name_specifier, $.call_expression, $.built_in_function_type_descriptor],
+    [$._type_name_specifier, $.typeof_specifier, $.expression],
+    [$._type_name_specifier, $.expression, $.va_arg_expression],
+    [$._type_name_specifier, $.expression, $.template_type, $.template_function],
+    [$._macro_declaration_specifiers, $.attributed_declarator],
+    [$._macro_declaration_specifiers],
+    [$.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$.type_definition, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$._statement_type_definition, $.type_specifier, $._built_in_declaration_specifiers],
+    [$.type_definition, $._declaration_modifiers, $._statement_empty_declaration],
+    [$._declaration_modifiers, $._statement_declaration_modifiers],
+    [$._declarator, $.attributed_declarator, $.type_specifier, $.expression, $.macro_specifier],
+    [$._type_name_specifier, $.call_expression],
+    [$._sized_type_name, $.expression, $.call_expression],
+    [$._sized_type_name, $.expression],
+    [$._declarator, $._type_name_specifier, $.typeof_specifier, $.expression],
+    [$._declarator, $.attributed_declarator, $._type_name_specifier, $.expression],
+    [$._declarator, $._type_name_specifier, $.expression],
+    [$._declarator, $._type_name_specifier, $.expression, $.va_arg_expression],
+    [$._declarator, $.attributed_declarator, $.expression, $.macro_specifier],
+    [$._declarator, $.expression, $.macro_specifier],
+    [$._macro_declaration_specifiers, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [
+      $.type_definition,
+      $._macro_declaration_specifiers,
+      $.type_specifier,
+      $.sized_type_specifier,
+      $._built_in_declaration_specifiers,
+    ],
+    [$._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
+    [$.type_definition, $._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
+    [$._conditional_function_specifiers, $._declaration_specifiers],
+    [$.type_definition, $._macro_declaration_specifiers, $._declaration_modifiers, $._statement_empty_declaration],
+    [$._declaration_modifiers, $._statement_empty_declaration],
+    [$._declaration_modifiers, $._empty_declaration, $._statement_empty_declaration],
+    [
+      $._macro_declaration_specifiers,
+      $._declaration_modifiers,
+      $.attributed_statement,
+      $.case_statement,
+      $.using_declaration,
+    ],
+    [
+      $._conditional_function_specifiers,
+      $.type_definition,
+      $._declaration_specifiers,
+      $._built_in_declaration_specifiers,
+      $._constructor_specifiers,
+    ],
+    [
+      $._macro_declaration_specifiers,
+      $._declarator,
+      $.attributed_declarator,
+      $.type_specifier,
+      $.expression,
+      $.macro_specifier,
+    ],
+    [$._declarator, $.type_specifier, $.expression, $.macro_specifier],
+    [$.type_specifier, $.expression, $.macro_specifier],
+    [$._macro_declaration_specifiers, $._declarator, $.attributed_declarator, $.type_specifier, $.expression],
     [$._class_declaration_item, $._class_name],
     [$.attribute, $._scope_resolution],
     [$.expression, $.contract_specifier],
@@ -313,9 +439,22 @@ module.exports = grammar(C, {
   ],
 
   rules: {
+    _top_level_expression_statement: ($, original = missingOriginalRule()) =>
+      choice(
+        original,
+        prec.dynamic(
+          -1,
+          choice(seq($.call_expression, sym('_macro_call_end')), seq($.identifier, sym('_macro_identifier_end')))
+        )
+      ),
+
     _top_level_item: ($, original = missingOriginalRule()) =>
       choice(
-        ...ruleMembers(original, 'CHOICE').filter((member) => !isOldStyleFunctionDefinition(member)),
+        ...ruleMembers(original, 'CHOICE').filter(
+          (member) => !isOldStyleFunctionDefinition(member) && !isContextualCItem(member)
+        ),
+        sym('preproc_if'),
+        sym('preproc_ifdef'),
         $.namespace_definition,
         $.concept_definition,
         $.namespace_alias_definition,
@@ -339,8 +478,17 @@ module.exports = grammar(C, {
       choice(
         ...ruleMembers(original, 'CHOICE').filter(
           (member) =>
-            !isOldStyleFunctionDefinition(member) && !(member.type === 'SYMBOL' && member.name.startsWith('preproc_if'))
+            !isOldStyleFunctionDefinition(member) &&
+            !isContextualCItem(member) &&
+            !(
+              member.type === 'SYMBOL' &&
+              (member.name.startsWith('preproc_if') || member.name === '_statement_empty_declaration')
+            )
         ),
+        $.function_definition,
+        $.declaration,
+        $.type_definition,
+        $._empty_declaration,
         $.namespace_definition,
         $.concept_definition,
         $.namespace_alias_definition,
@@ -417,30 +565,11 @@ module.exports = grammar(C, {
     decltype_auto: ($) => seq('decltype', '(', $.auto, ')'),
     decltype: ($) => seq('decltype', '(', choice($.expression, $.comma_expression), ')'),
 
-    type_specifier: ($) =>
-      choice(
-        $.struct_specifier,
-        $.union_specifier,
-        $.enum_specifier,
-        $.class_specifier,
-        $.sized_type_specifier,
-        $.pack_index_type,
-        $.primitive_type,
-        $.template_type,
-        $.dependent_type,
-        $.splice_type_specifier,
-        $.placeholder_type_specifier,
-        $.decltype,
-        $.typeof_specifier,
-        prec.right(
-          choice(
-            alias($.qualified_type_identifier, $.qualified_identifier),
-            C.grammar.rules._type_identifier,
-            alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(0, 2)), sym('type_identifier'))
-          )
-        ),
-        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(2)), sym('type_identifier'))
-      ),
+    type_specifier: ($) => cppTypeSpecifier($, $.sized_type_specifier),
+
+    _type_name_specifier: ($) => cppTypeSpecifier($, alias($._sized_type_name, $.sized_type_specifier)),
+
+    _field_declaration_specifiers: () => C.grammar.rules._declaration_specifiers,
 
     typeof_specifier: (_, original = missingOriginalRule()) => prec.dynamic(-1, original),
 
@@ -571,38 +700,9 @@ module.exports = grammar(C, {
     function_definition_reference_declarator: ($) =>
       prec.dynamic(1, prec.right(withReferenceDeclarator($, $._function_definition_declarator))),
 
-    declaration: ($) =>
-      choice(
-        seq(
-          $._declaration_specifiers,
-          field('declarator', declarationItem($)),
-          repeat(
-            seq(
-              ',',
-              field(
-                'declarator',
-                choice(declarationItem($), alias($.later_keyword_argument_init_declarator, $.init_declarator))
-              )
-            )
-          ),
-          ';'
-        ),
-        // A statement that can be a declaration is one ([stmt.ambig]), but only with a built-in type is the declaration
-        // reading certain: the expression reading of `void (*fp)();` calls a function-style cast, which is never
-        // valid, and that of `int(x);` discards one. With any other type, `foo(*p)();` and `get(*p)[0] = 5;` are
-        // commonly calls, so the declaration reading with parentheses (PREC.PAREN_DECLARATOR) keeps losing to them.
-        prec.dynamic(
-          PREC.CERTAIN_DECLARATION,
-          seq(
-            $._built_in_declaration_specifiers,
-            field('declarator', $._built_in_declarator),
-            // Each further declarator outweighs the call, as `y(3)` in `int(x), y(3);`, that its expression reading may
-            // contain.
-            repeat(seq(',', prec.dynamic(1, field('declarator', choice(declarationItem($), $._built_in_declarator))))),
-            ';'
-          )
-        )
-      ),
+    declaration: ($) => cppDeclaration($),
+
+    _statement_declaration: ($) => cppDeclaration($),
 
     _built_in_declarator: ($) =>
       choice($._built_in_parenthesized_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
@@ -653,13 +753,13 @@ module.exports = grammar(C, {
         seq(
           repeat($._declaration_modifiers),
           field('type', choice($.primitive_type, $.sized_type_specifier)),
-          repeat($._declaration_modifiers)
+          repeat($._non_macro_declaration_modifiers)
         )
       ),
 
     virtual_specifier: () => choice('final', 'override'),
 
-    _declaration_modifiers: ($, original = missingOriginalRule()) => choice(original, 'virtual'),
+    _non_macro_declaration_modifiers: ($, original = missingOriginalRule()) => choice(original, 'virtual'),
 
     explicit_function_specifier: ($) => choice('explicit', prec(PREC.CALL, seq('explicit', '(', $.expression, ')'))),
 
@@ -711,7 +811,7 @@ module.exports = grammar(C, {
               $._type_identifier,
               $.pack_index_type,
               $.primitive_type,
-              $.sized_type_specifier
+              alias($._sized_type_name, $.sized_type_specifier)
             )
           )
         )
@@ -740,7 +840,7 @@ module.exports = grammar(C, {
         ';'
       ),
 
-    export_declaration: ($) => prec(1, seq('export', choice($._block_item, $.declaration_list))),
+    export_declaration: ($) => prec(1, seq('export', choice($._block_item, prec.dynamic(1, $.declaration_list)))),
 
     import_declaration: ($) =>
       seq(
@@ -998,7 +1098,7 @@ module.exports = grammar(C, {
 
     init_declarator: ($, original = missingOriginalRule()) =>
       choice(
-        original,
+        withDeclarator(original, $._declarator),
         seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
         // A pointer or reference declarator takes the parameter list that follows its name, so `Foo* p(nullptr);`
         // would otherwise read only as a function taking a parameter of type `nullptr`. These alternatives reduce the
@@ -1407,7 +1507,8 @@ module.exports = grammar(C, {
       ),
 
     reference_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._declarator))),
-    pointer_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+    pointer_declarator: ($, original = missingOriginalRule()) =>
+      prec.dynamic(1, withPointerDeclarator($, undefined, original)),
     pointer_field_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
     pointer_type_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
     abstract_pointer_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
@@ -1815,7 +1916,7 @@ module.exports = grammar(C, {
 
     _unlabeled_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
-    _single_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
+    _single_unattributed_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
     switch_statement: ($) => seq('switch', field('condition', $.condition_clause), field('body', $.compound_statement)),
 
@@ -2806,6 +2907,73 @@ function fieldExpressionMember($) {
 }
 
 /**
+ * @param {NoInfer<GrammarSymbols<'_declaration_specifiers' | '_built_in_declaration_specifiers' | '_built_in_declarator' | 'later_keyword_argument_init_declarator' | 'init_declarator' | '_declarator' | 'gnu_asm_expression' | 'ms_call_modifier'>>} $
+ */
+function cppDeclaration($) {
+  return choice(
+    seq(
+      $._declaration_specifiers,
+      field('declarator', declarationItem($)),
+      repeat(
+        seq(
+          ',',
+          field(
+            'declarator',
+            choice(declarationItem($), alias($.later_keyword_argument_init_declarator, $.init_declarator))
+          )
+        )
+      ),
+      ';'
+    ),
+    // A statement that can be a declaration is one ([stmt.ambig]), but only with a built-in type is the declaration
+    // reading certain: the expression reading of `void (*fp)();` calls a function-style cast, which is never
+    // valid, and that of `int(x);` discards one. With any other type, `foo(*p)();` and `get(*p)[0] = 5;` are
+    // commonly calls, so the declaration reading with parentheses (PREC.PAREN_DECLARATOR) keeps losing to them.
+    prec.dynamic(
+      PREC.CERTAIN_DECLARATION,
+      seq(
+        $._built_in_declaration_specifiers,
+        field('declarator', $._built_in_declarator),
+        // Each further declarator outweighs the call, as `y(3)` in `int(x), y(3);`, that its expression reading may
+        // contain.
+        repeat(seq(',', prec.dynamic(1, field('declarator', choice(declarationItem($), $._built_in_declarator))))),
+        ';'
+      )
+    )
+  );
+}
+
+/**
+ * @param {NoInfer<GrammarSymbols<'struct_specifier' | 'union_specifier' | 'enum_specifier' | 'class_specifier' | 'pack_index_type' | 'primitive_type' | 'template_type' | 'dependent_type' | 'splice_type_specifier' | 'placeholder_type_specifier' | 'decltype' | 'typeof_specifier' | 'qualified_type_identifier' | 'qualified_identifier'>>} $
+ * @param {Rule} sized
+ */
+function cppTypeSpecifier($, sized) {
+  return choice(
+    $.struct_specifier,
+    $.union_specifier,
+    $.enum_specifier,
+    $.class_specifier,
+    sized,
+    $.pack_index_type,
+    $.primitive_type,
+    $.template_type,
+    $.dependent_type,
+    $.splice_type_specifier,
+    $.placeholder_type_specifier,
+    $.decltype,
+    $.typeof_specifier,
+    prec.right(
+      choice(
+        alias($.qualified_type_identifier, $.qualified_identifier),
+        C.grammar.rules._type_identifier,
+        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(0, 2)), sym('type_identifier'))
+      )
+    ),
+    alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(2)), sym('type_identifier'))
+  );
+}
+
+/**
  * C's declaration uses _declaration_declarator, whose function declarators take macro attributes; that causes a world of
  * pain for C++, so C++ uses the plain _declarator.
  * @param {NoInfer<GrammarSymbols<'_declarator' | 'gnu_asm_expression' | 'init_declarator' | 'ms_call_modifier'>>} $
@@ -2848,7 +3016,7 @@ function pointerToMember($, self, pointer, callModifierPrecedence = 2) {
  * @param {Rule | undefined} declarator
  * @param {Rule} [original]
  */
-function withPointerDeclarator($, declarator, original = C.grammar.rules.pointer_declarator) {
+function withPointerDeclarator($, declarator, original = prec.dynamic(1, C.grammar.rules.pointer_declarator)) {
   return withDeclarator(original, declarator, $.ms_call_modifier);
 }
 
@@ -2926,12 +3094,31 @@ function interleavePointerModifier(members, modifier) {
   return [...members.slice(0, index), seq(modifiers, optional(seq(modifier, modifiers))), ...members.slice(index + 2)];
 }
 
+/** @param {Rule} rule */
+function isContextualCItem(rule) {
+  return (
+    rule.type === 'ALIAS' &&
+    rule.content.type === 'SYMBOL' &&
+    [
+      '_statement_function_definition',
+      '_statement_declaration',
+      '_statement_type_definition',
+      'preproc_if_in_statement',
+      'preproc_ifdef_in_statement',
+      'preproc_if_in_header',
+      'preproc_ifdef_in_header',
+    ].includes(rule.content.name)
+  );
+}
+
 /**
  * @param {Rule} rule
  */
 function isOldStyleFunctionDefinition(rule) {
   return (
-    rule.type === 'ALIAS' && rule.content.type === 'SYMBOL' && rule.content.name === '_old_style_function_definition'
+    rule.type === 'ALIAS' &&
+    rule.content.type === 'SYMBOL' &&
+    rule.content.name.includes('_old_style_function_definition')
   );
 }
 

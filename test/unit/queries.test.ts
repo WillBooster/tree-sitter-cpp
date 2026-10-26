@@ -44,12 +44,13 @@ const listPublishedFiles = {
   crate: (): string[] => execFileSync('cargo', ['package', '--list', '--allow-dirty'], execOptions).split('\n'),
 };
 for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
-  test(`publishes every query file that tree-sitter.json references in the ${packageKind} package`, testOptions, () => {
+  test(`publishes required query and scanner files in the ${packageKind} package`, testOptions, () => {
     const published = new Set(listFiles());
     expect(published).toContain('tree-sitter.json');
     if (packageKind === 'crate') {
-      expect(published).toContain('src/pragma.h');
-      expect(published).toContain('src/identifier.h');
+      for (const file of scannerDependencies()) {
+        expect(published, file).toContain(file);
+      }
     }
     for (const kind of QueryKinds) {
       for (const file of queryPaths(kind)) {
@@ -59,8 +60,20 @@ for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
   });
 }
 
+function scannerDependencies(): string[] {
+  const dependencies = execFileSync('cc', ['-MM', '-Isrc', 'src/scanner.c'], execOptions)
+    .replaceAll(/\\\r?\n/g, ' ')
+    .split(':')[1]!
+    .trim()
+    .split(/\s+/);
+  return dependencies
+    .map((file) => path.relative(Root, path.resolve(Root, file)))
+    .filter((file) => file !== '..' && !file.startsWith(`..${path.sep}`) && !path.isAbsolute(file))
+    .map((file) => file.split(path.sep).join('/'));
+}
+
 test('keeps vendored C scanner headers synchronized with the installed dependency', () => {
-  for (const file of ['pragma.h', 'identifier.h']) {
+  for (const file of ['pragma.h', 'identifier.h', 'keywords.h', 'functionMacro.h', 'conditionalMacro.h']) {
     expect(fs.readFileSync(path.join(Root, 'src', file)), `${file} differs; run script/copy-c-scanner`).toEqual(
       fs.readFileSync(path.join(Root, 'node_modules/@willbooster/tree-sitter-c/src', file))
     );
