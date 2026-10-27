@@ -1,0 +1,17 @@
+struct Owner { int (*field)(int); int (Owner::*member)(int); };
+int (*pointer)(int);
+int (**nested)(int);
+int (&reference)(int) = *pointer;
+int (named);
+typedef int (*Callback)(int);
+using Abstract = int (*)(int);
+using Member = int (Owner::*)(int);
+auto trailing() -> int (*)(int);
+auto trailingReference() -> int (&)(int);
+int parameter(int (*input)(int));
+int size = sizeof(int (&)[3]);
+int ((nestedName));
+int (*(*factory)(int))(int);
+int (*arrayPointer)[3];
+auto nestedReturn() -> int (*(*)(int))(int);
+using Function = int ();

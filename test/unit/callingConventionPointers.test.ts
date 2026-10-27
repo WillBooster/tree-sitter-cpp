@@ -125,6 +125,12 @@ int (__stdcall (&nested_reference))(int) = *pointer;
       'parenthesized_declarator',
     ]);
     expect(tree.rootNode.namedChildren).toHaveLength(3);
+    for (const node of modifiers) {
+      const enclosed = node.parent!.childForFieldName('declarator');
+      expect(enclosed).not.toBeNull();
+      expect(enclosed!.equals(node)).toBe(false);
+      expect(enclosed!.type).not.toBe('ms_call_modifier');
+    }
   } finally {
     tree.delete();
     query.delete();
