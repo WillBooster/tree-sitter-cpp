@@ -728,7 +728,10 @@ module.exports = grammar(C, {
     built_in_parenthesized_declarator: ($) =>
       seq(
         '(',
-        choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+        field(
+          'declarator',
+          choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator))
+        ),
         ')'
       ),
     built_in_parenthesized_array_declarator: ($) =>
@@ -1631,6 +1634,15 @@ module.exports = grammar(C, {
         )
       ),
 
+    parenthesized_declarator: ($) => prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._declarator)),
+    parenthesized_field_declarator: ($) =>
+      prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._field_declarator)),
+    parenthesized_type_declarator: ($) =>
+      prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._type_declarator)),
+    abstract_parenthesized_declarator: ($) => prec(1, parenthesizedDeclarator($, $._abstract_declarator)),
+    _initialized_parenthesized_declarator: ($) =>
+      parenthesizedDeclarator($, alias($._initialized_parenthesized_content, $._declarator)),
+
     function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
 
     // Parentheses around a pointer before a parameter list or an array bound, as in `int (*pf)()` and `int (*a)[3]`,
@@ -1640,15 +1652,18 @@ module.exports = grammar(C, {
       seq(
         '(',
         choice(
-          $.pointer_declarator,
-          alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
-          alias($.qualified_pointer_declarator, $.qualified_identifier),
+          field('declarator', $.pointer_declarator),
+          field('declarator', alias($.required_parentheses_pointer_declarator, $.pointer_declarator)),
+          field('declarator', alias($.qualified_pointer_declarator, $.qualified_identifier)),
           seq(
             optional($.ms_call_modifier),
-            choice(
-              $.reference_declarator,
-              alias($.required_parentheses_reference_declarator, $.reference_declarator),
-              alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+            field(
+              'declarator',
+              choice(
+                $.reference_declarator,
+                alias($.required_parentheses_reference_declarator, $.reference_declarator),
+                alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+              )
             )
           )
         ),
@@ -1773,15 +1788,18 @@ module.exports = grammar(C, {
         seq(
           '(',
           choice(
-            alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
-            alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier),
+            field('declarator', alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator)),
+            field('declarator', alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)),
             seq(
               optional(prec.dynamic(3, $.ms_call_modifier)),
-              choice(
-                alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
-                alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
-                alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
-                alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator)
+              field(
+                'declarator',
+                choice(
+                  alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
+                  alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
+                  alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
+                  alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator)
+                )
               )
             )
           ),
@@ -2296,7 +2314,7 @@ module.exports = grammar(C, {
     _sizeof_reference_array_declarator: ($) =>
       withDeclarator(C.grammar.rules.abstract_array_declarator, $._sizeof_reference_declarator),
     _sizeof_reference_parenthesized_declarator: ($) =>
-      prec(1, seq('(', optional($.ms_call_modifier), $._sizeof_reference_declarator, ')')),
+      prec(1, seq('(', optional($.ms_call_modifier), field('declarator', $._sizeof_reference_declarator), ')')),
     _sizeof_reference_qualified_pointer_declarator: ($) =>
       pointerToMember(
         $,
@@ -3039,6 +3057,15 @@ function withDeclarator(rule, declarator, pointerModifier) {
   const result = replaceRuleField(rule, 'declarator', declarator, pointerModifier);
   if (JSON.stringify(result) === JSON.stringify(rule)) throw new Error('The rule has no declarator field to replace.');
   return result;
+}
+
+/**
+ * @param {NoInfer<GrammarSymbols<'ms_call_modifier'>>} $
+ * @param {Rule} declarator
+ */
+function parenthesizedDeclarator($, declarator) {
+  const parenthesized = seq('(', optional($.ms_call_modifier), field('declarator', declarator), ')');
+  return choice(parenthesized, prec(2, seq($.ms_call_modifier, parenthesized)));
 }
 
 /**
