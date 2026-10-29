@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { Edit, Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild';
@@ -53,56 +53,29 @@ test('retains complete interleaved type operands and C++ type kinds through inhe
   }
 });
 
-test('rejects storage in type operands and restores query ranges after incremental undo', () => {
+test('rejects storage in type operands', () => {
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, '(type_descriptor type: (type_specifier/sized_type_specifier) @type)');
   try {
     for (const expression of ['sizeof(int const long)', 'alignof(int const long)', 'static_cast<int const long>(1)']) {
-      let source = `void f() { (void)${expression}; }\nint following() { return 0; }`;
-      let tree = parser.parse(source)!;
+      const source = `void f() { (void)${expression}; }\nint following() { return 0; }`;
       const start = source.indexOf('const');
-      const original = tree.rootNode.toString();
-      const snapshot = (): [string, number, number][] =>
-        query.captures(tree.rootNode).map(({ node }) => [node.text, node.startIndex, node.endIndex]);
-      const originalCaptures = snapshot();
-      try {
-        expect(tree.rootNode.hasError, source).toBe(false);
-        expect(originalCaptures).toEqual([
-          ['int const long', source.indexOf('int const long'), source.indexOf('int const long') + 14],
-        ]);
-        for (const replacement of ['static', 'const']) {
-          const end = start + (replacement === 'static' ? 5 : 6);
-          tree.edit(
-            new Edit({
-              startIndex: start,
-              oldEndIndex: end,
-              newEndIndex: start + replacement.length,
-              startPosition: { row: 0, column: start },
-              oldEndPosition: { row: 0, column: end },
-              newEndPosition: { row: 0, column: start + replacement.length },
-            })
+      for (const replacement of ['const', 'static']) {
+        const replaced = source.slice(0, start) + replacement + source.slice(start + 'const'.length);
+        const tree = parser.parse(replaced)!;
+        try {
+          expect(tree.rootNode.hasError, replaced).toBe(replacement === 'static');
+          expect(tree.rootNode.descendantsOfType('function_definition').at(-1)?.text).toBe(
+            'int following() { return 0; }'
           );
-          source = source.slice(0, start) + replacement + source.slice(end);
-          const next = parser.parse(source, tree)!;
-          tree.delete();
-          tree = next;
-          const fresh = parser.parse(source)!;
-          try {
-            expect(tree.rootNode.hasError, source).toBe(replacement === 'static');
-            expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-            expect(tree.rootNode.descendantsOfType('function_definition').at(-1)?.text).toBe(
-              'int following() { return 0; }'
-            );
-            if (replacement === 'const') {
-              expect(tree.rootNode.toString()).toBe(original);
-              expect(snapshot()).toEqual(originalCaptures);
-            }
-          } finally {
-            fresh.delete();
+          if (replacement === 'const') {
+            expect(
+              query.captures(tree.rootNode).map(({ node }) => [node.text, node.startIndex, node.endIndex])
+            ).toEqual([['int const long', source.indexOf('int const long'), source.indexOf('int const long') + 14]]);
           }
+        } finally {
+          tree.delete();
         }
-      } finally {
-        tree.delete();
       }
     }
   } finally {

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { Edit, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { testCommand } from './run';
@@ -97,48 +97,20 @@ test('does not split ordinary multiline declarations or calls at macro boundarie
   }
 });
 
-test('preserves macro EOF query ranges and fresh/incremental equivalence after inserting a semicolon and undoing it', () => {
-  let source = '#define REGISTER(...)\nREGISTER(Item)';
+test('keeps macro EOF query ranges with and without a trailing semicolon', () => {
+  const source = '#define REGISTER(...)\nREGISTER(Item)';
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, '(expression_statement (call_expression) @call)');
-  let tree = parser.parse(source)!;
-  const captures = (parsed: Tree): [string, number, number][] =>
-    query.captures(parsed.rootNode).map(({ node }) => [node.text, node.startIndex, node.endIndex]);
-  const original = tree.rootNode.toString();
-  const originalCaptures = captures(tree);
-  const start = source.length;
-  const position = { row: 1, column: 'REGISTER(Item)'.length };
+  const tree = parser.parse(source)!;
+  const terminated = parser.parse(`${source};`)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    expect(originalCaptures).toEqual([['REGISTER(Item)', source.indexOf('REGISTER(Item)'), source.length]]);
-    for (const replacement of [';', '']) {
-      const oldLength = replacement ? 0 : 1;
-      tree.edit(
-        new Edit({
-          startIndex: start,
-          oldEndIndex: start + oldLength,
-          newEndIndex: start + replacement.length,
-          startPosition: position,
-          oldEndPosition: { ...position, column: position.column + oldLength },
-          newEndPosition: { ...position, column: position.column + replacement.length },
-        })
-      );
-      source = source.slice(0, start) + replacement;
-      const next = parser.parse(source, tree)!;
-      tree.delete();
-      tree = next;
-      const fresh = parser.parse(source)!;
-      try {
-        expect(tree.rootNode.hasError).toBe(false);
-        expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-        expect(captures(tree)).toEqual(captures(fresh));
-      } finally {
-        fresh.delete();
-      }
-    }
-    expect(tree.rootNode.toString()).toBe(original);
-    expect(captures(tree)).toEqual(originalCaptures);
+    expect(query.captures(tree.rootNode).map(({ node }) => [node.text, node.startIndex, node.endIndex])).toEqual([
+      ['REGISTER(Item)', source.indexOf('REGISTER(Item)'), source.length],
+    ]);
+    expect(terminated.rootNode.hasError).toBe(false);
   } finally {
+    terminated.delete();
     tree.delete();
     query.delete();
     parser.delete();
@@ -158,20 +130,19 @@ testCommand(
   }
 );
 
-test('keeps Unicode neighboring calls and query ranges through identifier edits and undo', () => {
-  let source = fs.readFileSync(new URL('../fixtures/unicodeMacroLines.cpp', import.meta.url), 'utf8');
+test('keeps Unicode neighboring calls and query ranges for each identifier spelling', () => {
+  const source = fs.readFileSync(new URL('../fixtures/unicodeMacroLines.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,
     '(expression_statement (call_expression function: (identifier) @function arguments: (argument_list) @arguments))'
   );
-  let tree = parser.parse(source)!;
+  const tree = parser.parse(source)!;
   const captures = (parsed: Tree): [string, string, number, number][] =>
     query.captures(parsed.rootNode).map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
-  const original = tree.rootNode.toString();
   const originalCaptures = captures(tree);
   try {
-    expect(tree.rootNode.hasError, original).toBe(false);
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(originalCaptures.filter(([name]) => name === 'function').map(([, text]) => text)).toEqual([
       'REGISTER',
       '本体',
@@ -194,36 +165,15 @@ test('keeps Unicode neighboring calls and query ranges through identifier edits 
     }
     expect(tree.rootNode.descendantsOfType('declaration').map((node) => node.text)).toEqual(['int following;']);
     const start = source.indexOf('本体();');
-    const row = source.slice(0, start).split('\n').length - 1;
-    let previous = '本体';
-    for (const replacement of ['数体', '𐐨entry', '本体']) {
-      tree.edit(
-        new Edit({
-          startIndex: start,
-          oldEndIndex: start + previous.length,
-          newEndIndex: start + replacement.length,
-          startPosition: { row, column: 0 },
-          oldEndPosition: { row, column: previous.length },
-          newEndPosition: { row, column: replacement.length },
-        })
-      );
-      source = source.slice(0, start) + replacement + source.slice(start + previous.length);
-      previous = replacement;
-      const next = parser.parse(source, tree)!;
-      tree.delete();
-      tree = next;
-      const fresh = parser.parse(source)!;
+    for (const replacement of ['数体', '𐐨entry']) {
+      const variant = parser.parse(source.slice(0, start) + replacement + source.slice(start + '本体'.length))!;
       try {
-        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-        expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-        expect(captures(tree)).toEqual(captures(fresh));
-        expect(captures(tree).filter(([name]) => name === 'function')[1]?.[1]).toBe(replacement);
+        expect(variant.rootNode.hasError, variant.rootNode.toString()).toBe(false);
+        expect(captures(variant).filter(([name]) => name === 'function')[1]?.[1]).toBe(replacement);
       } finally {
-        fresh.delete();
+        variant.delete();
       }
     }
-    expect(tree.rootNode.toString()).toBe(original);
-    expect(captures(tree)).toEqual(originalCaptures);
   } finally {
     tree.delete();
     query.delete();

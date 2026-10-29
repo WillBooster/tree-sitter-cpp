@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, type Node, Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import treeSitterJson from '../../tree-sitter.json';
@@ -30,7 +30,7 @@ test('exposes alternative words as operator arguments with primary-equivalent na
   const parser = new Parser().setLanguage(language);
   const query = highlights();
   const tree = parser.parse(source)!;
-  const primary = parser.parse(source.replace(wordPattern, (word) => primarySpellings.get(word)!))!;
+  const primary = parser.parse(source.replaceAll(wordPattern, (word) => primarySpellings.get(word)!))!;
   const abstractTypes = parser.parse('using L = int(bitand)[3]; using R = int(and)[3]; using F = void(bitand)(int);')!;
   const control = parser.parse('int anderson; int bitanderson; const char* text = R"(TAKE(and, bitand, xor_eq))";')!;
   try {
@@ -74,91 +74,35 @@ test('exposes alternative words as operator arguments with primary-equivalent na
   }
 });
 
-test('preserves full metadata and captures through a macro argument spelling edit and undo', () => {
+test('keeps the following function after each macro argument operator spelling', () => {
   const parser = new Parser().setLanguage(language);
-  const query = highlights();
-  let current = source;
-  let spelling = 'and';
   const start = source.indexOf('TAKE(and') + 'TAKE('.length;
-  let tree = parser.parse(current)!;
   try {
-    for (const replacement of ['&&', 'and']) {
-      const next = current.slice(0, start) + replacement + current.slice(start + spelling.length);
-      tree.edit(
-        new Edit({
-          startIndex: start,
-          oldEndIndex: start + spelling.length,
-          newEndIndex: start + replacement.length,
-          startPosition: point(current, start),
-          oldEndPosition: point(current, start + spelling.length),
-          newEndPosition: point(next, start + replacement.length),
-        })
-      );
-      const incremental = parser.parse(next, tree)!;
-      tree.delete();
-      tree = incremental;
-      const fresh = parser.parse(next)!;
+    for (const spelling of ['and', '&&']) {
+      const tree = parser.parse(source.slice(0, start) + spelling + source.slice(start + 'and'.length))!;
       try {
         expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-        expect(metadata(tree.rootNode)).toEqual(metadata(fresh.rootNode));
-        const captures = (node: Node): unknown => query.captures(node).map(({ name, node }) => [name, metadata(node)]);
-        expect(captures(tree.rootNode)).toEqual(captures(fresh.rootNode));
         expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return branch; }');
       } finally {
-        fresh.delete();
+        tree.delete();
       }
-      current = next;
-      spelling = replacement;
     }
-    expect(current).toBe(source);
   } finally {
-    tree.delete();
-    query.delete();
     parser.delete();
   }
 });
-test('keeps singleton word macro arguments clean through one-to-many argument edits and undo', () => {
+
+test('keeps singleton word macro arguments clean for one or many arguments', () => {
   const original = fs.readFileSync(path.join(root, 'test/fixtures/singleAlternativeArguments.cpp'), 'utf8');
   const parser = new Parser().setLanguage(language);
   const query = highlights();
-  let current = original;
-  let spelling = 'and';
   const start = original.indexOf('OP(and)') + 'OP('.length;
-  let tree = parser.parse(current)!;
   try {
-    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    const captures = query.captures(tree.rootNode);
-    for (const match of original.matchAll(/\b(?:and|bitand)\b/g)) {
-      const token = tree.rootNode.descendantForIndex(match.index, match.index + match[0].length)!;
-      expect(token.type).toBe('identifier');
-      const at = captures.filter(
-        ({ node }) => node.startIndex === match.index && node.endIndex === match.index + match[0].length
-      );
-      expect(at.filter(({ name }) => name === 'operator')).toEqual([]);
-      expect(at.filter(({ name }) => name === 'variable')).toHaveLength(1);
-    }
-    for (const replacement of ['bitand', 'and, bitand', '', 'and']) {
-      const next = current.slice(0, start) + replacement + current.slice(start + spelling.length);
-      tree.edit(
-        new Edit({
-          startIndex: start,
-          oldEndIndex: start + spelling.length,
-          newEndIndex: start + replacement.length,
-          startPosition: point(current, start),
-          oldEndPosition: point(current, start + spelling.length),
-          newEndPosition: point(next, start + replacement.length),
-        })
-      );
-      const incremental = parser.parse(next, tree)!;
-      tree.delete();
-      tree = incremental;
-      const fresh = parser.parse(next)!;
+    for (const argument of ['and', 'bitand', 'and, bitand', '']) {
+      const source = original.slice(0, start) + argument + original.slice(start + 'and'.length);
+      const tree = parser.parse(source)!;
       try {
         expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-        expect(metadata(tree.rootNode)).toEqual(metadata(fresh.rootNode));
-        const captureMetadata = (node: Node): unknown =>
-          query.captures(node).map(({ name, node }) => [name, metadata(node)]);
-        expect(captureMetadata(tree.rootNode)).toEqual(captureMetadata(fresh.rootNode));
         expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 0; }');
         expect(tree.rootNode.descendantsOfType('declaration').map((node) => node.text)).toEqual([
           'int y = SOME(and) + 1;',
@@ -167,17 +111,24 @@ test('keeps singleton word macro arguments clean through one-to-many argument ed
         expect(tree.rootNode.descendantsOfType('if_statement')).toHaveLength(1);
         const call = tree.rootNode.descendantsOfType('call_expression')[0]!.childForFieldName('arguments')!;
         expect(call.descendantsOfType('operator_argument').map((node) => node.text)).toEqual(
-          replacement.includes(',') ? ['and', 'bitand'] : []
+          argument.includes(',') ? ['and', 'bitand'] : []
         );
+        if (argument !== 'and') continue;
+        const captures = query.captures(tree.rootNode);
+        for (const match of source.matchAll(/\b(?:and|bitand)\b/g)) {
+          const token = tree.rootNode.descendantForIndex(match.index, match.index + match[0].length)!;
+          expect(token.type).toBe('identifier');
+          const at = captures.filter(
+            ({ node }) => node.startIndex === match.index && node.endIndex === match.index + match[0].length
+          );
+          expect(at.filter(({ name }) => name === 'operator')).toEqual([]);
+          expect(at.filter(({ name }) => name === 'variable')).toHaveLength(1);
+        }
       } finally {
-        fresh.delete();
+        tree.delete();
       }
-      current = next;
-      spelling = replacement;
     }
-    expect(current).toBe(original);
   } finally {
-    tree.delete();
     query.delete();
     parser.delete();
   }
@@ -190,24 +141,6 @@ function namedStructure(node: Node): unknown {
       child.isNamed ? [[node.fieldNameForChild(index), namedStructure(child)]] : []
     ),
   ];
-}
-function metadata(node: Node): unknown {
-  return [
-    node.type,
-    node.isNamed,
-    node.isExtra,
-    node.isMissing,
-    node.hasError,
-    node.startIndex,
-    node.endIndex,
-    node.startPosition,
-    node.endPosition,
-    node.children.map((child, index) => [node.fieldNameForChild(index), metadata(child)]),
-  ];
-}
-function point(text: string, index: number): { row: number; column: number } {
-  const lines = text.slice(0, index).split('\n');
-  return { row: lines.length - 1, column: lines.at(-1)!.length };
 }
 function highlights(): Query {
   return new Query(

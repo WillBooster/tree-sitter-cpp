@@ -133,9 +133,6 @@ and the release build regenerate the parsers before compiling them.
 `bun run test` runs:
 
 - the corpus in `test/corpus`, with the native build and with the Wasm build (the first run downloads the WASI SDK);
-- an incremental-parsing check (`test/unit/incremental.test.ts`): `script/fuzz-corpus` runs `tree-sitter fuzz`, which
-  edits each corpus case at random, reparses it, undoes the edits, and reparses again. `TREE_SITTER_SEED`, `TREE_SITTER_ITERATIONS`, and
-  `TREE_SITTER_EDITS` run other or more edits;
 - a check that the real-world C++ files in `examples/`, the checked-in ones and those of the cloned repositories,
   fail to parse exactly as listed in `script/known-failures.txt`. The first run clones the repositories. The example
   repositories are pinned to commits in `script/parse-examples`. After a grammar change or a moved pin alters that

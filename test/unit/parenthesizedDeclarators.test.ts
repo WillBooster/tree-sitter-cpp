@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, type Node, Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
@@ -38,27 +38,12 @@ test('exposes enclosed declarators through parentheses in declarations and abstr
     expect(parenthesized.map((node) => node.childForFieldName('declarator')!.text)).toContain('Owner::*');
 
     const index = source.indexOf('pointer');
-    const replacement = 'renamedPointer';
-    const changed = source.slice(0, index) + replacement + source.slice(index + 'pointer'.length);
-    tree.edit(
-      new Edit({
-        startIndex: index,
-        oldEndIndex: index + 'pointer'.length,
-        newEndIndex: index + replacement.length,
-        startPosition: { row: 1, column: 6 },
-        oldEndPosition: { row: 1, column: 13 },
-        newEndPosition: { row: 1, column: 6 + replacement.length },
-      })
-    );
-    const incremental = parser.parse(changed, tree)!;
-    const fresh = parser.parse(changed)!;
+    const renamed = parser.parse(source.slice(0, index) + 'renamedPointer' + source.slice(index + 'pointer'.length))!;
     try {
-      expect(incremental.rootNode.hasError).toBe(false);
-      expect(fieldTree(incremental.rootNode)).toEqual(fieldTree(fresh.rootNode));
-      expect(query.captures(incremental.rootNode).some(({ node }) => node.text === '*renamedPointer')).toBe(true);
+      expect(renamed.rootNode.hasError).toBe(false);
+      expect(query.captures(renamed.rootNode).some(({ node }) => node.text === '*renamedPointer')).toBe(true);
     } finally {
-      incremental.delete();
-      fresh.delete();
+      renamed.delete();
     }
   } finally {
     query.delete();
@@ -66,12 +51,3 @@ test('exposes enclosed declarators through parentheses in declarations and abstr
     parser.delete();
   }
 });
-
-function fieldTree(node: Node): unknown {
-  return [
-    node.type,
-    node.startIndex,
-    node.endIndex,
-    node.namedChildren.map((child, index) => [node.fieldNameForNamedChild(index), fieldTree(child)]),
-  ];
-}

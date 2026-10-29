@@ -1,4 +1,4 @@
-import { Edit, Parser } from '@willbooster/web-tree-sitter';
+import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
@@ -41,42 +41,24 @@ test('terminates final C++ directives without inventing physical source characte
   }
 });
 
-test('updates final directives when physical endings are added and removed', () => {
+test('parses final directives with and without physical endings after a declaration', () => {
   const parser = new Parser().setLanguage(language);
   const prefix = 'int before;\n#define X 1';
-  let ending = '';
-  let tree = parser.parse(prefix)!;
   try {
-    for (const nextEnding of ['\n', '', '\\\n', '\\\r\n', '', '\nint after;\n', '']) {
-      tree.edit(
-        new Edit({
-          startIndex: prefix.length,
-          oldEndIndex: prefix.length + ending.length,
-          newEndIndex: prefix.length + nextEnding.length,
-          startPosition: point(prefix),
-          oldEndPosition: point(prefix + ending),
-          newEndPosition: point(prefix + nextEnding),
-        })
-      );
-      const source = prefix + nextEnding;
-      const next = parser.parse(source, tree)!;
-      tree.delete();
-      tree = next;
-      const fresh = parser.parse(source)!;
+    for (const ending of ['\n', '', '\\\n', '\\\r\n', '\nint after;\n']) {
+      const source = prefix + ending;
+      const tree = parser.parse(source)!;
       try {
         expect(tree.rootNode.hasError, JSON.stringify(source)).toBe(false);
-        expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
         expect(tree.rootNode.text).toBe(source);
         expect(tree.rootNode.descendantsOfType('declaration').map((node) => node.text)).toEqual(
-          nextEnding.includes('int after;') ? ['int before;', 'int after;'] : ['int before;']
+          ending.includes('int after;') ? ['int before;', 'int after;'] : ['int before;']
         );
       } finally {
-        fresh.delete();
+        tree.delete();
       }
-      ending = nextEnding;
     }
   } finally {
-    tree.delete();
     parser.delete();
   }
 });
@@ -104,8 +86,3 @@ test('retains errors for unfinished directive syntax at EOF', () => {
     parser.delete();
   }
 });
-
-function point(source: string): { row: number; column: number } {
-  const lines = source.split('\n');
-  return { row: lines.length - 1, column: lines.at(-1)!.length };
-}

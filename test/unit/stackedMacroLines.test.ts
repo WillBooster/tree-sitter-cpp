@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { Edit, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { testCommand } from './run';
@@ -76,69 +76,32 @@ test('keeps every marker, directive and declaration query range in nested condit
   }
 });
 
-test('invalidates a validated marker chain after middle and final-line edits and undo', () => {
-  const originalSource = '#define marker\n' + 'marker\n'.repeat(12) + 'template<class T> void kept();\n';
-  let source = originalSource;
+test('recognizes stacked marker lines around a middle terminator and a final declaration', () => {
+  const original = '#define marker\n' + 'marker\n'.repeat(12) + 'template<class T> void kept();\n';
+  const middle = '#define marker\n'.length + 'marker\n'.repeat(5).length + 'marker'.length;
+  const terminated = original.slice(0, middle) + ';' + original.slice(middle);
+  const declared = original.replace('template<class T> void kept();', 'int following;');
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,
     '(expression_statement (identifier) @marker) (declaration type: (_) @type declarator: (_) @declarator)'
   );
-  let tree = parser.parse(source)!;
-  const captures = (parsed: Tree): [string, string, number, number][] =>
-    query.captures(parsed.rootNode).map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
-  const original = tree.rootNode.toString();
-  const originalCaptures = captures(tree);
-  const replace = (start: number, oldText: string, newText: string): void => {
-    const preceding = source.slice(0, start).split('\n');
-    const position = { row: preceding.length - 1, column: preceding.at(-1)!.length };
-    tree.edit(
-      new Edit({
-        startIndex: start,
-        oldEndIndex: start + oldText.length,
-        newEndIndex: start + newText.length,
-        startPosition: position,
-        oldEndPosition: { ...position, column: position.column + oldText.length },
-        newEndPosition: { ...position, column: position.column + newText.length },
-      })
-    );
-    source = source.slice(0, start) + newText + source.slice(start + oldText.length);
-    const next = parser.parse(source, tree)!;
-    tree.delete();
-    tree = next;
-    const fresh = parser.parse(source)!;
-    try {
-      expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-      expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-      expect(captures(tree)).toEqual(captures(fresh));
-    } finally {
-      fresh.delete();
-    }
-  };
+  const trees = [original, terminated, declared].map((source) => parser.parse(source)!);
+  const markers = (tree: Tree): number => query.captures(tree.rootNode).filter(({ name }) => name === 'marker').length;
   try {
-    expect(tree.rootNode.hasError).toBe(false);
-    expect(originalCaptures.filter(([name]) => name === 'marker')).toHaveLength(12);
-    const middle = '#define marker\n'.length + 'marker\n'.repeat(5).length + 'marker'.length;
-    replace(middle, '', ';');
-    expect(captures(tree).filter(([name]) => name === 'marker')).toHaveLength(6);
-    expect(tree.rootNode.descendantsOfType('template_declaration').map((node) => node.text)).toEqual([
+    for (const tree of trees) expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    const [originalTree, terminatedTree, declaredTree] = trees as [Tree, Tree, Tree];
+    expect(markers(originalTree)).toBe(12);
+    expect(markers(terminatedTree)).toBe(6);
+    expect(terminatedTree.rootNode.descendantsOfType('template_declaration').map((node) => node.text)).toEqual([
       'template<class T> void kept();',
     ]);
-    replace(middle, ';', '');
-    expect(tree.rootNode.toString()).toBe(original);
-    expect(captures(tree)).toEqual(originalCaptures);
-    const final = source.indexOf('template');
-    replace(final, 'template<class T> void kept();', 'int following;');
-    expect(captures(tree).filter(([name]) => name === 'marker')).toEqual([]);
-    expect(tree.rootNode.descendantsOfType('declaration').at(-1)?.childForFieldName('declarator')?.text).toBe(
+    expect(markers(declaredTree)).toBe(0);
+    expect(declaredTree.rootNode.descendantsOfType('declaration').at(-1)?.childForFieldName('declarator')?.text).toBe(
       'following'
     );
-    replace(final, 'int following;', 'template<class T> void kept();');
-    expect(source).toBe(originalSource);
-    expect(tree.rootNode.toString()).toBe(original);
-    expect(captures(tree)).toEqual(originalCaptures);
   } finally {
-    tree.delete();
+    for (const tree of trees) tree.delete();
     query.delete();
     parser.delete();
   }

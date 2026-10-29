@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, type Node, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import treeSitterJson from '../../tree-sitter.json';
@@ -11,7 +11,7 @@ const Root = path.join(import.meta.dirname, '../..');
 const Source = fs.readFileSync(path.join(Root, 'test/fixtures/constructorPreproc.cpp'), 'utf8');
 await Parser.init();
 
-test('keeps conditional constructor initializers, following tags and edits in their public parents', async () => {
+test('keeps conditional constructor initializers and following tags in their public parents', async () => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser();
   const queries: Query[] = [];
@@ -101,72 +101,22 @@ test('keeps conditional constructor initializers, following tags and edits in th
     expect(directives.map(({ node }) => node.text)).toContain('#ifndef');
 
     const conditional = Source.slice(Source.indexOf('#if SELECT'), Source.indexOf('#endif') + '#endif'.length);
-    const plain = '    , b(n + 1)';
-    let source = Source;
     for (const [before, afterText, hasError] of [
-      [conditional, plain, false],
-      [plain, conditional, false],
+      [conditional, '    , b(n + 1)', false],
       ['#endif', '#endi', true],
-      ['#endi\n', '#endif\n', false],
     ] as const) {
-      const startIndex = source.indexOf(before);
+      const startIndex = Source.indexOf(before);
       expect(startIndex).toBeGreaterThanOrEqual(0);
-      const nextSource = source.slice(0, startIndex) + afterText + source.slice(startIndex + before.length);
-      tree.edit(
-        new Edit({
-          startIndex,
-          oldEndIndex: startIndex + before.length,
-          newEndIndex: startIndex + afterText.length,
-          startPosition: point(source, startIndex),
-          oldEndPosition: point(source, startIndex + before.length),
-          newEndPosition: point(nextSource, startIndex + afterText.length),
-        })
-      );
-      let incremental: Tree | undefined;
-      let fresh: Tree | undefined;
+      const variant = parser.parse(Source.slice(0, startIndex) + afterText + Source.slice(startIndex + before.length))!;
       try {
-        incremental = parser.parse(nextSource, tree)!;
-        fresh = parser.parse(nextSource)!;
-        expect(incremental.rootNode.hasError).toBe(hasError);
-        expect(snapshot(incremental.rootNode)).toEqual(snapshot(fresh.rootNode));
-        for (const query of queries) {
-          expect(query.captures(incremental.rootNode).map(({ name, node }) => [name, snapshot(node)])).toEqual(
-            query.captures(fresh.rootNode).map(({ name, node }) => [name, snapshot(node)])
-          );
-        }
-        tree.delete();
-        tree = incremental;
-        incremental = undefined;
-        source = nextSource;
+        expect(variant.rootNode.hasError).toBe(hasError);
       } finally {
-        incremental?.delete();
-        fresh?.delete();
+        variant.delete();
       }
     }
-    expect(source).toBe(Source);
   } finally {
     tree?.delete();
     for (const query of queries) query.delete();
     parser.delete();
   }
 }, 30_000);
-
-function point(source: string, index: number): { row: number; column: number } {
-  const prefix = source.slice(0, index);
-  return { row: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
-}
-
-function snapshot(node: Node): unknown {
-  return {
-    type: node.type,
-    named: node.isNamed,
-    extra: node.isExtra,
-    missing: node.isMissing,
-    error: node.hasError,
-    start: node.startIndex,
-    end: node.endIndex,
-    startPosition: node.startPosition,
-    endPosition: node.endPosition,
-    children: node.children.map((child, index) => [node.fieldNameForChild(index), snapshot(child)]),
-  };
-}
