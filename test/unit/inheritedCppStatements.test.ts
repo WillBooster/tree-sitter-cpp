@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { Edit, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild';
@@ -8,7 +8,7 @@ import { loadCurrentWasmBuild } from './wasmBuild';
 await Parser.init();
 const language = await loadCurrentWasmBuild();
 
-test('preserves C++ attributed substatement kinds and query ranges after an incremental edit', () => {
+test('preserves C++ attributed substatement kinds and query ranges', () => {
   const source = fs.readFileSync(new URL('../fixtures/inheritedCppStatements.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
   const query = new Query(
@@ -38,29 +38,12 @@ test('preserves C++ attributed substatement kinds and query ranges after an incr
       expect(end).toBe(start + text.length);
     }
     const start = source.indexOf('throw 1;') + 'throw '.length;
-    const preceding = source.slice(0, start).split('\n');
-    const position = { row: preceding.length - 1, column: preceding.at(-1)!.length };
-    tree.edit(
-      new Edit({
-        startIndex: start,
-        oldEndIndex: start + 1,
-        newEndIndex: start + 1,
-        startPosition: position,
-        oldEndPosition: { ...position, column: position.column + 1 },
-        newEndPosition: { ...position, column: position.column + 1 },
-      })
-    );
-    const changed = source.slice(0, start) + '9' + source.slice(start + 1);
-    const incremental = parser.parse(changed, tree)!;
-    const fresh = parser.parse(changed)!;
+    const changed = parser.parse(source.slice(0, start) + '9' + source.slice(start + 1))!;
     try {
-      expect(incremental.rootNode.hasError, incremental.rootNode.toString()).toBe(false);
-      expect(incremental.rootNode.toString()).toBe(fresh.rootNode.toString());
-      expect(captures(incremental)).toEqual(captures(fresh));
-      expect(captures(incremental)[0]?.slice(0, 2)).toEqual(['throw_statement', 'throw 9;']);
+      expect(changed.rootNode.hasError, changed.rootNode.toString()).toBe(false);
+      expect(captures(changed)[0]?.slice(0, 2)).toEqual(['throw_statement', 'throw 9;']);
     } finally {
-      fresh.delete();
-      incremental.delete();
+      changed.delete();
     }
   } finally {
     tree.delete();

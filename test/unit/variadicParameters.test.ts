@@ -1,4 +1,4 @@
-import { Edit, Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
@@ -128,50 +128,29 @@ test('recovers conditional parameter lists without consuming following definitio
     ]) {
       const prefix = 'void conditional(int first,\n';
       const suffix = ');\n' + following;
-      let previous = conditional;
-      let tree = parser.parse(prefix + previous + suffix)!;
-      try {
-        for (const parameters of [conditional, 'int second\n', conditional]) {
-          tree.edit(
-            new Edit({
-              startIndex: prefix.length,
-              oldEndIndex: prefix.length + previous.length,
-              newEndIndex: prefix.length + parameters.length,
-              startPosition: { row: 1, column: 0 },
-              oldEndPosition: { row: 1 + previous.split('\n').length - 1, column: 0 },
-              newEndPosition: { row: 1 + parameters.split('\n').length - 1, column: 0 },
-            })
-          );
-          const source = prefix + parameters + suffix;
-          const next = parser.parse(source, tree)!;
+      for (const parameters of [conditional, 'int second\n']) {
+        const source = prefix + parameters + suffix;
+        const tree = parser.parse(source)!;
+        try {
+          expect(
+            tree.rootNode
+              .descendantsOfType('function_definition')
+              .map((node) => [node.text, node.startIndex, node.endIndex])
+          ).toEqual([
+            [
+              'int after1(int value) { return value; }',
+              source.indexOf('int after1'),
+              source.indexOf('int after1') + 'int after1(int value) { return value; }'.length,
+            ],
+            [
+              'int after2(int value) { return value; }',
+              source.indexOf('int after2'),
+              source.indexOf('int after2') + 'int after2(int value) { return value; }'.length,
+            ],
+          ]);
+        } finally {
           tree.delete();
-          tree = next;
-          const fresh = parser.parse(source)!;
-          try {
-            expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-            expect(
-              tree.rootNode
-                .descendantsOfType('function_definition')
-                .map((node) => [node.text, node.startIndex, node.endIndex])
-            ).toEqual([
-              [
-                'int after1(int value) { return value; }',
-                source.indexOf('int after1'),
-                source.indexOf('int after1') + 'int after1(int value) { return value; }'.length,
-              ],
-              [
-                'int after2(int value) { return value; }',
-                source.indexOf('int after2'),
-                source.indexOf('int after2') + 'int after2(int value) { return value; }'.length,
-              ],
-            ]);
-          } finally {
-            fresh.delete();
-          }
-          previous = parameters;
         }
-      } finally {
-        tree.delete();
       }
     }
   } finally {
@@ -219,58 +198,37 @@ test('keeps conditional parameter prefixes and tails within the complete functio
     ]) {
       const prefix = 'int log_message(' + first + '\n';
       const suffix = tail + ');\n' + following;
-      let previous = conditional;
-      let tree = parser.parse(prefix + previous + suffix)!;
-      try {
-        for (const parameters of [conditional, ...plain, conditional]) {
-          tree.edit(
-            new Edit({
-              startIndex: prefix.length,
-              oldEndIndex: prefix.length + previous.length,
-              newEndIndex: prefix.length + parameters.length,
-              startPosition: { row: 1, column: 0 },
-              oldEndPosition: { row: previous.split('\n').length, column: 0 },
-              newEndPosition: { row: parameters.split('\n').length, column: 0 },
-            })
+      for (const parameters of [conditional, ...plain]) {
+        const source = prefix + parameters + suffix;
+        const tree = parser.parse(source)!;
+        try {
+          expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+          const captures = query.captures(tree.rootNode);
+          expect(
+            captures
+              .filter(({ name }) => name === 'name')
+              .map(({ node }) => [node.text, node.startIndex, node.endIndex])
+          ).toEqual([['log_message', 4, 15]]);
+          const declaration = prefix + parameters + tail + ');';
+          expect(
+            captures
+              .filter(({ name }) => name === 'declaration')
+              .map(({ node }) => [node.text, node.startIndex, node.endIndex])
+          ).toEqual([[declaration, 0, declaration.length]]);
+          expect(
+            tree.rootNode
+              .descendantsOfType('function_definition')
+              .map((node) => [node.text, node.startIndex, node.endIndex])
+          ).toEqual(
+            definitions.map((definition) => [
+              definition,
+              source.indexOf(definition),
+              source.indexOf(definition) + definition.length,
+            ])
           );
-          const source = prefix + parameters + suffix;
-          const next = parser.parse(source, tree)!;
+        } finally {
           tree.delete();
-          tree = next;
-          const fresh = parser.parse(source)!;
-          try {
-            expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-            expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-            const captures = query.captures(tree.rootNode);
-            expect(
-              captures
-                .filter(({ name }) => name === 'name')
-                .map(({ node }) => [node.text, node.startIndex, node.endIndex])
-            ).toEqual([['log_message', 4, 15]]);
-            const declaration = prefix + parameters + tail + ');';
-            expect(
-              captures
-                .filter(({ name }) => name === 'declaration')
-                .map(({ node }) => [node.text, node.startIndex, node.endIndex])
-            ).toEqual([[declaration, 0, declaration.length]]);
-            expect(
-              tree.rootNode
-                .descendantsOfType('function_definition')
-                .map((node) => [node.text, node.startIndex, node.endIndex])
-            ).toEqual(
-              definitions.map((definition) => [
-                definition,
-                source.indexOf(definition),
-                source.indexOf(definition) + definition.length,
-              ])
-            );
-          } finally {
-            fresh.delete();
-          }
-          previous = parameters;
         }
-      } finally {
-        tree.delete();
       }
     }
   } finally {

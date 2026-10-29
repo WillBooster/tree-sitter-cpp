@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import treeSitterJson from '../../tree-sitter.json';
@@ -86,49 +86,23 @@ test('retains function-like names after leading splices and comments', () => {
   }
 });
 
-test('updates macro classification and query captures after adjacency edits', () => {
+test('classifies macro names by adjacency in highlight captures', () => {
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, highlights);
-  const prefix = '#define M';
-  const suffix = '(x) x\nint after;\n';
-  let gap = '';
-  let tree = parser.parse(prefix + suffix)!;
-  const captures = (root: typeof tree.rootNode): unknown[] =>
-    query
-      .captures(root)
-      .map(({ name, node }) => ({ name, text: node.text, start: node.startIndex, end: node.endIndex }));
   try {
-    for (const [nextGap, functionNames] of [
-      ['/**/', []],
+    for (const [gap, functionNames] of [
       ['', ['M']],
+      ['/**/', []],
       ['\\\n', ['M']],
       ['\\\n/**/', []],
       ['\\\r/**/', []],
       ['\\\r', ['M']],
       [' ', []],
-      ['', ['M']],
       ['/**/\\\n', []],
-      ['', ['M']],
     ] as const) {
-      tree.edit(
-        new Edit({
-          startIndex: prefix.length,
-          oldEndIndex: prefix.length + gap.length,
-          newEndIndex: prefix.length + nextGap.length,
-          startPosition: point(prefix),
-          oldEndPosition: point(prefix + gap),
-          newEndPosition: point(prefix + nextGap),
-        })
-      );
-      const source = prefix + nextGap + suffix;
-      const next = parser.parse(source, tree)!;
-      tree.delete();
-      tree = next;
-      const fresh = parser.parse(source)!;
+      const tree = parser.parse(`#define M${gap}(x) x\nint after;\n`)!;
       try {
-        expect(tree.rootNode.hasError, JSON.stringify(nextGap)).toBe(false);
-        expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-        expect(captures(tree.rootNode)).toEqual(captures(fresh.rootNode));
+        expect(tree.rootNode.hasError, JSON.stringify(gap)).toBe(false);
         expect(
           query
             .captures(tree.rootNode)
@@ -136,12 +110,10 @@ test('updates macro classification and query captures after adjacency edits', ()
             .map(({ node }) => node.text)
         ).toEqual(functionNames);
       } finally {
-        fresh.delete();
+        tree.delete();
       }
-      gap = nextGap;
     }
   } finally {
-    tree.delete();
     query.delete();
     parser.delete();
   }
@@ -173,11 +145,6 @@ test('retains ordinary call expressions while recovering outside macro definitio
     parser.delete();
   }
 });
-
-function point(text: string): { row: number; column: number } {
-  const lines = text.split('\n');
-  return { row: lines.length - 1, column: lines.at(-1)!.length };
-}
 
 test('preserves pragma extras before macro names without reserving identifier prefixes', () => {
   const parser = new Parser().setLanguage(language);

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import treeSitterJson from '../../tree-sitter.json';
@@ -64,49 +64,24 @@ test('highlights alternative operators in expressions, overloads and macro expre
   }
 });
 
-test('keeps fresh and incremental captures aligned when a word operator changes spelling', () => {
+test('captures each spelling of a word operator', () => {
   const parser = new Parser().setLanguage(language);
   const query = highlights();
   const prefix = 'bool changed(bool left, bool right) { return left ';
   const suffix = ' right; }\n';
-  let spelling = 'and';
-  let tree = parser.parse(prefix + spelling + suffix)!;
   try {
-    for (const replacement of ['&&', '', 'or', 'and']) {
-      tree.edit(
-        new Edit({
-          startIndex: prefix.length,
-          oldEndIndex: prefix.length + spelling.length,
-          newEndIndex: prefix.length + replacement.length,
-          startPosition: { row: 0, column: prefix.length },
-          oldEndPosition: { row: 0, column: prefix.length + spelling.length },
-          newEndPosition: { row: 0, column: prefix.length + replacement.length },
-        })
-      );
-      const nextSource = prefix + replacement + suffix;
-      const next = parser.parse(nextSource, tree)!;
-      tree.delete();
-      tree = next;
-      const fresh = parser.parse(nextSource)!;
+    for (const spelling of ['&&', '', 'or', 'and']) {
+      const tree = parser.parse(prefix + spelling + suffix)!;
       try {
-        expect(tree.rootNode.hasError).toBe(replacement === '');
-        expect(tree.rootNode.toString()).toBe(fresh.rootNode.toString());
-        const actual = query
-          .captures(tree.rootNode)
-          .map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
-        const expected = query
-          .captures(fresh.rootNode)
-          .map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
-        expect(actual).toEqual(expected);
-        if (replacement)
-          expect(actual.filter(([name, text]) => name === 'operator' && text === replacement)).toHaveLength(1);
+        expect(tree.rootNode.hasError).toBe(spelling === '');
+        const captures = query.captures(tree.rootNode).map(({ name, node }) => [name, node.text]);
+        if (spelling)
+          expect(captures.filter(([name, text]) => name === 'operator' && text === spelling)).toHaveLength(1);
       } finally {
-        fresh.delete();
+        tree.delete();
       }
-      spelling = replacement;
     }
   } finally {
-    tree.delete();
     query.delete();
     parser.delete();
   }

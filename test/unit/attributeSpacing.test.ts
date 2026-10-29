@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, type Node, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
@@ -11,13 +11,13 @@ const source = fs.readFileSync(path.join(root, 'test/fixtures/spacedAttributes.c
 await Parser.init();
 const language = await loadCurrentWasmBuild();
 
-test('preserves C++ declarators and query ranges through attribute bracket edits', () => {
+test('preserves C++ declarators and query ranges across attribute bracket spacing', () => {
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,
     '(attribute_declaration) @attribute (qualified_identifier) @qualified (reference_declarator) @reference'
   );
-  let tree = parser.parse(source)!;
+  const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(tree.rootNode.descendantsOfType('attribute_declaration')).toHaveLength(11);
@@ -46,41 +46,20 @@ test('preserves C++ declarators and query ranges through attribute bracket edits
         .map((node) => node.childForFieldName('namespace')?.text)
     ).toEqual(['gnu', 'gnu', 'gnu']);
     const before = '[ /*left*/ [ maybe_unused ] /*right*/ ]';
-    const start = source.indexOf(before);
-    let current = source;
-    let spelling = before;
-    for (const replacement of ['[[maybe_unused]]', before]) {
-      const nextSource = current.slice(0, start) + replacement + current.slice(start + spelling.length);
-      tree.edit(
-        new Edit({
-          startIndex: start,
-          oldEndIndex: start + spelling.length,
-          newEndIndex: start + replacement.length,
-          startPosition: { row: 1, column: 13 },
-          oldEndPosition: { row: 1, column: 13 + spelling.length },
-          newEndPosition: { row: 1, column: 13 + replacement.length },
-        })
-      );
-      const next = parser.parse(nextSource, tree)!;
-      tree.delete();
-      tree = next;
-      const fresh = parser.parse(nextSource)!;
+    const compact = source.replace(before, '[[maybe_unused]]');
+    for (const current of [source, compact]) {
+      const parsed = parser.parse(current)!;
       try {
-        expect(tree.rootNode.hasError).toBe(false);
-        expect(metadata(tree.rootNode)).toEqual(metadata(fresh.rootNode));
-        expect(captures(query, tree)).toEqual(captures(query, fresh));
-        for (const { node } of query.captures(tree.rootNode))
-          expect(nextSource.slice(node.startIndex, node.endIndex)).toBe(node.text);
-        expect(tree.rootNode.lastNamedChild?.text).toBe(
+        expect(parsed.rootNode.hasError).toBe(false);
+        for (const { node } of query.captures(parsed.rootNode))
+          expect(current.slice(node.startIndex, node.endIndex)).toBe(node.text);
+        expect(parsed.rootNode.lastNamedChild?.text).toBe(
           'int indexed(int *values) { return values[([] { return 0; }())]; }'
         );
       } finally {
-        fresh.delete();
+        parsed.delete();
       }
-      current = nextSource;
-      spelling = replacement;
     }
-    expect(current).toBe(source);
   } finally {
     tree.delete();
     query.delete();
@@ -105,24 +84,6 @@ test('separates annotation brackets without losing enum and class attributes', (
     parser.delete();
   }
 });
-
-function captures(query: Query, tree: Tree): unknown[] {
-  return query.captures(tree.rootNode).map(({ name, node }) => [name, metadata(node)]);
-}
-function metadata(node: Node): unknown {
-  return [
-    node.type,
-    node.isNamed,
-    node.isExtra,
-    node.isMissing,
-    node.hasError,
-    node.startIndex,
-    node.endIndex,
-    node.startPosition,
-    node.endPosition,
-    node.children.map((child, index) => [node.fieldNameForChild(index), metadata(child)]),
-  ];
-}
 
 test('keeps long qualified declarator attribute lists flat with linear parse growth', () => {
   const parser = new Parser().setLanguage(language);

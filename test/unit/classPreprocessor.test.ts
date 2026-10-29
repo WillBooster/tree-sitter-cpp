@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { Edit, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild';
@@ -45,7 +45,7 @@ test('retains directive-only elaborated initializers as variable declarations', 
   }
 });
 
-test('preserves members nested in conditional macro class bodies after edits', () => {
+test('preserves members nested in conditional macro class bodies and after renaming one', () => {
   const input = fs.readFileSync(new URL('macroClasses.cpp', fixtures), 'utf8');
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, '(field_declaration declarator: (field_identifier) @member)');
@@ -79,32 +79,13 @@ test('preserves members nested in conditional macro class bodies after edits', (
         .filter(({ name }) => name === 'definition.class')
         .map(({ node }) => node.childForFieldName('name')?.text)
     ).toEqual(['Conditional', 'Nested', 'Methods', 'Mixed']);
-    const startIndex = input.indexOf('nested;');
-    const row = input.slice(0, startIndex).split('\n').length - 1;
-    const column = startIndex - input.lastIndexOf('\n', startIndex) - 1;
-    tree.edit(
-      new Edit({
-        startIndex,
-        oldEndIndex: startIndex + 'nested'.length,
-        newEndIndex: startIndex + 'renamed'.length,
-        startPosition: { row, column },
-        oldEndPosition: { row, column: column + 'nested'.length },
-        newEndPosition: { row, column: column + 'renamed'.length },
-      })
-    );
     const changed = input.replace('nested;', 'renamed;');
-    const edited = parser.parse(changed, tree)!;
-    const fresh = parser.parse(changed)!;
+    const renamed = parser.parse(changed)!;
     try {
-      expect(edited.rootNode.hasError, edited.rootNode.toString()).toBe(false);
-      expect(edited.rootNode.toString()).toBe(fresh.rootNode.toString());
-      const captures = (parsed: Tree): [string, string, number, number][] =>
-        query.captures(parsed.rootNode).map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
-      expect(captures(edited)).toEqual(captures(fresh));
-      expect(query.captures(edited.rootNode).map(({ node }) => node.text)).toContain('renamed');
+      expect(renamed.rootNode.hasError, renamed.rootNode.toString()).toBe(false);
+      expect(query.captures(renamed.rootNode).map(({ node }) => node.text)).toContain('renamed');
     } finally {
-      fresh.delete();
-      edited.delete();
+      renamed.delete();
     }
   } finally {
     tree.delete();

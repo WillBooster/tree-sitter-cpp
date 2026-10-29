@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, type Node, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, Query } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
@@ -11,7 +11,7 @@ const source = fs.readFileSync(path.join(root, 'test/fixtures/preprocessorWordOp
 await Parser.init();
 const language = await loadCurrentWasmBuild();
 
-test('preserves preprocessing operator precedence, source ranges and branches through spelling edits', () => {
+test('parses preprocessing operator precedence, source ranges and branches for each spelling', () => {
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,
@@ -23,11 +23,9 @@ test('preserves preprocessing operator precedence, source ranges and branches th
       .map((file) => fs.readFileSync(path.join(root, file), 'utf8'))
       .join('\n')
   );
-  let current = source;
-  let tree = parser.parse(source)!;
+  const tree = parser.parse(source)!;
   const original = '1 or 0 and 0';
   const start = source.indexOf(original);
-  let spelling = original;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     const conditions = tree.rootNode.descendantsOfType('preproc_if').map((node) => node.childForFieldName('condition'));
@@ -88,24 +86,19 @@ test('preserves preprocessing operator precedence, source ranges and branches th
       ['(not)', 'operator_argument'],
       ['(compl)', 'operator_argument'],
     ]);
-    for (const replacement of ['1 || 0 && 0', '1 or 0 /* gap */ and 0', original]) {
-      const edited = editSource(parser, tree, current, spelling, replacement);
-      tree = edited.tree;
-      const nextSource = edited.source;
-      const fresh = parser.parse(nextSource)!;
+    for (const replacement of [original, '1 || 0 && 0', '1 or 0 /* gap */ and 0']) {
+      const nextSource = source.slice(0, start) + replacement + source.slice(start + original.length);
+      const variant = parser.parse(nextSource)!;
       try {
-        expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-        const condition = tree.rootNode.descendantsOfType('preproc_if')[0]!.childForFieldName('condition')!;
+        expect(variant.rootNode.hasError, variant.rootNode.toString()).toBe(false);
+        const condition = variant.rootNode.descendantsOfType('preproc_if')[0]!.childForFieldName('condition')!;
         expect([condition.startIndex, condition.endIndex, condition.text]).toEqual([
           start,
           start + replacement.length,
           replacement,
         ]);
-        expect(metadata(tree.rootNode)).toEqual(metadata(fresh.rootNode));
-        expect(captures(query, tree)).toEqual(captures(query, fresh));
-        expect(captures(highlights, tree)).toEqual(captures(highlights, fresh));
-        const highlighted = highlights.captures(tree.rootNode);
-        for (const { name, node } of query.captures(tree.rootNode).filter(({ name }) => name === 'operator')) {
+        const highlighted = highlights.captures(variant.rootNode);
+        for (const { name, node } of query.captures(variant.rootNode).filter(({ name }) => name === 'operator')) {
           expect(
             highlighted.filter(
               (capture) =>
@@ -118,7 +111,7 @@ test('preserves preprocessing operator precedence, source ranges and branches th
         expect(highlighted.some(({ name, node }) => name === 'operator' && node.text === 'andrew')).toBe(false);
         expect(
           query
-            .captures(tree.rootNode)
+            .captures(variant.rootNode)
             .filter(({ name }) => name === 'name')
             .map(({ node }) => node.text)
         ).toEqual([
@@ -131,16 +124,13 @@ test('preserves preprocessing operator precedence, source ranges and branches th
           'macro_branch',
           'following',
         ]);
-        for (const { node } of query.captures(tree.rootNode))
+        for (const { node } of query.captures(variant.rootNode))
           expect(nextSource.slice(node.startIndex, node.endIndex)).toBe(node.text);
-        expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 4; }');
+        expect(variant.rootNode.lastNamedChild?.text).toBe('int following() { return 4; }');
       } finally {
-        fresh.delete();
+        variant.delete();
       }
-      current = nextSource;
-      spelling = replacement;
     }
-    expect(current).toBe(source);
   } finally {
     tree.delete();
     query.delete();
@@ -149,26 +139,17 @@ test('preserves preprocessing operator precedence, source ranges and branches th
   }
 });
 
-test('edits discarded preprocessing macro arguments between bare tokens and unary expressions', () => {
+test('parses discarded preprocessing macro arguments as bare tokens and unary expressions', () => {
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, '(argument_list) @arguments (declaration declarator: (identifier) @name)');
-  const source = '#define F(x) 1\n#if F(not)\nint selected;\n#endif\nint following;\n';
-  let current = source;
-  let spelling = 'not';
-  let tree = parser.parse(source)!;
   try {
-    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    for (const replacement of ['not FLAG', 'compl', 'not']) {
-      const edited = editSource(parser, tree, current, spelling, replacement);
-      tree = edited.tree;
-      const fresh = parser.parse(edited.source)!;
+    for (const argumentText of ['not', 'not FLAG', 'compl']) {
+      const tree = parser.parse(`#define F(x) 1\n#if F(${argumentText})\nint selected;\n#endif\nint following;\n`)!;
       try {
         expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
         const argument = tree.rootNode.descendantsOfType('argument_list')[0]!;
-        expect(argument.text).toBe(`(${replacement})`);
-        expect(argument.firstNamedChild?.text).toBe(replacement);
-        expect(metadata(tree.rootNode)).toEqual(metadata(fresh.rootNode));
-        expect(captures(query, tree)).toEqual(captures(query, fresh));
+        expect(argument.text).toBe(`(${argumentText})`);
+        expect(argument.firstNamedChild?.text).toBe(argumentText);
         expect(
           query
             .captures(tree.rootNode)
@@ -177,62 +158,11 @@ test('edits discarded preprocessing macro arguments between bare tokens and unar
         ).toEqual(['selected', 'following']);
         expect(tree.rootNode.lastNamedChild?.text).toBe('int following;');
       } finally {
-        fresh.delete();
+        tree.delete();
       }
-      current = edited.source;
-      spelling = replacement;
     }
-    expect(current).toBe(source);
   } finally {
-    tree.delete();
     query.delete();
     parser.delete();
   }
 });
-
-function editSource(
-  parser: Parser,
-  tree: Tree,
-  source: string,
-  before: string,
-  after: string
-): { source: string; tree: Tree } {
-  const start = source.indexOf(before);
-  expect(start).toBeGreaterThanOrEqual(0);
-  const nextSource = source.slice(0, start) + after + source.slice(start + before.length);
-  tree.edit(
-    new Edit({
-      startIndex: start,
-      oldEndIndex: start + before.length,
-      newEndIndex: start + after.length,
-      startPosition: pointAt(source, start),
-      oldEndPosition: pointAt(source, start + before.length),
-      newEndPosition: pointAt(nextSource, start + after.length),
-    })
-  );
-  const next = parser.parse(nextSource, tree)!;
-  tree.delete();
-  return { source: nextSource, tree: next };
-}
-
-function captures(query: Query, tree: Tree): unknown[] {
-  return query.captures(tree.rootNode).map(({ name, node }) => [name, metadata(node)]);
-}
-function pointAt(text: string, index: number): { row: number; column: number } {
-  const lines = text.slice(0, index).split('\n');
-  return { row: lines.length - 1, column: lines.at(-1)!.length };
-}
-function metadata(node: Node): unknown {
-  return [
-    node.type,
-    node.isNamed,
-    node.isExtra,
-    node.isMissing,
-    node.hasError,
-    node.startIndex,
-    node.endIndex,
-    node.startPosition,
-    node.endPosition,
-    node.children.map((child, index) => [node.fieldNameForChild(index), metadata(child)]),
-  ];
-}

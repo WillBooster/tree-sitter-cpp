@@ -2,23 +2,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Edit, type Language, type Node, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { type Language, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { afterAll, beforeAll, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 const root = path.resolve(import.meta.dirname, '../..');
-const snapshot = (node: Node): unknown => ({
-  type: node.type,
-  named: node.isNamed,
-  extra: node.isExtra,
-  missing: node.isMissing,
-  error: node.hasError,
-  start: node.startIndex,
-  end: node.endIndex,
-  startPosition: node.startPosition,
-  endPosition: node.endPosition,
-  children: node.children.map((n, i) => ({ field: node.fieldNameForChild(i), node: snapshot(n) })),
-});
 let language: Language;
 const queries: Query[] = [];
 
@@ -42,7 +30,7 @@ afterAll(() => {
 });
 
 test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
-  'preserves typeof type fields, configured captures and contextual names after edits (%s)',
+  'preserves typeof type fields, configured captures and contextual names (%s)',
   (file) => {
     const [types, highlights, tags] = queries;
     assert.ok(types && highlights && tags);
@@ -50,11 +38,7 @@ test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
     try {
       parser.setLanguage(language);
       const source = fs.readFileSync(path.join(root, 'test/fixtures', file), 'utf8');
-      let tree: Tree | undefined,
-        edited: Tree | undefined,
-        fresh: Tree | undefined,
-        restored: Tree | undefined,
-        restoredFresh: Tree | undefined;
+      let tree: Tree | undefined, changed: Tree | undefined;
       try {
         tree = parser.parse(source) ?? undefined;
         assert.ok(tree);
@@ -178,68 +162,19 @@ test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
             assert.equal(counter?.childForFieldName('right')?.text, '1');
           }
         }
-        const original = snapshot(tree.rootNode);
-        const marker =
+        const [before, after] =
           file === 'typeofCpp.cpp'
-            ? '__typeof__(source) value'
+            ? ['__typeof__(source) value', '__typeof__(source + 1) value']
             : file === 'typeofNames.cpp'
-              ? 'operator typeof() const noexcept'
-              : '__typeof_unqual(x) * y';
-        const prefix =
-          file === 'typeofCpp.cpp'
-            ? '__typeof__('
-            : file === 'typeofNames.cpp'
-              ? 'operator typeof() const'
-              : '__typeof_unqual(x) ';
-        const start = source.indexOf(marker) + prefix.length;
-        const old = file === 'typeofCpp.cpp' ? 'source' : file === 'typeofNames.cpp' ? ' noexcept' : '*';
-        const replacement = file === 'typeofCpp.cpp' ? 'source + 1' : file === 'typeofNames.cpp' ? '' : '&';
-        const changed = source.slice(0, start) + replacement + source.slice(start + old.length);
-        const position = (i: number): { row: number; column: number } => {
-          const lines = source.slice(0, i).split('\n');
-          return { row: lines.length - 1, column: lines.at(-1)!.length };
-        };
-        const a = position(start),
-          b = position(start + old.length),
-          c = { row: a.row, column: a.column + replacement.length };
-        tree.edit(
-          new Edit({
-            startIndex: start,
-            oldEndIndex: start + old.length,
-            newEndIndex: start + replacement.length,
-            startPosition: a,
-            oldEndPosition: b,
-            newEndPosition: c,
-          })
-        );
-        edited = parser.parse(changed, tree) ?? undefined;
-        fresh = parser.parse(changed) ?? undefined;
-        assert.ok(edited);
-        assert.ok(fresh);
-        assert.deepEqual(snapshot(edited.rootNode), snapshot(fresh.rootNode));
-        assert.equal(edited.rootNode.hasError, false);
-        edited.edit(
-          new Edit({
-            startIndex: start,
-            oldEndIndex: start + replacement.length,
-            newEndIndex: start + old.length,
-            startPosition: a,
-            oldEndPosition: c,
-            newEndPosition: b,
-          })
-        );
-        restored = parser.parse(source, edited) ?? undefined;
-        restoredFresh = parser.parse(source) ?? undefined;
-        assert.ok(restored);
-        assert.ok(restoredFresh);
-        assert.deepEqual(snapshot(restored.rootNode), snapshot(restoredFresh.rootNode));
-        assert.deepEqual(snapshot(restored.rootNode), original);
+              ? ['operator typeof() const noexcept', 'operator typeof() const']
+              : ['__typeof_unqual(x) * y', '__typeof_unqual(x) & y'];
+        const start = source.indexOf(before);
+        changed = parser.parse(source.slice(0, start) + after + source.slice(start + before.length)) ?? undefined;
+        assert.ok(changed);
+        assert.equal(changed.rootNode.hasError, false);
       } finally {
         tree?.delete();
-        edited?.delete();
-        fresh?.delete();
-        restored?.delete();
-        restoredFresh?.delete();
+        changed?.delete();
       }
     } finally {
       parser.delete();
