@@ -15,7 +15,7 @@ test('exposes contract predicates and postcondition result bindings', () => {
   parser.setLanguage(language);
   const query = new Query(
     language,
-    '(contract_specifier condition: (expression) @predicate) (contract_specifier result: (identifier) @result)'
+    '(contract_specifier condition: (_) @predicate) (contract_specifier result: (identifier) @result)'
   );
   const source = `int f(const int x)
     pre [[maybe_unused]] (x > 0)
@@ -142,7 +142,7 @@ test('keeps contract fields outside pointer, reference and function trailing ret
     query = new Query(
       language,
       `(trailing_return_type (type_descriptor declarator: (_) @return))
-    (contract_specifier condition: (expression) @condition)
+    (contract_specifier condition: (_) @condition)
     (contract_specifier result: (identifier) @result)`
     );
     tree = parser.parse(`struct Box { int value; };

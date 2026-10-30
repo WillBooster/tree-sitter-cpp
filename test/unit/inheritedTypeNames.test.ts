@@ -12,7 +12,7 @@ test('retains complete interleaved type operands and C++ type kinds through inhe
   const source = fs.readFileSync(new URL('../fixtures/inheritedTypeNames.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(source)!;
-  const query = new Query(language, '(type_descriptor type: (type_specifier) @type)');
+  const query = new Query(language, '(type_descriptor type: (_) @type)');
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(
