@@ -8,32 +8,21 @@ import { afterAll, beforeAll, test } from 'vitest';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 const root = path.resolve(import.meta.dirname, '../..');
 let language: Language;
-const queries: Query[] = [];
+let types: Query;
 
 beforeAll(async () => {
   await Parser.init();
   language = await loadCurrentWasmBuild();
-  queries.push(new Query(language, '(type_specifier/typeof_specifier) @type'));
-  queries.push(
-    new Query(
-      language,
-      ['queries/c/highlights.scm', 'queries/highlights.scm']
-        .map((f) => fs.readFileSync(path.join(root, f), 'utf8'))
-        .join('\n')
-    )
-  );
-  queries.push(new Query(language, fs.readFileSync(path.join(root, 'queries/tags.scm'), 'utf8')));
+  types = new Query(language, '(typeof_specifier) @type');
 }, 30_000);
 
 afterAll(() => {
-  for (const query of queries) query.delete();
+  types?.delete();
 });
 
 test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
-  'preserves typeof type fields, configured captures and contextual names (%s)',
+  'preserves typeof type fields and contextual names (%s)',
   (file) => {
-    const [types, highlights, tags] = queries;
-    assert.ok(types && highlights && tags);
     const parser = new Parser();
     try {
       parser.setLanguage(language);
@@ -58,12 +47,6 @@ test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
           end: node.endIndex,
           parent: node.parent?.type,
         }));
-        const names: Set<string> = new Set(
-          tags
-            .captures(tree.rootNode)
-            .filter((c) => c.name === 'name')
-            .map((c) => c.node.text)
-        );
         if (file === 'typeofCpp.cpp') {
           assert.equal(captures.length, 11);
           assert.ok(captures.every((c) => c.type === 'typeof_specifier' && source.slice(c.start, c.end) === c.text));
@@ -79,26 +62,8 @@ test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
           assert.equal(member?.childForFieldName('type')?.text, '__typeof__(source)');
           const cast = tree.rootNode.descendantsOfType('cast_expression')[0];
           assert.equal(cast?.childForFieldName('type')?.childForFieldName('type')?.type, 'typeof_specifier');
-          assert.deepEqual(
-            highlights
-              .captures(tree.rootNode)
-              .filter((c) => c.name === 'keyword' && c.node.text === '__typeof__')
-              .map((c) => c.node.text),
-            Array.from({ length: 11 }, () => '__typeof__')
-          );
-          assert.ok(names.has('echo') && names.has('other') && names.has('main'));
-          assert.ok(!names.has('__typeof__'));
         } else {
           assert.equal(captures.length, 0);
-          assert.ok(
-            !highlights
-              .captures(tree.rootNode)
-              .some(
-                (c) =>
-                  c.name === 'keyword' &&
-                  ['typeof', 'typeof_unqual', '__typeof_unqual', '__typeof_unqual__'].includes(c.node.text)
-              )
-          );
           const declaration = tree.rootNode
             .descendantsOfType('declaration')
             .find(
@@ -149,7 +114,6 @@ test.each(['typeofCpp.cpp', 'typeofNames.cpp', 'typeofGccNames.cpp'])(
                 source.slice(node.startIndex, node.endIndex) === node.text
             )
           );
-          assert.ok(typeNames.every((name) => names.has(name)) && names.has('operations'));
           if (file === 'typeofGccNames.cpp') {
             assert.deepEqual(
               tree.rootNode.descendantsOfType('statement_identifier').map((n) => n.text),

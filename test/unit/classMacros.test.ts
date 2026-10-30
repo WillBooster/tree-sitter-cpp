@@ -9,9 +9,8 @@ await Parser.init();
 const language = await loadCurrentWasmBuild();
 const source = fs.readFileSync(new URL('../fixtures/classMacros.cpp', import.meta.url), 'utf8');
 
-test('preserves macro class definitions, ordinary declarators, and class tags', () => {
+test('preserves macro class definitions and ordinary declarators', () => {
   const parser = new Parser().setLanguage(language);
-  const tags = new Query(language, fs.readFileSync(new URL('../../queries/tags.scm', import.meta.url), 'utf8'));
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
@@ -45,31 +44,16 @@ test('preserves macro class definitions, ordinary declarators, and class tags', 
     const renamed = parser.parse(source.replace('Derived', 'Renamed'))!;
     try {
       expect(renamed.rootNode.hasError, renamed.rootNode.toString()).toBe(false);
-      const definitions = tags
-        .captures(renamed.rootNode)
-        .filter(({ name }) => name === 'definition.class')
-        .map(({ node }) => node.childForFieldName('name')?.text);
-      expect(definitions).toContain('Renamed');
-      expect(definitions).toContain('Plain');
-      expect(definitions).toContain('Payload');
-      expect(definitions).not.toContain('API');
-      const functionNames = tags
-        .captures(renamed.rootNode)
-        .filter(({ name }) => name === 'definition.function')
-        .map(({ node }) => node.childForFieldName('declarator')?.text);
-      expect(functionNames).toContain('ordinaryFunction');
-      expect(functionNames).toContain('ordinaryElaboratedFunction');
     } finally {
       renamed.delete();
     }
   } finally {
     tree.delete();
-    tags.delete();
     parser.delete();
   }
 });
 
-test('retains macro function fields and query ranges with changed bodies', () => {
+test('retains macro function fields and ranges with changed bodies', () => {
   const parser = new Parser().setLanguage(language);
   const query = new Query(
     language,

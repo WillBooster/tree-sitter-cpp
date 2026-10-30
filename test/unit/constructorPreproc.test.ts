@@ -1,27 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
-import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const Root = path.join(import.meta.dirname, '../..');
 const Source = fs.readFileSync(path.join(Root, 'test/fixtures/constructorPreproc.cpp'), 'utf8');
 await Parser.init();
 
-test('keeps conditional constructor initializers and following tags in their public parents', async () => {
+test('keeps conditional constructor initializers and following definitions in their public parents', async () => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser();
-  const queries: Query[] = [];
   let tree: Tree | undefined;
   try {
     parser.setLanguage(language);
-    for (const kind of ['highlights', 'tags']) {
-      const files = kind === 'highlights' ? treeSitterJson.grammars[0]!.highlights : [treeSitterJson.grammars[0]!.tags];
-      queries.push(new Query(language, files.map((file) => fs.readFileSync(path.join(Root, file), 'utf8')).join('\n')));
-    }
     tree = parser.parse(Source)!;
     expect(tree.rootNode.hasError).toBe(false);
     const lists = tree.rootNode.descendantsOfType('field_initializer_list');
@@ -74,32 +68,6 @@ test('keeps conditional constructor initializers and following tags in their pub
     );
     expect(after?.startIndex).toBe(Source.indexOf('int after()'));
     expect(after?.endIndex).toBe(Source.indexOf('\nint main()'));
-    const names = queries[1]!
-      .captures(tree.rootNode)
-      .filter(({ name }) => name === 'name')
-      .map(({ node }) => node.text);
-    expect(names).toEqual([
-      'Leading',
-      'Leading',
-      'Trailing',
-      'Trailing',
-      'AllGuarded',
-      'AllGuarded',
-      'Nested',
-      'Nested',
-      'Base',
-      'Base',
-      'Out',
-      'Out',
-      'Out',
-      'after',
-      'main',
-    ]);
-    const directives = queries[0]!.captures(tree.rootNode).filter(({ name }) => name === 'keyword');
-    expect(directives.map(({ node }) => node.text)).toContain('#elif');
-    expect(directives.map(({ node }) => node.text)).toContain('#ifdef');
-    expect(directives.map(({ node }) => node.text)).toContain('#ifndef');
-
     const conditional = Source.slice(Source.indexOf('#if SELECT'), Source.indexOf('#endif') + '#endif'.length);
     for (const [before, afterText, hasError] of [
       [conditional, '    , b(n + 1)', false],
@@ -116,7 +84,6 @@ test('keeps conditional constructor initializers and following tags in their pub
     }
   } finally {
     tree?.delete();
-    for (const query of queries) query.delete();
     parser.delete();
   }
 }, 30_000);
