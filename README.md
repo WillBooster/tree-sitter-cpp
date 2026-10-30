@@ -110,7 +110,7 @@ let mut parser = tree_sitter::Parser::new();
 parser.set_language(&tree_sitter_cpp::LANGUAGE.into())?;
 ```
 
-The crate ships the same `tree-sitter.json` and query files as the npm package.
+The crate ships the same `tree-sitter.json` as the npm package.
 
 ## Development
 
