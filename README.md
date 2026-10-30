@@ -38,6 +38,13 @@ evaluation and header inclusion are left to a preprocessor. Name lookup, type ch
 are left to a compiler. In ambiguous declaration and expression syntax, the chosen tree can therefore differ from
 the compiler's interpretation.
 
+## Support Scope
+
+This fork maintains only full parsing: valid input yields a correct tree, and invalid input yields `ERROR` or `MISSING`
+nodes without crashing, hanging, or taking more than linear time. Incremental parsing works as in upstream tree-sitter
+but is not tested here, and no queries (highlights, locals, injections, tags) are shipped. Node types, field names, and
+the trees that error recovery produces may change; such changes are released as new major versions.
+
 ## Usage
 
 The npm package ships `tree-sitter-cpp.wasm` for
@@ -87,8 +94,7 @@ const parser = new Parser();
 parser.setLanguage(await Language.load(cpp));
 ```
 
-The package also ships the node types in `src/node-types.json`, and the queries that `tree-sitter.json` lists: this
-grammar's in `queries/` and, in `queries/c/`, the highlights of the C grammar it extends.
+The package also ships the node types in `src/node-types.json`.
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
@@ -144,8 +150,9 @@ and the release build regenerate the parsers before compiling them.
   parameter is expected in parameter lists, so that `long(n)(sizeof(b));` stays an initialization, and that the
   keyword-led arguments that make `Foo* p(nullptr);` a variable start only with such keywords or `this`, which starts
   a parameter only when a declaration follows it;
-- a check (`test/unit/grammarPackage.test.ts`) that the queries `tree-sitter.json` lists are published in the npm
-  package and the crate, and that the vendored scanner headers match the installed @willbooster/tree-sitter-c. The copied C highlight query excludes the C-only `_Countof` capture. After updating that dependency, run `script/copy-c-queries` and `script/copy-c-scanner`.
+- a check (`test/unit/grammarPackage.test.ts`) that `tree-sitter.json` is published in the npm package and the crate,
+  that the scanner headers are published in the crate, and that the vendored scanner headers match the installed
+  @willbooster/tree-sitter-c. After updating that dependency, run `script/copy-c-scanner`.
   The scanner headers are verbatim copies from that package; their generator paths refer to the C repository.
   Review the C scanner dispatch and external-token order against `src/scanner.c` when updating the dependency;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and

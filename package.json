@@ -15,7 +15,6 @@
     "url": "git+https://github.com/WillBooster/tree-sitter-cpp.git"
   },
   "files": [
-    "queries/**/*.scm",
     "tree-sitter.json",
     "src/node-types.json",
     "*.wasm"

@@ -5,16 +5,10 @@ import path from 'node:path';
 import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
-import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const Root = path.join(import.meta.dirname, '../..');
-const QueryKinds = ['highlights', 'injections', 'locals', 'tags'] as const;
-const [grammar] = treeSitterJson.grammars;
 await Parser.init();
-
-const queryPaths = (kind: (typeof QueryKinds)[number]): string[] =>
-  [(grammar as Partial<Record<(typeof QueryKinds)[number], string | string[]>>)[kind] ?? []].flat();
 
 // The packages' tree-sitter.json can reference only files inside the package: a dependency's directory is not at a
 // fixed path relative to it after an install.
@@ -32,16 +26,11 @@ const listPublishedFiles = {
   crate: (): string[] => execFileSync('cargo', ['package', '--list', '--allow-dirty'], execOptions).split('\n'),
 };
 for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
-  test(`publishes required query and scanner files in the ${packageKind} package`, testOptions, () => {
+  test(`publishes tree-sitter.json and scanner files in the ${packageKind} package`, testOptions, () => {
     const published = new Set(listFiles());
     expect(published).toContain('tree-sitter.json');
     if (packageKind === 'crate') {
       for (const file of scannerDependencies()) {
-        expect(published, file).toContain(file);
-      }
-    }
-    for (const kind of QueryKinds) {
-      for (const file of queryPaths(kind)) {
         expect(published, file).toContain(file);
       }
     }

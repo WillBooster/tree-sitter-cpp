@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-# The inherited C query names a C-only token omitted from the C++ grammar; retaining it makes the published query invalid.
-
-set -euo pipefail
-
-cd "$(dirname "$0")/.."
-mkdir -p queries/c
-sed '/^"_Countof" @keyword$/d' node_modules/@willbooster/tree-sitter-c/queries/highlights.scm > queries/c/highlights.scm
