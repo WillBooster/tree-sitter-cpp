@@ -35,91 +35,13 @@ pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_cpp) 
 /// [`node-types.json`]: https://tree-sitter.github.io/tree-sitter/using-parsers/6-static-node-types
 pub const NODE_TYPES: &str = include_str!("../../src/node-types.json");
 
-/// The combined C and C++ syntax-highlighting query, with inherited C patterns first.
-pub const HIGHLIGHTS_QUERY: &str = concat!(
-    include_str!("../../queries/c/highlights.scm"),
-    "\n",
-    include_str!("../../queries/highlights.scm")
-);
-
-/// The query for extracting symbol definitions from C++ source.
-pub const TAGS_QUERY: &str = include_str!("../../queries/tags.scm");
-
-/// The query for identifying languages and contents embedded in C++ raw strings.
-pub const INJECTIONS_QUERY: &str = include_str!("../../queries/injections.scm");
-
 #[cfg(test)]
 mod tests {
-    use tree_sitter::StreamingIterator;
-
     #[test]
     fn test_can_load_grammar() {
         let mut parser = tree_sitter::Parser::new();
         parser
             .set_language(&super::LANGUAGE.into())
             .expect("Error loading C++ parser");
-    }
-
-    #[test]
-    fn highlights_c_and_cpp_syntax() {
-        let source = "class Example { int value = 1; };\n";
-        for (name, texts) in [
-            ("keyword", vec!["class"]),
-            ("type", vec!["Example", "int"]),
-            ("property", vec!["value"]),
-            ("number", vec!["1"]),
-        ] {
-            assert_eq!(captured_texts(source, super::HIGHLIGHTS_QUERY, name), texts);
-        }
-    }
-
-    #[test]
-    fn extracts_symbol_definitions() {
-        let source = "struct Example { void method() {} };\nvoid function() {}\n";
-        assert_eq!(
-            captured_texts(source, super::TAGS_QUERY, "name"),
-            ["Example", "method", "function"]
-        );
-    }
-
-    #[test]
-    fn extracts_raw_string_injections() {
-        let source =
-            "const char* embedded = R\"sql(SELECT 1)sql\";\nconst char* plain = \"SELECT 2\";\n";
-        assert_eq!(
-            captured_texts(source, super::INJECTIONS_QUERY, "injection.language"),
-            ["sql"]
-        );
-        assert_eq!(
-            captured_texts(source, super::INJECTIONS_QUERY, "injection.content"),
-            ["SELECT 1"]
-        );
-    }
-
-    fn captured_texts(source: &str, query_source: &str, capture_name: &str) -> Vec<String> {
-        let language = super::LANGUAGE.into();
-        let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&language).unwrap();
-        let tree = parser.parse(source, None).unwrap();
-        assert!(!tree.root_node().has_error());
-
-        let query = tree_sitter::Query::new(&language, query_source).unwrap();
-        let name_index = query.capture_index_for_name(capture_name).unwrap();
-        let mut cursor = tree_sitter::QueryCursor::new();
-        let mut captures = cursor.captures(&query, tree.root_node(), source.as_bytes());
-        let mut texts = Vec::new();
-        while let Some((query_match, capture_index)) = captures.next() {
-            let capture = query_match.captures()[*capture_index];
-            if capture.index == name_index {
-                texts.push(
-                    capture
-                        .node
-                        .utf8_text(source.as_bytes())
-                        .unwrap()
-                        .to_owned(),
-                );
-            }
-        }
-        texts
     }
 }
