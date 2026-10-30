@@ -1844,8 +1844,7 @@ module.exports = grammar(C, {
 
     // A lone identifier as a template argument is resolved to a type statically instead of by GLR with
     // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
-    // an earlier error recovery, tree-sitter's version limit dropped the type interpretation, and incremental
-    // parsing then reused that subtree after the error was gone.
+    // an earlier error recovery, tree-sitter's version limit could drop the type interpretation.
     _template_argument_type_identifier: ($) => prec(1, field('type', $._type_identifier)),
 
     namespace_definition: ($) =>

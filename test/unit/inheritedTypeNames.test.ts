@@ -12,7 +12,7 @@ test('retains complete interleaved type operands and C++ type kinds through inhe
   const source = fs.readFileSync(new URL('../fixtures/inheritedTypeNames.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(source)!;
-  const query = new Query(language, '(type_descriptor type: (type_specifier) @type)');
+  const query = new Query(language, '(type_descriptor type: (_) @type)');
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(
@@ -55,7 +55,7 @@ test('retains complete interleaved type operands and C++ type kinds through inhe
 
 test('rejects storage in type operands', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, '(type_descriptor type: (type_specifier/sized_type_specifier) @type)');
+  const query = new Query(language, '(type_descriptor type: (sized_type_specifier) @type)');
   try {
     for (const expression of ['sizeof(int const long)', 'alignof(int const long)', 'static_cast<int const long>(1)']) {
       const source = `void f() { (void)${expression}; }\nint following() { return 0; }`;

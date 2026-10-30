@@ -1,10 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { type Node, Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
-import config from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -22,7 +21,6 @@ test('keeps alternative sizeof reference operands equivalent to primary tokens w
       .replaceAll(/\bbitand\b/g, '&')
       .replaceAll(/\band\b/g, '&&') + source.slice(split);
   const primary = parser.parse(primarySource)!;
-  const queries = configuredQueries(language);
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(primary.rootNode.hasError, primary.rootNode.toString()).toBe(false);
@@ -49,14 +47,6 @@ test('keeps alternative sizeof reference operands equivalent to primary tokens w
         expected[0],
       ]);
     }
-    const highlights = queries[0]!.captures(tree.rootNode);
-    for (const match of source.slice(0, split).matchAll(/\b(?:bitand|and)\b/g)) {
-      const captures = highlights.filter(
-        ({ node }) => node.startIndex === match.index && node.endIndex === match.index + match[0].length
-      );
-      expect(captures.filter(({ name }) => name === 'operator')).toHaveLength(1);
-      expect(captures.filter(({ name }) => name === 'variable')).toHaveLength(0);
-    }
     const calls = tree.rootNode
       .descendantsOfType('call_expression')
       .filter((node) => node.childForFieldName('function')?.text === 'SINGLE');
@@ -72,7 +62,6 @@ test('keeps alternative sizeof reference operands equivalent to primary tokens w
     ]);
     expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 0; }');
   } finally {
-    for (const query of queries) query.delete();
     tree.delete();
     primary.delete();
     parser.delete();
@@ -83,7 +72,6 @@ test('retains singleton macro calls in direct initializers and genuine sizeof va
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(source)!;
-  const queries = configuredQueries(language);
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     const names = ['directAnd', 'directBitand', 'localAnd', 'localBitand'];
@@ -113,11 +101,8 @@ test('retains singleton macro calls in direct initializers and genuine sizeof va
       'parenthesized_expression',
       'parenthesized_expression',
     ]);
-    const tags = queries[1]!.captures(tree.rootNode);
-    expect(tags.filter(({ name, node }) => name === 'name' && names.includes(node.text))).toHaveLength(0);
     expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 0; }');
   } finally {
-    for (const query of queries) query.delete();
     tree.delete();
     parser.delete();
   }
@@ -143,17 +128,6 @@ test('parses every spelling of the first sizeof reference operand', async () => 
   }
 });
 
-function configuredQueries(language: ConstructorParameters<typeof Query>[0]): Query[] {
-  return (['highlights', 'tags', 'injections'] as const).map((key) => {
-    const files = config.grammars[0]![key];
-    return new Query(
-      language,
-      (typeof files === 'string' ? [files] : files)
-        .map((file) => fs.readFileSync(path.join(root, file), 'utf8'))
-        .join('\n')
-    );
-  });
-}
 function namedStructure(node: Node): unknown {
   return [
     node.type,

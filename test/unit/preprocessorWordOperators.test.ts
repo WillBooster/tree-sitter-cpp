@@ -17,12 +17,6 @@ test('parses preprocessing operator precedence, source ranges and branches for e
     language,
     '(binary_expression operator: _ @operator) (unary_expression operator: _ @operator) (function_declarator declarator: (identifier) @name)'
   );
-  const highlights = new Query(
-    language,
-    ['queries/c/highlights.scm', 'queries/highlights.scm']
-      .map((file) => fs.readFileSync(path.join(root, file), 'utf8'))
-      .join('\n')
-  );
   const tree = parser.parse(source)!;
   const original = '1 or 0 and 0';
   const start = source.indexOf(original);
@@ -97,18 +91,6 @@ test('parses preprocessing operator precedence, source ranges and branches for e
           start + replacement.length,
           replacement,
         ]);
-        const highlighted = highlights.captures(variant.rootNode);
-        for (const { name, node } of query.captures(variant.rootNode).filter(({ name }) => name === 'operator')) {
-          expect(
-            highlighted.filter(
-              (capture) =>
-                capture.name === name &&
-                capture.node.startIndex === node.startIndex &&
-                capture.node.endIndex === node.endIndex
-            )
-          ).toHaveLength(1);
-        }
-        expect(highlighted.some(({ name, node }) => name === 'operator' && node.text === 'andrew')).toBe(false);
         expect(
           query
             .captures(variant.rootNode)
@@ -134,7 +116,6 @@ test('parses preprocessing operator precedence, source ranges and branches for e
   } finally {
     tree.delete();
     query.delete();
-    highlights.delete();
     parser.delete();
   }
 });

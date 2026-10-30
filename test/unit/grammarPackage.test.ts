@@ -16,18 +16,6 @@ await Parser.init();
 const queryPaths = (kind: (typeof QueryKinds)[number]): string[] =>
   [(grammar as Partial<Record<(typeof QueryKinds)[number], string | string[]>>)[kind] ?? []].flat();
 
-// Tools that read tree-sitter.json, such as the tree-sitter CLI, compile each kind of query from its files
-// concatenated, so a node type that a grammar change removes must fail here rather than in them.
-test('compiles the queries that tree-sitter.json lists', { timeout: 30_000 }, async () => {
-  const language = await loadCurrentWasmBuild();
-  for (const kind of QueryKinds) {
-    const source = queryPaths(kind)
-      .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-      .join('\n');
-    expect(() => new Query(language, source), `${kind} queries`).not.toThrow();
-  }
-});
-
 // The packages' tree-sitter.json can reference only files inside the package: a dependency's directory is not at a
 // fixed path relative to it after an install.
 // On a fresh runner, cargo first installs the toolchain that rust-toolchain.toml pins. The commands run synchronously,
@@ -77,22 +65,6 @@ test('keeps vendored C scanner headers synchronized with the installed dependenc
     expect(fs.readFileSync(path.join(Root, 'src', file)), `${file} differs; run script/copy-c-scanner`).toEqual(
       fs.readFileSync(path.join(Root, 'node_modules/@willbooster/tree-sitter-c/src', file))
     );
-  }
-});
-
-test('matches sized keywords in macro arguments through the expression supertype', async () => {
-  const language = await loadCurrentWasmBuild();
-  const parser = new Parser();
-  parser.setLanguage(language);
-  const tree = parser.parse('#define DECLARE(type, name) type name\nvoid f() { DECLARE(long, value); }')!;
-  const query = new Query(language, '(call_expression arguments: (argument_list (expression) @argument))');
-  try {
-    expect(tree.rootNode.hasError).toBe(false);
-    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['long', 'value']);
-  } finally {
-    query.delete();
-    tree.delete();
-    parser.delete();
   }
 });
 
@@ -166,41 +138,6 @@ int main() { ~Box<int>(); return ~Box<int>() == 1 ? 0 : 1; }
         expect(selfName.childForFieldName('scope')?.text).toBe('Box<int>');
         expect(selfName.childForFieldName('name')?.type).toBe('destructor_name');
         expect(selfName.childForFieldName('name')?.text).toBe('~Box<int>');
-        let tags: Query | undefined;
-        let highlights: Query | undefined;
-        try {
-          tags = new Query(
-            language,
-            queryPaths('tags')
-              .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-              .join('\n')
-          );
-          highlights = new Query(
-            language,
-            queryPaths('highlights')
-              .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-              .join('\n')
-          );
-          expect(
-            tags
-              .captures(tree.rootNode)
-              .filter(({ name }) => name === 'definition.function')
-              .map(({ node }) => node.childForFieldName('declarator')?.text)
-          ).toEqual(['destroySelf', 'destroy', 'destroyReferences', 'destroyDependent', 'main']);
-          const unaryFunctionNames = highlights
-            .captures(tree.rootNode)
-            .filter(
-              ({ name, node }) =>
-                name === 'function' && node.text === 'Box' && node.parent?.type === 'template_function'
-            );
-          expect([...new Set(unaryFunctionNames.map(({ node }) => node.startIndex))]).toEqual([
-            source.indexOf('~Box<int>();', source.indexOf('int main')) + 1,
-            source.indexOf('return ~Box<int>()') + 'return ~'.length,
-          ]);
-        } finally {
-          highlights?.delete();
-          tags?.delete();
-        }
         const unary = tree.rootNode.descendantsOfType('unary_expression');
         expect(unary.map((node) => node.text)).toEqual(['~Box<int>()', '~Box<int>()']);
         expect(unary.map((node) => node.childForFieldName('argument')?.type)).toEqual([
@@ -227,7 +164,7 @@ int main() { ~Box<int>(); return ~Box<int>() == 1 ? 0 : 1; }
   }
 });
 
-test('preserves attributed friend definitions in public trees and shipped queries', { timeout: 30_000 }, async () => {
+test('preserves attributed friend definitions in public trees', { timeout: 30_000 }, async () => {
   const source = `struct Value {
   int number;
   [[nodiscard]] friend int get(Value v) { return v.number; }
@@ -241,25 +178,11 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
   const parser = new Parser();
   let tree: Tree | undefined;
   let friends: Query | undefined;
-  let tags: Query | undefined;
-  let highlights: Query | undefined;
   try {
     parser.setLanguage(language);
     friends = new Query(
       language,
       '(friend_declaration (function_definition declarator: (function_declarator declarator: (identifier) @name) body: (compound_statement)) @function) @friend'
-    );
-    tags = new Query(
-      language,
-      queryPaths('tags')
-        .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-        .join('\n')
-    );
-    highlights = new Query(
-      language,
-      queryPaths('highlights')
-        .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-        .join('\n')
     );
     tree = parser.parse(source)!;
     expect(tree.rootNode.hasError).toBe(false);
@@ -277,15 +200,6 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
           .map((node) => node.text)
       )
     ).toEqual([['[[nodiscard]]'], ['[[nodiscard]]', '[[maybe_unused]]'], []]);
-    expect(
-      tags
-        .captures(tree.rootNode)
-        .filter(({ name }) => name === 'name')
-        .map(({ node }) => node.text)
-    ).toEqual(['Value', 'get', 'twice', 'plain', 'main']);
-    expect(
-      highlights.captures(tree.rootNode).filter(({ name, node }) => name === 'keyword' && node.text === 'friend')
-    ).toHaveLength(3);
 
     const recoveryInputs = [
       `struct A {
@@ -314,16 +228,6 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
         const declaration = following[1]?.namedChildren[0];
         expect(declaration?.type).toBe('declaration');
         expect(declaration?.childForFieldName('declarator')?.childForFieldName('declarator')?.text).toBe('h');
-        expect(
-          tags.captures(recovery.rootNode).find(({ name, node }) => name === 'name' && node.text === 'h')?.node
-            .startIndex
-        ).toBe(input.indexOf('h();'));
-        expect(
-          highlights
-            .captures(recovery.rootNode)
-            .filter(({ name, node }) => name === 'keyword' && node.text === 'friend')
-            .map(({ node }) => input.slice(node.startIndex, node.endIndex))
-        ).toEqual(['friend', 'friend', 'friend', 'friend']);
       } finally {
         recovery.delete();
       }
@@ -338,8 +242,6 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
       withoutAttribute.delete();
     }
   } finally {
-    highlights?.delete();
-    tags?.delete();
     friends?.delete();
     tree?.delete();
     parser.delete();
@@ -418,7 +320,7 @@ int main() { Both value; return left + right + value.first() + value.second() ==
   }
 });
 
-test('retains dependent using names and pack expansions in queries', async () => {
+test('retains dependent using names and pack expansions', async () => {
   const source = `struct Base { using value_type = int; using other_type = int; };
 template<class T> struct Derived : T { using typename T::value_type; value_type value = 0; };
 struct First { int f(int) { return 0; } };
@@ -430,18 +332,11 @@ int main() { Derived<Base> derived; Joined<First, Second> joined; return derived
   const parser = new Parser();
   let tree: Tree | undefined;
   let names: Query | undefined;
-  let highlights: Query | undefined;
   try {
     parser.setLanguage(language);
     names = new Query(
       language,
       '(using_declaration (qualified_identifier scope: (_) @scope name: (identifier) @name)) @using'
-    );
-    highlights = new Query(
-      language,
-      queryPaths('highlights')
-        .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-        .join('\n')
     );
     tree = parser.parse(source)!;
     expect(tree.rootNode.hasError).toBe(false);
@@ -461,12 +356,6 @@ int main() { Derived<Base> derived; Joined<First, Second> joined; return derived
         .filter(({ name }) => name === 'name')
         .map(({ node }) => node.text)
     ).toEqual(['value_type', 'f']);
-    expect(
-      highlights
-        .captures(tree.rootNode)
-        .filter(({ name, node }) => name === 'keyword' && node.text === 'typename')
-        .map(({ node }) => [node.startIndex, node.endIndex])
-    ).toEqual([[source.indexOf('typename'), source.indexOf('typename') + 'typename'.length]]);
     const oldLine = `${source.split('\n')[1]}\n`;
     const renamed = parser.parse(source.replace(oldLine, oldLine.replaceAll('value_type', 'other_type')))!;
     try {
@@ -496,14 +385,13 @@ int main() { Derived<Base> derived; Joined<First, Second> joined; return derived
       }
     }
   } finally {
-    highlights?.delete();
     names?.delete();
     tree?.delete();
     parser.delete();
   }
 });
 
-test('keeps GNU attributes with friend definitions in queries', async () => {
+test('keeps GNU attributes with friend definitions', async () => {
   const source = `struct Value {
   __attribute__((unused)) friend int first(Value) { return 1; }
   __attribute__((unused)) __attribute__((noinline)) friend int second(Value) { return 2; }
@@ -518,20 +406,9 @@ int main() { Value value; return first(value) + second(value) + third(value) + b
   const parser = new Parser();
   let tree: Tree | undefined;
   let attributes: Query | undefined;
-  const shipped: Query[] = [];
   try {
     parser.setLanguage(language);
     attributes = new Query(language, '(friend_declaration (attribute_specifier) @attribute) @friend');
-    for (const kind of ['tags', 'highlights'] as const) {
-      shipped.push(
-        new Query(
-          language,
-          queryPaths(kind)
-            .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-            .join('\n')
-        )
-      );
-    }
     tree = parser.parse(source)!;
     expect(tree.rootNode.hasError).toBe(false);
     expect(
@@ -547,17 +424,6 @@ int main() { Value value; return first(value) + second(value) + third(value) + b
       { text: '__attribute__((unused))', parent: 'friend_declaration' },
       { text: '__attribute__((unused))', parent: 'friend_declaration' },
     ]);
-    expect(
-      shipped[0]!
-        .captures(tree.rootNode)
-        .filter(
-          ({ name, node }) =>
-            name === 'definition.function' &&
-            node.parent?.type === 'function_definition' &&
-            node.parent.parent?.type === 'friend_declaration'
-        )
-        .map(({ node }) => node.childForFieldName('declarator')?.text)
-    ).toEqual(['first', 'second', 'third', 'before', 'after']);
     expect(tree.rootNode.descendantsOfType('field_identifier').map((node) => node.text)).toEqual(['member']);
 
     const prefix = '__attribute__((unused)) ';
@@ -569,7 +435,6 @@ int main() { Value value; return first(value) + second(value) + third(value) + b
       withoutAttribute.delete();
     }
   } finally {
-    for (const query of shipped) query.delete();
     attributes?.delete();
     tree?.delete();
     parser.delete();

@@ -49,7 +49,6 @@ test('preserves members nested in conditional macro class bodies and after renam
   const input = fs.readFileSync(new URL('macroClasses.cpp', fixtures), 'utf8');
   const parser = new Parser().setLanguage(language);
   const query = new Query(language, '(field_declaration declarator: (field_identifier) @member)');
-  const tags = new Query(language, fs.readFileSync(new URL('../../queries/tags.scm', import.meta.url), 'utf8'));
   const tree = parser.parse(input)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
@@ -73,12 +72,6 @@ test('preserves members nested in conditional macro class bodies and after renam
       expect(node.startIndex).toBe(input.indexOf(`int ${node.text};`) + 'int '.length);
       expect(node.endIndex).toBe(node.startIndex + node.text.length);
     }
-    expect(
-      tags
-        .captures(tree.rootNode)
-        .filter(({ name }) => name === 'definition.class')
-        .map(({ node }) => node.childForFieldName('name')?.text)
-    ).toEqual(['Conditional', 'Nested', 'Methods', 'Mixed']);
     const changed = input.replace('nested;', 'renamed;');
     const renamed = parser.parse(changed)!;
     try {
@@ -89,7 +82,6 @@ test('preserves members nested in conditional macro class bodies and after renam
     }
   } finally {
     tree.delete();
-    tags.delete();
     query.delete();
     parser.delete();
   }

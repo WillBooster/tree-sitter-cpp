@@ -144,9 +144,8 @@ and the release build regenerate the parsers before compiling them.
   parameter is expected in parameter lists, so that `long(n)(sizeof(b));` stays an initialization, and that the
   keyword-led arguments that make `Foo* p(nullptr);` a variable start only with such keywords or `this`, which starts
   a parameter only when a declaration follows it;
-- a check (`test/unit/queries.test.ts`) that the queries `tree-sitter.json` lists compile against the grammar, are
-  published in the npm package and the crate, and that the vendored scanner headers match the installed
-  @willbooster/tree-sitter-c. The copied C highlight query excludes the C-only `_Countof` capture. After updating that dependency, run `script/copy-c-queries` and `script/copy-c-scanner`.
+- a check (`test/unit/grammarPackage.test.ts`) that the queries `tree-sitter.json` lists are published in the npm
+  package and the crate, and that the vendored scanner headers match the installed @willbooster/tree-sitter-c. The copied C highlight query excludes the C-only `_Countof` capture. After updating that dependency, run `script/copy-c-queries` and `script/copy-c-scanner`.
   The scanner headers are verbatim copies from that package; their generator paths refer to the C repository.
   Review the C scanner dispatch and external-token order against `src/scanner.c` when updating the dependency;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and

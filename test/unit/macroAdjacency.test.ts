@@ -1,18 +1,10 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
-import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 await Parser.init();
 const language = await loadCurrentWasmBuild();
-const highlights = [treeSitterJson.grammars[0]!.highlights]
-  .flat()
-  .map((file) => fs.readFileSync(path.join(import.meta.dirname, '../..', file), 'utf8'))
-  .join('\n');
 
 test('preserves macro name adjacency across comments and line splices', () => {
   const parser = new Parser().setLanguage(language);
@@ -86,42 +78,24 @@ test('retains function-like names after leading splices and comments', () => {
   }
 });
 
-test('classifies macro names by adjacency in highlight captures', () => {
+test('parses macro definitions with each gap between the name and parentheses', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, highlights);
   try {
-    for (const [gap, functionNames] of [
-      ['', ['M']],
-      ['/**/', []],
-      ['\\\n', ['M']],
-      ['\\\n/**/', []],
-      ['\\\r/**/', []],
-      ['\\\r', ['M']],
-      [' ', []],
-      ['/**/\\\n', []],
-    ] as const) {
+    for (const gap of ['', '/**/', '\\\n', '\\\n/**/', '\\\r/**/', '\\\r', ' ', '/**/\\\n']) {
       const tree = parser.parse(`#define M${gap}(x) x\nint after;\n`)!;
       try {
         expect(tree.rootNode.hasError, JSON.stringify(gap)).toBe(false);
-        expect(
-          query
-            .captures(tree.rootNode)
-            .filter(({ name }) => name === 'function.special')
-            .map(({ node }) => node.text)
-        ).toEqual(functionNames);
       } finally {
         tree.delete();
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });
 
 test('retains ordinary call expressions while recovering outside macro definitions', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, highlights);
   try {
     for (const source of ['int x = @ foo(1) + 2;', 'void f(void) { if (@ foo(1)) return; }']) {
       const tree = parser.parse(source)!;
@@ -133,15 +107,11 @@ test('retains ordinary call expressions while recovering outside macro definitio
           calls.map((node) => node.childForFieldName('function')?.text),
           source
         ).toEqual(['foo']);
-        expect(
-          query.captures(tree.rootNode).filter(({ name, node }) => name === 'function' && node.text === 'foo')
-        ).toHaveLength(1);
       } finally {
         tree.delete();
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });

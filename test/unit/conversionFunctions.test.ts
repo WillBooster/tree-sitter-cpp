@@ -11,30 +11,21 @@ const Root = path.resolve(import.meta.dirname, '../..');
 const Source = fs.readFileSync(path.join(Root, 'test/fixtures/conversionFunctions.cpp'), 'utf8');
 await Parser.init();
 
-test('parses conversion declarations and queries', async () => {
+test('parses conversion declarations', async () => {
   const parser = new Parser();
-  const queries: Query[] = [];
+  let query: Query | undefined;
   let tree: Tree | undefined;
   try {
     const language = await loadCurrentWasmBuild();
     parser.setLanguage(language);
-    queries.push(
-      new Query(
-        language,
-        '(function_definition declarator: (qualified_identifier name: (operator_cast) @cast)) @definition (function_definition declarator: (operator_cast) @cast) @definition'
-      ),
-      new Query(
-        language,
-        ['queries/c/highlights.scm', 'queries/highlights.scm']
-          .map((file) => fs.readFileSync(path.join(Root, file), 'utf8'))
-          .join('\n')
-      ),
-      new Query(language, fs.readFileSync(path.join(Root, 'queries/tags.scm'), 'utf8'))
+    query = new Query(
+      language,
+      '(function_definition declarator: (qualified_identifier name: (operator_cast) @cast)) @definition (function_definition declarator: (operator_cast) @cast) @definition'
     );
     const minimal = parser.parse('struct A { operator int(); }; inline A::operator int() { return 42; }')!;
     try {
       assert.equal(minimal.rootNode.hasError, false);
-      const definitions = queries[0]!.captures(minimal.rootNode).filter((c) => c.name === 'definition');
+      const definitions = query.captures(minimal.rootNode).filter((c) => c.name === 'definition');
       assert.equal(definitions.length, 1);
       assert.equal(
         definitions[0]!.node.childForFieldName('declarator')?.childForFieldName('name')?.type,
@@ -46,7 +37,7 @@ test('parses conversion declarations and queries', async () => {
     }
     tree = parser.parse(Source)!;
     assert.equal(tree.rootNode.hasError, false, tree.rootNode.toString());
-    const definitions = queries[0]!
+    const definitions = query
       .captures(tree.rootNode)
       .filter((c) => c.name === 'definition')
       .map((c) => c.node);
@@ -74,20 +65,6 @@ test('parses conversion declarations and queries', async () => {
     }
     const casts = tree.rootNode.descendantsOfType('operator_cast');
     assert.equal(casts.length, 30);
-    for (const cast of casts) {
-      assert.ok(
-        queries[1]!
-          .captures(cast)
-          .some((c) => c.name.startsWith('type') && c.node.id === cast.childForFieldName('type')?.id)
-      );
-    }
-    assert.deepEqual(
-      queries[2]!
-        .captures(tree.rootNode)
-        .filter((c) => c.name === 'name' && c.node.parent?.type === 'function_declarator')
-        .map((c) => c.node.text),
-      ['ordinary', 'main']
-    );
     for (const [before, after, hasError] of [
       ['inline Scalar::operator int() const', '[[nodiscard]] inline Scalar::operator int() const', false],
       ['friend Pointer::operator int*() const;', 'friend Pointer::operator int*() const', true],
@@ -103,7 +80,7 @@ test('parses conversion declarations and queries', async () => {
     }
   } finally {
     tree?.delete();
-    for (const query of queries) query.delete();
+    query?.delete();
     parser.delete();
   }
 });

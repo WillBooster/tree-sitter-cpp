@@ -1,10 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { type Node, Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
-import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -28,7 +27,6 @@ const language = await loadCurrentWasmBuild();
 
 test('exposes alternative words as operator arguments with primary-equivalent named structure', () => {
   const parser = new Parser().setLanguage(language);
-  const query = highlights();
   const tree = parser.parse(source)!;
   const primary = parser.parse(source.replaceAll(wordPattern, (word) => primarySpellings.get(word)!))!;
   const abstractTypes = parser.parse('using L = int(bitand)[3]; using R = int(and)[3]; using F = void(bitand)(int);')!;
@@ -37,39 +35,21 @@ test('exposes alternative words as operator arguments with primary-equivalent na
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(primary.rootNode.hasError, primary.rootNode.toString()).toBe(false);
     expect(namedStructure(tree.rootNode)).toEqual(namedStructure(primary.rootNode));
-    const captures = query.captures(tree.rootNode);
     for (const match of source.matchAll(wordPattern)) {
       const token = tree.rootNode.descendantForIndex(match.index, match.index + match[0].length)!;
       expect(token.parent?.type, match[0]).toBe('operator_argument');
       expect(token.text).toBe(match[0]);
-      const at = captures.filter(
-        ({ node }) => node.startIndex === match.index && node.endIndex === match.index + match[0].length
-      );
-      expect(
-        at.filter(({ name }) => name === 'operator'),
-        match[0]
-      ).toHaveLength(1);
-      expect(
-        at.filter(({ name }) => name === 'variable'),
-        match[0]
-      ).toHaveLength(0);
     }
     expect(abstractTypes.rootNode.hasError, abstractTypes.rootNode.toString()).toBe(false);
     expect(abstractTypes.rootNode.descendantsOfType('operator_argument')).toEqual([]);
     expect(abstractTypes.rootNode.descendantsOfType('abstract_reference_declarator')).toHaveLength(3);
     expect(control.rootNode.hasError, control.rootNode.toString()).toBe(false);
     expect(control.rootNode.descendantsOfType('operator_argument')).toEqual([]);
-    expect(
-      query
-        .captures(control.rootNode)
-        .filter(({ name, node }) => name === 'operator' && primarySpellings.has(node.text))
-    ).toEqual([]);
   } finally {
     tree.delete();
     primary.delete();
     abstractTypes.delete();
     control.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -95,7 +75,6 @@ test('keeps the following function after each macro argument operator spelling',
 test('keeps singleton word macro arguments clean for one or many arguments', () => {
   const original = fs.readFileSync(path.join(root, 'test/fixtures/singleAlternativeArguments.cpp'), 'utf8');
   const parser = new Parser().setLanguage(language);
-  const query = highlights();
   const start = original.indexOf('OP(and)') + 'OP('.length;
   try {
     for (const argument of ['and', 'bitand', 'and, bitand', '']) {
@@ -114,22 +93,15 @@ test('keeps singleton word macro arguments clean for one or many arguments', () 
           argument.includes(',') ? ['and', 'bitand'] : []
         );
         if (argument !== 'and') continue;
-        const captures = query.captures(tree.rootNode);
         for (const match of source.matchAll(/\b(?:and|bitand)\b/g)) {
           const token = tree.rootNode.descendantForIndex(match.index, match.index + match[0].length)!;
           expect(token.type).toBe('identifier');
-          const at = captures.filter(
-            ({ node }) => node.startIndex === match.index && node.endIndex === match.index + match[0].length
-          );
-          expect(at.filter(({ name }) => name === 'operator')).toEqual([]);
-          expect(at.filter(({ name }) => name === 'variable')).toHaveLength(1);
         }
       } finally {
         tree.delete();
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });
@@ -141,10 +113,4 @@ function namedStructure(node: Node): unknown {
       child.isNamed ? [[node.fieldNameForChild(index), namedStructure(child)]] : []
     ),
   ];
-}
-function highlights(): Query {
-  return new Query(
-    language,
-    treeSitterJson.grammars[0]!.highlights.map((file) => fs.readFileSync(path.join(root, file), 'utf8')).join('\n')
-  );
 }

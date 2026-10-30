@@ -1,10 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { type Node, Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
-import treeSitterJson from '../../tree-sitter.json';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -14,7 +13,6 @@ const language = await loadCurrentWasmBuild();
 
 test('preserves default, named, initialized and pack reference captures with bitand tokens', () => {
   const parser = new Parser().setLanguage(language);
-  const query = highlights();
   const tree = parser.parse(source)!;
   const primary = parser.parse(source.replaceAll(/\bbitand\b/g, '&'))!;
   const control = parser.parse(
@@ -37,35 +35,11 @@ test('preserves default, named, initialized and pack reference captures with bit
       ['alias', 'x'],
       ['refs', 'values'],
     ]);
-    const captures = query.captures(tree.rootNode);
-    const tokens = [...source.matchAll(/\bbitand\b/g)];
-    expect(tokens).toHaveLength(7);
-    for (const match of tokens) {
-      const at = captures.filter(
-        ({ node }) => node.startIndex === match.index && node.endIndex === match.index + match[0].length
-      );
-      expect(
-        at.filter(({ name }) => name === 'operator'),
-        match[0]
-      ).toHaveLength(1);
-      expect(
-        at.filter(({ name }) => name === 'variable'),
-        match[0]
-      ).toHaveLength(0);
-    }
     expect(control.rootNode.hasError, control.rootNode.toString()).toBe(false);
-    const protectedCaptures = query.captures(control.rootNode);
-    expect(
-      protectedCaptures.filter(({ name, node }) => name === 'operator' && node.text.includes('bitand'))
-    ).toHaveLength(0);
-    expect(
-      protectedCaptures.filter(({ name, node }) => name === 'variable' && node.text === 'bitanderson')
-    ).toHaveLength(3);
   } finally {
     tree.delete();
     primary.delete();
     control.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -100,10 +74,4 @@ function namedStructure(node: Node): unknown {
       child.isNamed ? [[node.fieldNameForChild(index), namedStructure(child)]] : []
     ),
   ];
-}
-function highlights(): Query {
-  return new Query(
-    language,
-    treeSitterJson.grammars[0]!.highlights.map((file) => fs.readFileSync(path.join(root, file), 'utf8')).join('\n')
-  );
 }

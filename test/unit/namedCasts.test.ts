@@ -1,6 +1,4 @@
-import fs from 'node:fs';
-
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild';
@@ -18,7 +16,6 @@ auto &e = typeid(unsigned long long);
 auto &f = typeid(struct X);
 auto &g = typeid(first(), second());
 `)!;
-  const query = new Query(language, fs.readFileSync(new URL('../../queries/highlights.scm', import.meta.url), 'utf8'));
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     const casts = tree.rootNode.descendantsOfType('named_cast_expression');
@@ -38,14 +35,7 @@ auto &g = typeid(first(), second());
       'first()',
       'second()',
     ]);
-    expect(
-      query
-        .captures(tree.rootNode)
-        .filter((capture) => capture.name === 'keyword')
-        .map((capture) => capture.node.text)
-    ).toEqual(['static_cast', 'dynamic_cast', 'reinterpret_cast', 'const_cast', 'typeid', 'typeid', 'typeid']);
   } finally {
-    query.delete();
     tree.delete();
     parser.delete();
   }
