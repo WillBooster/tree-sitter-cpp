@@ -41,6 +41,7 @@ typedef struct {
 typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_INCLUDE, INITIALIZER_OTHER } InitializerDirective;
 
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive);
+static bool initializer_conditional_trivia(TSLexer *lexer);
 static bool initializer_conditional_splice(TSLexer *lexer);
 static uint32_t initializer_conditional_node(InitializerConditionals *state, uint32_t position);
 static void initializer_conditional_push(InitializerConditionals *state, uint32_t node);
@@ -64,8 +65,7 @@ static bool scan_empty_initializer_conditional(InitializerConditionals *state, T
     if (state->nodes[first].kind != INITIALIZER_UNKNOWN) return state->nodes[first].kind == INITIALIZER_EMPTY;
     state->frame_count = 0;
     for (;;) {
-        bool newline = false;
-        if (!skip_cpp_trivia(lexer, &newline) || lexer->lookahead != '#') {
+        if (!initializer_conditional_trivia(lexer) || lexer->lookahead != '#') {
             return initializer_conditional_nonempty(state);
         }
         lexer->get_position(lexer, &position);
@@ -103,6 +103,15 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
     }
     frame->has_else = directive == INITIALIZER_ELSE;
     return initializer_conditional_header(lexer, false) != frame->has_else;
+}
+
+static bool initializer_conditional_trivia(TSLexer *lexer) {
+    for (;;) {
+        bool newline = false;
+        if (!skip_cpp_trivia(lexer, &newline)) return false;
+        if (lexer->lookahead != '_') return true;
+        if (!scan_pragma(lexer)) return false;
+    }
 }
 
 static bool initializer_conditional_splice(TSLexer *lexer) {

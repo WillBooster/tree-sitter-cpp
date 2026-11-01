@@ -150,9 +150,12 @@ static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbo
     }
     if (!skip_pack_index_whitespace(lexer, true)) return false;
     if (valid_symbols[EMPTY_INITIALIZER_START] && lexer->lookahead == '#') {
-        lexer->mark_end(lexer);
+        TSLexerCheckpoint start;
+        lexer->get_checkpoint(lexer, &start);
         lexer->result_symbol = EMPTY_INITIALIZER_START;
-        return scan_empty_initializer_conditional(&scanner->initializer_conditionals, lexer);
+        bool empty = scan_empty_initializer_conditional(&scanner->initializer_conditionals, lexer);
+        lexer->mark_end_at(lexer, &start);
+        return empty;
     }
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
         return scan_pack_index_operator(lexer);

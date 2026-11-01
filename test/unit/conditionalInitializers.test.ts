@@ -105,6 +105,7 @@ test('preserves directives around values and in value-less initializer arms', ()
     expect(values[2]!.descendantsOfType('preproc_include').map((node) => node.childForFieldName('path')?.text)).toEqual(
       ['<missing/*>', '"missing/*"']
     );
+    expect(values[2]!.descendantsOfType('pragma_operator')).toHaveLength(2);
     expect(values[2]!.descendantsOfType('preproc_call').some((node) => node.text.startsWith('#error'))).toBe(true);
     expect(tree.rootNode.lastNamedChild?.childForFieldName('declarator')?.text).toBe('after()');
   } finally {

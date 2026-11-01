@@ -77,9 +77,10 @@ function expectLinearParseTime(small: string, large: string, hasError: boolean):
     smallFastest = Math.min(smallFastest, parseCpuTime(small, hasError));
     largeFastest = Math.min(largeFastest, parseCpuTime(large, hasError));
   }
-  expect(largeFastest / smallFastest).toBeLessThan(18);
+  const timings = `small=${smallFastest}us large=${largeFastest}us, bytes=${small.length}/${large.length}`;
+  expect(largeFastest / smallFastest, timings).toBeLessThan(18);
   // process.threadCpuUsage reports microseconds.
-  expect(largeFastest).toBeLessThan(2_000_000);
+  expect(largeFastest, timings).toBeLessThan(2_000_000);
 }
 
 function parseCpuTime(source: string, expectedError: boolean): number {

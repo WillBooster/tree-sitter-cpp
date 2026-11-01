@@ -25,10 +25,12 @@ int second =
 int third =
 #if 1
 #if 0
+_Pragma("clang diagnostic push")
 #include <missing/*>
 #define EMPTY(value) value /* multiline
 #elif is not a directive here */
 #else
+_Pragma("clang diagnostic push")
 #pragma clang diagnostic ignored "-Wunused"
 #endif
   3
