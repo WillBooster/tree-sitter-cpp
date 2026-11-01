@@ -38,7 +38,7 @@ typedef struct {
     uint32_t call_depth;
 } InitializerHeaderContext;
 
-typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_OTHER } InitializerDirective;
+typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_INCLUDE, INITIALIZER_OTHER } InitializerDirective;
 
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive);
 static bool initializer_conditional_splice(TSLexer *lexer);
@@ -46,7 +46,7 @@ static uint32_t initializer_conditional_node(InitializerConditionals *state, uin
 static void initializer_conditional_push(InitializerConditionals *state, uint32_t node);
 static bool initializer_conditional_nonempty(InitializerConditionals *state);
 static InitializerDirective initializer_conditional_directive(TSLexer *lexer);
-static bool initializer_conditional_header(TSLexer *lexer);
+static bool initializer_conditional_header(TSLexer *lexer, bool header_argument);
 static bool initializer_conditional_header_operand(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_identifier(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c);
@@ -70,7 +70,7 @@ static bool scan_empty_initializer_conditional(InitializerConditionals *state, T
         }
         lexer->get_position(lexer, &position);
         InitializerDirective directive = initializer_conditional_directive(lexer);
-        if (directive == INITIALIZER_OTHER || (!state->frame_count && directive != INITIALIZER_IF)) {
+        if (!state->frame_count && directive != INITIALIZER_IF) {
             return initializer_conditional_nonempty(state);
         }
         if (directive == INITIALIZER_IF) {
@@ -86,9 +86,13 @@ static bool scan_empty_initializer_conditional(InitializerConditionals *state, T
 }
 
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive) {
-    if (directive == INITIALIZER_IF) return initializer_conditional_header(lexer);
+    if (directive == INITIALIZER_OTHER || directive == INITIALIZER_INCLUDE) {
+        initializer_conditional_header(lexer, directive == INITIALIZER_INCLUDE);
+        return true;
+    }
+    if (directive == INITIALIZER_IF) return initializer_conditional_header(lexer, false);
     if (directive == INITIALIZER_ENDIF) {
-        if (initializer_conditional_header(lexer)) return false;
+        if (initializer_conditional_header(lexer, false)) return false;
         state->nodes[state->frames[--state->frame_count].node].kind = INITIALIZER_EMPTY;
         return true;
     }
@@ -98,7 +102,7 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
         return false;
     }
     frame->has_else = directive == INITIALIZER_ELSE;
-    return initializer_conditional_header(lexer) != frame->has_else;
+    return initializer_conditional_header(lexer, false) != frame->has_else;
 }
 
 static bool initializer_conditional_splice(TSLexer *lexer) {
@@ -161,13 +165,14 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     if (!strcmp(name, "else")) return INITIALIZER_ELSE;
     if (!strcmp(name, "elif") || !strcmp(name, "elifdef") || !strcmp(name, "elifndef")) return INITIALIZER_ELIF;
     if (!strcmp(name, "endif")) return INITIALIZER_ENDIF;
+    if (!strcmp(name, "include")) return INITIALIZER_INCLUDE;
     return INITIALIZER_OTHER;
 }
 
 // code-gauge-allow functionCognitiveComplexity 16 -- The header loop keeps newline termination and token-role transitions together.
-static bool initializer_conditional_header(TSLexer *lexer) {
+static bool initializer_conditional_header(TSLexer *lexer, bool header_argument) {
     bool content = false;
-    InitializerHeaderContext context = {0};
+    InitializerHeaderContext context = {.argument_start = header_argument};
     while (!lexer->eof(lexer)) {
         if (lexer->lookahead == '\n' || lexer->lookahead == '\r') {
             lexer->advance(lexer, false);

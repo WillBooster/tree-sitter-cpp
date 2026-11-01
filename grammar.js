@@ -1151,11 +1151,11 @@ module.exports = grammar(C, {
 
     preproc_ifdef_without_initializer: () => initializerIfdef(emptyInitializerBody()),
 
-    preproc_else_without_initializer: () => initializerElse(repeat(sym('_nested_empty_initializer_conditional'))),
+    preproc_else_without_initializer: () => initializerElse(repeat(sym('_nested_empty_initializer_content'))),
 
-    preproc_elif_without_initializer: () => initializerElif(repeat(sym('_nested_empty_initializer_conditional'))),
+    preproc_elif_without_initializer: () => initializerElif(repeat(sym('_nested_empty_initializer_content'))),
 
-    preproc_elifdef_without_initializer: () => initializerElifdef(repeat(sym('_nested_empty_initializer_conditional'))),
+    preproc_elifdef_without_initializer: () => initializerElifdef(repeat(sym('_nested_empty_initializer_content'))),
 
     _empty_initializer_conditional: ($) =>
       seq(sym('_empty_initializer_start'), $._nested_empty_initializer_conditional),
@@ -1166,16 +1166,25 @@ module.exports = grammar(C, {
         alias(sym('preproc_ifdef_without_initializer'), sym('preproc_ifdef'))
       ),
 
-    _initializer_branch_content: ($) => choice($._initializer_branch_value, repeat1($._empty_initializer_conditional)),
+    _initializer_nonconditional_directive: ($) =>
+      choice($.preproc_include, $.preproc_def, $.preproc_function_def, $.preproc_call),
+
+    _empty_initializer_content: ($) =>
+      choice($._empty_initializer_conditional, $._initializer_nonconditional_directive),
+
+    _nested_empty_initializer_content: ($) =>
+      choice($._nested_empty_initializer_conditional, $._initializer_nonconditional_directive),
+
+    _initializer_branch_content: ($) => choice($._initializer_branch_value, repeat1($._empty_initializer_content)),
 
     _initializer_branch_value: ($) =>
-      seq(repeat($._empty_initializer_conditional), $._initializer_value, repeat($._empty_initializer_conditional)),
+      seq(repeat($._empty_initializer_content), $._initializer_value, repeat($._empty_initializer_content)),
 
     _initializer_conditional_body: ($) =>
       choice(
         seq($._initializer_branch_value, initializerFollowingArms()),
         seq(
-          repeat($._empty_initializer_conditional),
+          repeat($._empty_initializer_content),
           repeat(field('alternative', $._initializer_empty_elif)),
           choice(
             seq(field('alternative', $._initializer_value_elif), initializerFollowingArms()),
@@ -1214,9 +1223,9 @@ module.exports = grammar(C, {
 
     preproc_elifdef_with_initializer: () => initializerElifdef(sym('_initializer_branch_value')),
 
-    preproc_elif_without_value: () => initializerElif(repeat(sym('_empty_initializer_conditional'))),
+    preproc_elif_without_value: () => initializerElif(repeat(sym('_empty_initializer_content'))),
 
-    preproc_elifdef_without_value: () => initializerElifdef(repeat(sym('_empty_initializer_conditional'))),
+    preproc_elifdef_without_value: () => initializerElifdef(repeat(sym('_empty_initializer_content'))),
 
     // After a comma, a declaration cannot be the call through a function pointer `x * (*fp)(this);`, so the forms that
     // only take the fallback above take the keyword reading too, as in `Foo* k, *(*l)(nullptr);`.
@@ -3150,7 +3159,7 @@ function initializerFollowingArms() {
 
 function emptyInitializerBody() {
   return seq(
-    repeat(sym('_nested_empty_initializer_conditional')),
+    repeat(sym('_nested_empty_initializer_content')),
     repeat(field('alternative', sym('_empty_initializer_elif'))),
     optional(field('alternative', alias(sym('preproc_else_without_initializer'), sym('preproc_else'))))
   );

@@ -85,8 +85,37 @@ test('preserves conditional initializer values and following declarations', () =
   }
 });
 
+test('preserves directives around values and in value-less initializer arms', () => {
+  const input = fs.readFileSync(new URL('../fixtures/conditionalInitializerDirectives.cpp', import.meta.url), 'utf8');
+  const parser = new Parser().setLanguage(language);
+  const tree = parser.parse(input)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    const values = tree.rootNode.descendantsOfType('init_declarator').map((node) => node.childForFieldName('value')!);
+    expect(
+      values.map((node) =>
+        node
+          .descendantsOfType('number_literal')
+          .filter((value) => value.parent?.childForFieldName('condition')?.id !== value.id)
+          .map((value) => value.text)
+      )
+    ).toEqual([['1'], ['2'], ['3']]);
+    expect(values[0]!.descendantsOfType('preproc_function_def')[0]?.childForFieldName('name')?.text).toBe('VALUE');
+    expect(values[1]!.descendantsOfType('preproc_def')[0]?.childForFieldName('name')?.text).toBe('OMITTED');
+    expect(values[2]!.descendantsOfType('preproc_include').map((node) => node.childForFieldName('path')?.text)).toEqual(
+      ['<missing/*>', '"missing/*"']
+    );
+    expect(values[2]!.descendantsOfType('preproc_call').some((node) => node.text.startsWith('#error'))).toBe(true);
+    expect(tree.rootNode.lastNamedChild?.childForFieldName('declarator')?.text).toBe('after()');
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});
+
 test.each([
   'int missingValue =\n#if 1\n#else\n#endif\n;',
+  'int directivesOnly =\n#if 1\n#define VALUE 1\n#else\n#pragma clang diagnostic ignored "-Wunused"\n#endif\n;',
   'int emptyChain =\n#if 1\n#elif 0\n#else\n#endif\n;',
   'int emptyNested =\n#if 1\n#if INNER\n#endif\n#else\n#ifdef OTHER\n#endif\n#endif\n;',
   'int missingEnd =\n#if 1\n1\n#else\n2\n;',
