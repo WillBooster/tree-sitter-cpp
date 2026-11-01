@@ -151,6 +151,7 @@ module.exports = grammar(C, {
     sym('_macro_call_end'),
     sym('_macro_identifier_end'),
     sym('_empty_initializer_start'),
+    sym('_initializer_directive_name'),
   ],
 
   conflicts: ($, original) => [
@@ -1178,28 +1179,7 @@ module.exports = grammar(C, {
       replaceRuleField(
         C.grammar.rules.preproc_call,
         'directive',
-        alias(
-          choice(
-            ...[
-              'undef',
-              'line',
-              'error',
-              'warning',
-              'pragma',
-              'embed',
-              'include_next',
-              'import',
-              'ident',
-              'region',
-              'endregion',
-              'using',
-            ].map((command) => {
-              const rule = preprocessor(command);
-              return rule.type === 'ALIAS' ? rule.content : rule;
-            })
-          ),
-          sym('preproc_directive')
-        )
+        alias(sym('_initializer_directive_name'), sym('preproc_directive'))
       ),
 
     _empty_initializer_content: ($) =>

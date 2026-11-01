@@ -27,6 +27,8 @@ int third =
 #if 0
 _Pragma("clang diagnostic push")
 #include <missing/*>
+#vendor_specific anything
+#Vendor_123 arbitrary tokens
 #define COMPARISON F(< /* replacement
 comment */ >)
 #warning can't /* diagnostic

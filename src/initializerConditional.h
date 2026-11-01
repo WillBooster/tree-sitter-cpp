@@ -41,8 +41,11 @@ typedef struct {
     uint32_t call_depth;
 } InitializerHeaderContext;
 
-typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_INCLUDE, INITIALIZER_DEFINE, INITIALIZER_OTHER } InitializerDirective;
+typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_INCLUDE, INITIALIZER_DEFINE, INITIALIZER_OTHER, INITIALIZER_INVALID } InitializerDirective;
 
+typedef enum { INITIALIZER_START_NONE, INITIALIZER_START_EMPTY, INITIALIZER_START_DIRECTIVE } InitializerStartKind;
+
+static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer *lexer);
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive);
 static bool initializer_conditional_trivia(TSLexer *lexer);
 static bool initializer_conditional_splice(TSLexer *lexer);
@@ -50,6 +53,7 @@ static uint32_t initializer_conditional_node(InitializerConditionals *state, uin
 static void initializer_conditional_push(InitializerConditionals *state, uint32_t node);
 static bool initializer_conditional_nonempty(InitializerConditionals *state);
 static InitializerDirective initializer_conditional_directive(TSLexer *lexer);
+static bool initializer_conditional_word(TSLexer *lexer, MacroName *word);
 static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode);
 static bool initializer_conditional_header_operand(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_identifier(TSLexer *lexer, InitializerHeaderContext *context);
@@ -59,23 +63,38 @@ static bool initializer_conditional_separator(TSLexer *lexer);
 static void initializer_conditional_literal(TSLexer *lexer, int32_t closing);
 static void initializer_conditional_literal_body(TSLexer *lexer, int32_t closing);
 
-// code-gauge-allow functionCognitiveComplexity 19 -- The proof loop keeps directive order and memo updates together; header validation is already separate.
-static bool scan_empty_initializer_conditional(InitializerConditionals *state, TSLexer *lexer) {
-    if (state->invalid_directive_order) return false;
+static InitializerStartKind scan_initializer_start(InitializerConditionals *state, TSLexer *lexer,
+                                                   bool allow_empty, bool allow_directive) {
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
-    uint32_t first = initializer_conditional_node(state, position.bytes);
-    if (state->nodes[first].kind != INITIALIZER_UNKNOWN) return state->nodes[first].kind == INITIALIZER_EMPTY;
+    uint32_t first = 0;
+    if (allow_empty) {
+        first = initializer_conditional_node(state, position.bytes);
+        InitializerConditionalKind cached = state->nodes[first].kind;
+        if (cached != INITIALIZER_UNKNOWN) {
+            return cached == INITIALIZER_EMPTY ? INITIALIZER_START_EMPTY : INITIALIZER_START_NONE;
+        }
+    }
+    InitializerDirective directive = initializer_conditional_directive(lexer);
+    if (allow_directive && directive == INITIALIZER_OTHER) return INITIALIZER_START_DIRECTIVE;
+    if (!allow_empty || directive != INITIALIZER_IF || state->invalid_directive_order) return INITIALIZER_START_NONE;
     state->frame_count = 0;
+    initializer_conditional_push(state, first);
+    if (!initializer_conditional_accept_header(state, lexer, directive)) {
+        initializer_conditional_nonempty(state);
+        return INITIALIZER_START_NONE;
+    }
+    return scan_empty_initializer_tail(state, lexer) ? INITIALIZER_START_EMPTY : INITIALIZER_START_NONE;
+}
+
+static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer *lexer) {
+    TSLexerPosition position;
     for (;;) {
         if (!initializer_conditional_trivia(lexer) || lexer->lookahead != '#') {
             return initializer_conditional_nonempty(state);
         }
         lexer->get_position(lexer, &position);
         InitializerDirective directive = initializer_conditional_directive(lexer);
-        if (!state->frame_count && directive != INITIALIZER_IF) {
-            return initializer_conditional_nonempty(state);
-        }
         if (directive == INITIALIZER_IF) {
             uint32_t node = initializer_conditional_node(state, position.bytes);
             if (state->nodes[node].kind == INITIALIZER_NONEMPTY) return initializer_conditional_nonempty(state);
@@ -89,6 +108,7 @@ static bool scan_empty_initializer_conditional(InitializerConditionals *state, T
 }
 
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive) {
+    if (directive == INITIALIZER_INVALID) return false;
     if (directive == INITIALIZER_OTHER || directive == INITIALIZER_INCLUDE || directive == INITIALIZER_DEFINE) {
         InitializerHeaderMode mode = directive == INITIALIZER_INCLUDE ? INITIALIZER_HEADER :
             directive == INITIALIZER_DEFINE ? INITIALIZER_REPLACEMENT : INITIALIZER_DIRECTIVE_TEXT;
@@ -169,12 +189,9 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     lexer->advance(lexer, false);
     while (lexer->lookahead == ' ' || lexer->lookahead == '\t') lexer->advance(lexer, false);
     char name[9] = {0};
-    unsigned length = 0;
-    while (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') {
-        if (length == sizeof(name) - 1) return INITIALIZER_OTHER;
-        name[length++] = (char)lexer->lookahead;
-        lexer->advance(lexer, false);
-    }
+    MacroName word = {.word = name, .capacity = sizeof(name) - 1, .ascii = true, .lookahead_only = true};
+    if (!initializer_conditional_word(lexer, &word)) return INITIALIZER_INVALID;
+    if (!word.ascii) return INITIALIZER_OTHER;
     if (!strcmp(name, "if") || !strcmp(name, "ifdef") || !strcmp(name, "ifndef")) return INITIALIZER_IF;
     if (!strcmp(name, "else")) return INITIALIZER_ELSE;
     if (!strcmp(name, "elif") || !strcmp(name, "elifdef") || !strcmp(name, "elifndef")) return INITIALIZER_ELIF;
@@ -182,6 +199,17 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     if (!strcmp(name, "include")) return INITIALIZER_INCLUDE;
     if (!strcmp(name, "define")) return INITIALIZER_DEFINE;
     return INITIALIZER_OTHER;
+}
+
+static bool initializer_conditional_word(TSLexer *lexer, MacroName *word) {
+    bool has_name = false;
+    for (;;) {
+        MacroNameCharacter character = scan_macro_name_character(lexer, true, word);
+        if (character == MACRO_NAME_SPLICE) continue;
+        if (character != MACRO_NAME_CHARACTER) return has_name;
+        has_name = true;
+        lexer->mark_end(lexer);
+    }
 }
 
 // code-gauge-allow functionCognitiveComplexity 16 -- The header loop keeps newline termination and token-role transitions together.

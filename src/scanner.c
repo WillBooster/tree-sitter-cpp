@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, MACRO_CALL_END, MACRO_IDENTIFIER_END, EMPTY_INITIALIZER_START };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, MACRO_CALL_END, MACRO_IDENTIFIER_END, EMPTY_INITIALIZER_START, INITIALIZER_DIRECTIVE_NAME };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
@@ -106,6 +106,7 @@ void *tree_sitter_cpp_external_scanner_create() {
 }
 
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static bool scan_initializer_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer);
 static bool scan_macro_boundary_name(TSLexer *lexer, MacroName *name);
@@ -128,7 +129,7 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     return found;
 }
 
-// code-gauge-allow functionCognitiveComplexity 17 -- Ordered token dispatch keeps mutually exclusive scanner contexts together.
+// code-gauge-allow functionCognitiveComplexity 18 -- Ordered token dispatch keeps mutually exclusive scanner contexts together.
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     if (valid_symbols[RAW_STRING_DELIMITER] || valid_symbols[RAW_STRING_CONTENT]) {
         return scan_raw_string_token(scanner, lexer, valid_symbols);
@@ -149,14 +150,8 @@ static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbo
         pending_close = lexer->lookahead == '>';
     }
     if (!skip_pack_index_whitespace(lexer, true)) return false;
-    if (valid_symbols[EMPTY_INITIALIZER_START] && lexer->lookahead == '#') {
-        TSLexerCheckpoint start;
-        lexer->get_checkpoint(lexer, &start);
-        lexer->result_symbol = EMPTY_INITIALIZER_START;
-        bool empty = scan_empty_initializer_conditional(&scanner->initializer_conditionals, lexer);
-        lexer->mark_start(lexer, &start);
-        lexer->mark_end_at(lexer, &start);
-        return empty;
+    if ((valid_symbols[EMPTY_INITIALIZER_START] || valid_symbols[INITIALIZER_DIRECTIVE_NAME]) && lexer->lookahead == '#') {
+        return scan_initializer_token(scanner, lexer, valid_symbols);
     }
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
         return scan_pack_index_operator(lexer);
@@ -165,6 +160,21 @@ static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbo
         return scan_template_close(scanner, lexer, valid_symbols, pending_close);
     }
     return scan_declaration_macro(lexer, valid_symbols);
+}
+
+static bool scan_initializer_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+    TSLexerCheckpoint start;
+    lexer->get_checkpoint(lexer, &start);
+    InitializerStartKind kind = scan_initializer_start(&scanner->initializer_conditionals, lexer,
+        valid_symbols[EMPTY_INITIALIZER_START], valid_symbols[INITIALIZER_DIRECTIVE_NAME]);
+    lexer->mark_start(lexer, &start);
+    if (kind == INITIALIZER_START_DIRECTIVE) {
+        lexer->result_symbol = INITIALIZER_DIRECTIVE_NAME;
+    } else {
+        lexer->result_symbol = EMPTY_INITIALIZER_START;
+        lexer->mark_end_at(lexer, &start);
+    }
+    return kind != INITIALIZER_START_NONE;
 }
 
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {

@@ -27252,57 +27252,8 @@
           "content": {
             "type": "ALIAS",
             "content": {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*undef"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*line"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*error"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*warning"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*pragma"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*embed"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*include_next"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*import"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*ident"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*region"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*endregion"
-                },
-                {
-                  "type": "PATTERN",
-                  "value": "#[ \t]*using"
-                }
-              ]
+              "type": "SYMBOL",
+              "name": "_initializer_directive_name"
             },
             "named": true,
             "value": "preproc_directive"
@@ -40473,6 +40424,10 @@
     {
       "type": "SYMBOL",
       "name": "_empty_initializer_start"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_initializer_directive_name"
     }
   ],
   "inline": [
