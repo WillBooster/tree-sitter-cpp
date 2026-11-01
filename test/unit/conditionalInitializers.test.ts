@@ -27,6 +27,8 @@ test('preserves conditional initializer values and following declarations', () =
       ['delayed', 'preproc_if'],
       ['(parenthesized)', 'preproc_if'],
       ['nested', 'preproc_if'],
+      ['emptyNestedPrimary', 'preproc_if'],
+      ['emptyNestedAlternative', 'preproc_if'],
     ]);
     const global = initializers[0]!.childForFieldName('value')!;
     expect(global.childForFieldName('condition')?.text).toBe('SELECT');
@@ -49,8 +51,22 @@ test('preserves conditional initializer values and following declarations', () =
     const laterBranch = delayed.childForFieldName('alternative')!.childForFieldName('alternative')!;
     expect(laterBranch.type).toBe('preproc_elifdef');
     expect(laterBranch.childForFieldName('name')?.text).toBe('OMITTED');
-    const nested = initializers.at(-1)!.childForFieldName('value')!;
+    const nested = initializers[8]!.childForFieldName('value')!;
     expect(nested.namedChildren.filter((node) => node.type === 'preproc_if')).toHaveLength(1);
+    const nestedEmpty = initializers[9]!.childForFieldName('value')!;
+    expect(nestedEmpty.namedChildren.filter((node) => node.type === 'preproc_if')).toHaveLength(1);
+    expect(
+      nestedEmpty
+        .childForFieldName('alternative')
+        ?.descendantsOfType('number_literal')
+        .map((node) => node.text)
+    ).toEqual(['44']);
+    expect(
+      initializers[10]!
+        .childForFieldName('value')
+        ?.descendantsOfType('number_literal')
+        .map((node) => node.text)
+    ).toEqual(['1', '45']);
     const after = tree.rootNode.lastNamedChild!;
     expect(after.type).toBe('function_definition');
     expect(after.childForFieldName('declarator')?.text).toBe('after()');
@@ -64,6 +80,7 @@ test('preserves conditional initializer values and following declarations', () =
 test.each([
   'int missingValue =\n#if 1\n#else\n#endif\n;',
   'int emptyChain =\n#if 1\n#elif 0\n#else\n#endif\n;',
+  'int emptyNested =\n#if 1\n#if INNER\n#endif\n#else\n#ifdef OTHER\n#endif\n#endif\n;',
   'int missingEnd =\n#if 1\n1\n#else\n2\n;',
   'int invalidValue =\n#if 1\n1 2\n#else\n3\n#endif\n;',
 ])('reports incomplete or invalid conditional initializer syntax: %s', (input) => {

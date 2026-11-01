@@ -31,7 +31,7 @@ test.each(['plain', 'conditional'])('parses %s bare-marker chains in linear time
 });
 
 test('parses conditional initializer branches in linear time', { timeout: 60_000 }, () => {
-  const block = '{ int value =\n#if FEATURE\n1\n#else\n2\n#endif\n; }\n';
+  const block = '{ int value =\n#if FEATURE\n#if EMPTY\n#endif\n1\n#else\n2\n#endif\n; }\n';
   const input = (count: number): string => `void conditional() {\n${block.repeat(count)}}`;
   expectLinearParseTime(input(2000), input(20_000), false);
 });

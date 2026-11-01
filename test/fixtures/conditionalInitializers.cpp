@@ -96,4 +96,29 @@ int read() {
   return parenthesized + nested;
 }
 
+int emptyNestedPrimary =
+#if 0
+#if NESTED_EMPTY
+#endif
+#else
+44
+#endif
+;
+
+int emptyNestedAlternative =
+#if 1
+#if BEFORE_VALUE
+#else
+#ifdef NESTED_EMPTY
+#endif
+#endif
+45
+#ifndef AFTER_VALUE
+#endif
+#else
+#if UNUSED
+#endif
+#endif
+;
+
 int after() { return 0; }

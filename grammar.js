@@ -1136,7 +1136,20 @@ module.exports = grammar(C, {
         alias(sym('preproc_ifdef_in_initializer'), sym('preproc_ifdef'))
       ),
 
-    ...preprocIf('_in_initializer', () => sym('_initializer_value'), 0, false),
+    ...preprocIf('_in_initializer', () => sym('_initializer_branch_content'), 0, false),
+
+    ...preprocIf('_without_initializer', () => sym('_empty_initializer_conditional')),
+
+    _empty_initializer_conditional: () =>
+      choice(
+        alias(sym('preproc_if_without_initializer'), sym('preproc_if')),
+        alias(sym('preproc_ifdef_without_initializer'), sym('preproc_ifdef'))
+      ),
+
+    _initializer_branch_content: ($) => choice($._initializer_branch_value, repeat1($._empty_initializer_conditional)),
+
+    _initializer_branch_value: ($) =>
+      seq(repeat($._empty_initializer_conditional), $._initializer_value, repeat($._empty_initializer_conditional)),
 
     preproc_if_in_initializer: ($) =>
       seq(
@@ -1157,8 +1170,8 @@ module.exports = grammar(C, {
 
     _initializer_conditional_body: ($) =>
       choice(
-        seq($._initializer_value, field('alternative', optional($._initializer_alternative))),
-        field('alternative', $._initializer_required_alternative)
+        seq($._initializer_branch_value, field('alternative', optional($._initializer_alternative))),
+        seq(repeat($._empty_initializer_conditional), field('alternative', $._initializer_required_alternative))
       ),
 
     _initializer_alternative: () =>
@@ -1175,7 +1188,7 @@ module.exports = grammar(C, {
         alias($.preproc_elifdef_with_initializer, sym('preproc_elifdef'))
       ),
 
-    preproc_else_with_initializer: ($) => seq(preprocessor('else'), $._initializer_value),
+    preproc_else_with_initializer: ($) => seq(preprocessor('else'), $._initializer_branch_value),
 
     preproc_elif_with_initializer: ($) =>
       seq(
