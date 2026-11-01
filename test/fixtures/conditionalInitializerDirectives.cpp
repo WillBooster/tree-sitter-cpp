@@ -27,6 +27,10 @@ int third =
 #if 0
 _Pragma("clang diagnostic push")
 #include <missing/*>
+#define COMPARISON F(< /* replacement
+comment */ >)
+#warning can't /* diagnostic
+comment */
 #define EMPTY(value) value /* multiline
 #elif is not a directive here */
 #else

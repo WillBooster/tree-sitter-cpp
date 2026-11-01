@@ -154,6 +154,7 @@ static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbo
         lexer->get_checkpoint(lexer, &start);
         lexer->result_symbol = EMPTY_INITIALIZER_START;
         bool empty = scan_empty_initializer_conditional(&scanner->initializer_conditionals, lexer);
+        lexer->mark_start(lexer, &start);
         lexer->mark_end_at(lexer, &start);
         return empty;
     }

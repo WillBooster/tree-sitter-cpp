@@ -32,13 +32,16 @@ typedef struct {
     bool invalid_directive_order;
 } InitializerConditionals;
 
+typedef enum { INITIALIZER_CONDITION, INITIALIZER_HEADER, INITIALIZER_REPLACEMENT, INITIALIZER_DIRECTIVE_TEXT } InitializerHeaderMode;
+
 typedef struct {
+    InitializerHeaderMode mode;
     bool after_identifier;
     bool argument_start;
     uint32_t call_depth;
 } InitializerHeaderContext;
 
-typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_INCLUDE, INITIALIZER_OTHER } InitializerDirective;
+typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_INCLUDE, INITIALIZER_DEFINE, INITIALIZER_OTHER } InitializerDirective;
 
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive);
 static bool initializer_conditional_trivia(TSLexer *lexer);
@@ -47,7 +50,7 @@ static uint32_t initializer_conditional_node(InitializerConditionals *state, uin
 static void initializer_conditional_push(InitializerConditionals *state, uint32_t node);
 static bool initializer_conditional_nonempty(InitializerConditionals *state);
 static InitializerDirective initializer_conditional_directive(TSLexer *lexer);
-static bool initializer_conditional_header(TSLexer *lexer, bool header_argument);
+static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode);
 static bool initializer_conditional_header_operand(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_identifier(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c);
@@ -86,13 +89,15 @@ static bool scan_empty_initializer_conditional(InitializerConditionals *state, T
 }
 
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive) {
-    if (directive == INITIALIZER_OTHER || directive == INITIALIZER_INCLUDE) {
-        initializer_conditional_header(lexer, directive == INITIALIZER_INCLUDE);
+    if (directive == INITIALIZER_OTHER || directive == INITIALIZER_INCLUDE || directive == INITIALIZER_DEFINE) {
+        InitializerHeaderMode mode = directive == INITIALIZER_INCLUDE ? INITIALIZER_HEADER :
+            directive == INITIALIZER_DEFINE ? INITIALIZER_REPLACEMENT : INITIALIZER_DIRECTIVE_TEXT;
+        initializer_conditional_header(lexer, mode);
         return true;
     }
-    if (directive == INITIALIZER_IF) return initializer_conditional_header(lexer, false);
+    if (directive == INITIALIZER_IF) return initializer_conditional_header(lexer, INITIALIZER_CONDITION);
     if (directive == INITIALIZER_ENDIF) {
-        if (initializer_conditional_header(lexer, false)) return false;
+        if (initializer_conditional_header(lexer, INITIALIZER_CONDITION)) return false;
         state->nodes[state->frames[--state->frame_count].node].kind = INITIALIZER_EMPTY;
         return true;
     }
@@ -102,7 +107,7 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
         return false;
     }
     frame->has_else = directive == INITIALIZER_ELSE;
-    return initializer_conditional_header(lexer, false) != frame->has_else;
+    return initializer_conditional_header(lexer, INITIALIZER_CONDITION) != frame->has_else;
 }
 
 static bool initializer_conditional_trivia(TSLexer *lexer) {
@@ -175,13 +180,14 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     if (!strcmp(name, "elif") || !strcmp(name, "elifdef") || !strcmp(name, "elifndef")) return INITIALIZER_ELIF;
     if (!strcmp(name, "endif")) return INITIALIZER_ENDIF;
     if (!strcmp(name, "include")) return INITIALIZER_INCLUDE;
+    if (!strcmp(name, "define")) return INITIALIZER_DEFINE;
     return INITIALIZER_OTHER;
 }
 
 // code-gauge-allow functionCognitiveComplexity 16 -- The header loop keeps newline termination and token-role transitions together.
-static bool initializer_conditional_header(TSLexer *lexer, bool header_argument) {
+static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode) {
     bool content = false;
-    InitializerHeaderContext context = {.argument_start = header_argument};
+    InitializerHeaderContext context = {.mode = mode, .argument_start = mode == INITIALIZER_HEADER};
     while (!lexer->eof(lexer)) {
         if (lexer->lookahead == '\n' || lexer->lookahead == '\r') {
             lexer->advance(lexer, false);
@@ -211,9 +217,14 @@ static bool initializer_conditional_header(TSLexer *lexer, bool header_argument)
 }
 
 static bool initializer_conditional_header_operand(TSLexer *lexer, InitializerHeaderContext *context) {
-    if ((lexer->lookahead >= '0' && lexer->lookahead <= '9') || lexer->lookahead == '.') {
+    if (context->mode != INITIALIZER_DIRECTIVE_TEXT &&
+        ((lexer->lookahead >= '0' && lexer->lookahead <= '9') || lexer->lookahead == '.')) {
         initializer_conditional_pp_number(lexer);
-    } else if (lexer->lookahead == '\'' || lexer->lookahead == '"' || (context->argument_start && lexer->lookahead == '<')) {
+    } else if (context->mode == INITIALIZER_DIRECTIVE_TEXT && lexer->lookahead == '"') {
+        lexer->advance(lexer, false);
+        scan_preproc_quote(lexer, '"', false, true);
+    } else if ((context->mode != INITIALIZER_DIRECTIVE_TEXT && lexer->lookahead == '\'') ||
+               lexer->lookahead == '"' || (context->argument_start && lexer->lookahead == '<')) {
         initializer_conditional_literal(lexer, lexer->lookahead == '<' ? '>' : lexer->lookahead);
     } else {
         return false;
@@ -232,6 +243,11 @@ static void initializer_conditional_header_identifier(TSLexer *lexer, Initialize
 }
 
 static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c) {
+    if (context->mode != INITIALIZER_CONDITION) {
+        context->after_identifier = false;
+        context->argument_start = false;
+        return;
+    }
     if (c == '(') {
         context->argument_start = context->after_identifier;
         if (context->after_identifier || context->call_depth) context->call_depth++;
