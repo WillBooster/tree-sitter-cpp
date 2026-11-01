@@ -54,6 +54,16 @@ test.each(['empty', 'value'])(
   }
 );
 
+test.each(['elif', 'elifdef', 'elifndef'])(
+  'recovers from invalid #%s initializer bodies in linear time',
+  { timeout: 60_000 },
+  (directive) => {
+    const input = (count: number): string =>
+      'int value =\n#if A\n1\n' + `#${directive} B\na b\n`.repeat(count) + '#endif\n;';
+    expectLinearParseTime(input(2000), input(20_000), true);
+  }
+);
+
 function malformedInitializerAlternatives(count: number): string {
   return 'int value =\n#if A\n1\n' + '#if E\n#else\n#elif F\n'.repeat(count) + '#endif\n'.repeat(count) + '#endif\n;';
 }

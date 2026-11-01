@@ -33,10 +33,17 @@ test('preserves conditional initializer values and following declarations', () =
     ]);
     const global = initializers[0]!.childForFieldName('value')!;
     expect(global.childForFieldName('condition')?.text).toBe('SELECT');
-    const alternative = global.childForFieldName('alternative')!;
+    const alternatives = global.childrenForFieldName('alternative');
+    expect(alternatives.map((node) => node.type)).toEqual(['preproc_elif', 'preproc_else']);
+    const alternative = alternatives[0]!;
     expect(alternative.type).toBe('preproc_elif');
     expect(alternative.childForFieldName('condition')?.text).toBe('ALTERNATE');
-    expect(alternative.childForFieldName('alternative')?.type).toBe('preproc_else');
+    expect(
+      initializers[3]!
+        .childForFieldName('value')!
+        .childrenForFieldName('alternative')
+        .map((node) => node.type)
+    ).toEqual(['preproc_elif', 'preproc_elifdef', 'preproc_elifdef', 'preproc_else']);
     expect(initializers[1]!.descendantsOfType('initializer_list').map((node) => node.text)).toEqual([
       '{1, 2}',
       '{3, 4}',
@@ -49,7 +56,7 @@ test('preserves conditional initializer values and following declarations', () =
       'preproc_ifdef'
     );
     const delayed = initializers[6]!.childForFieldName('value')!;
-    const laterBranch = delayed.childForFieldName('alternative')!.childForFieldName('alternative')!;
+    const laterBranch = delayed.childrenForFieldName('alternative')[1]!;
     expect(laterBranch.type).toBe('preproc_elifdef');
     expect(laterBranch.childForFieldName('name')?.text).toBe('OMITTED');
     const nested = initializers[8]!.childForFieldName('value')!;

@@ -132,6 +132,11 @@ int literalConditions =
 #if 1 < 2 /* multiline
 comment */
 #endif
+#if 0
+#elif 0
+#elifdef UNUSED
+#else
+#endif
 46
 #else
 47
