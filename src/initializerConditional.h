@@ -47,9 +47,13 @@ static void initializer_conditional_push(InitializerConditionals *state, uint32_
 static bool initializer_conditional_nonempty(InitializerConditionals *state);
 static InitializerDirective initializer_conditional_directive(TSLexer *lexer);
 static bool initializer_conditional_header(TSLexer *lexer);
-static void initializer_conditional_header_identifier(TSLexer *lexer);
+static bool initializer_conditional_header_operand(TSLexer *lexer, InitializerHeaderContext *context);
+static void initializer_conditional_header_identifier(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c);
+static void initializer_conditional_pp_number(TSLexer *lexer);
+static bool initializer_conditional_separator(TSLexer *lexer);
 static void initializer_conditional_literal(TSLexer *lexer, int32_t closing);
+static void initializer_conditional_literal_body(TSLexer *lexer, int32_t closing);
 
 // code-gauge-allow functionCognitiveComplexity 19 -- The proof loop keeps directive order and memo updates together; header validation is already separate.
 static bool scan_empty_initializer_conditional(InitializerConditionals *state, TSLexer *lexer) {
@@ -160,8 +164,7 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     return INITIALIZER_OTHER;
 }
 
-// code-gauge-allow functionCognitiveComplexity 21 -- Token categories keep comments, literals and header names in one line scan.
-// code-gauge-allow functionNcss 34 -- The line scan keeps token consumption and call-context transitions together.
+// code-gauge-allow functionCognitiveComplexity 16 -- The header loop keeps newline termination and token-role transitions together.
 static bool initializer_conditional_header(TSLexer *lexer) {
     bool content = false;
     InitializerHeaderContext context = {0};
@@ -178,15 +181,10 @@ static bool initializer_conditional_header(TSLexer *lexer) {
                 content = true;
                 initializer_conditional_header_punctuation(&context, '/');
             }
-        } else if (lexer->lookahead == '\'' || lexer->lookahead == '"' || (context.argument_start && lexer->lookahead == '<')) {
-            initializer_conditional_literal(lexer, lexer->lookahead == '<' ? '>' : lexer->lookahead);
+        } else if (initializer_conditional_header_operand(lexer, &context)) {
             content = true;
-            context.after_identifier = false;
-            context.argument_start = false;
         } else if (preproc_word(lexer->lookahead, false)) {
-            initializer_conditional_header_identifier(lexer);
-            context.after_identifier = true;
-            context.argument_start = false;
+            initializer_conditional_header_identifier(lexer, &context);
             content = true;
         } else {
             bool token = !iswspace(lexer->lookahead);
@@ -198,10 +196,25 @@ static bool initializer_conditional_header(TSLexer *lexer) {
     return content;
 }
 
-static void initializer_conditional_header_identifier(TSLexer *lexer) {
+static bool initializer_conditional_header_operand(TSLexer *lexer, InitializerHeaderContext *context) {
+    if ((lexer->lookahead >= '0' && lexer->lookahead <= '9') || lexer->lookahead == '.') {
+        initializer_conditional_pp_number(lexer);
+    } else if (lexer->lookahead == '\'' || lexer->lookahead == '"' || (context->argument_start && lexer->lookahead == '<')) {
+        initializer_conditional_literal(lexer, lexer->lookahead == '<' ? '>' : lexer->lookahead);
+    } else {
+        return false;
+    }
+    context->after_identifier = false;
+    context->argument_start = false;
+    return true;
+}
+
+static void initializer_conditional_header_identifier(TSLexer *lexer, InitializerHeaderContext *context) {
     do {
         lexer->advance(lexer, false);
     } while (preproc_word(lexer->lookahead, true));
+    context->after_identifier = true;
+    context->argument_start = false;
 }
 
 static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c) {
@@ -215,8 +228,53 @@ static void initializer_conditional_header_punctuation(InitializerHeaderContext 
     context->after_identifier = false;
 }
 
+// code-gauge-allow functionCognitiveComplexity 20 -- The pp-number loop consumes continuations, separators and UCNs in one pass.
+static void initializer_conditional_pp_number(TSLexer *lexer) {
+    int32_t previous = 0;
+    while (!lexer->eof(lexer)) {
+        int32_t c = lexer->lookahead;
+        bool exponent_sign = (c == '+' || c == '-') &&
+            (previous == 'e' || previous == 'E' || previous == 'p' || previous == 'P');
+        if (preproc_word(c, true) || c == '.' || exponent_sign) {
+            previous = c;
+            lexer->advance(lexer, false);
+        } else if (c == '\'') {
+            if (!initializer_conditional_separator(lexer)) return;
+            previous = 0;
+        } else if (c == '\\') {
+            lexer->advance(lexer, false);
+            if (scan_preproc_newline(lexer, false)) continue;
+            bool in_number = true;
+            if (!scan_preproc_ucn(lexer, &in_number) || !in_number) return;
+            previous = 0;
+        } else {
+            return;
+        }
+    }
+}
+
+static bool initializer_conditional_separator(TSLexer *lexer) {
+    lexer->advance(lexer, false);
+    while (lexer->lookahead == '\\') {
+        lexer->advance(lexer, false);
+        if (scan_preproc_newline(lexer, false)) continue;
+        bool in_number = true;
+        if (scan_preproc_ucn(lexer, &in_number) && in_number) return true;
+        if (!lexer->eof(lexer)) lexer->advance(lexer, false);
+        initializer_conditional_literal_body(lexer, '\'');
+        return false;
+    }
+    if (preproc_word(lexer->lookahead, true)) return true;
+    initializer_conditional_literal_body(lexer, '\'');
+    return false;
+}
+
 static void initializer_conditional_literal(TSLexer *lexer, int32_t closing) {
     lexer->advance(lexer, false);
+    initializer_conditional_literal_body(lexer, closing);
+}
+
+static void initializer_conditional_literal_body(TSLexer *lexer, int32_t closing) {
     while (!lexer->eof(lexer) && lexer->lookahead != '\n' && lexer->lookahead != '\r') {
         if (lexer->lookahead == '\\') {
             bool splice = initializer_conditional_splice(lexer);

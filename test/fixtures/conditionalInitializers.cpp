@@ -140,6 +140,12 @@ int literalConditions =
 #if VALUE_IDENTITY(1 < 2 /* multiline
 comparison */)
 #endif
+#if 1'000 > 5 /* multiline
+decimal */
+#endif
+#if 0x1'F > 5 /* multiline
+hexadecimal */
+#endif
 #if 1 < 2 /* multiline
 comment */
 #endif
