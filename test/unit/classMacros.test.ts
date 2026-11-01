@@ -193,3 +193,35 @@ test('retains nested template expression types and ranges inside function bodies
     parser.delete();
   }
 });
+
+test.each(['std::string_view', 'std::pmr::string'])(
+  'preserves braced arguments after nested qualified templates with %s',
+  (type) => {
+    const input = fs
+      .readFileSync(new URL('../fixtures/nestedTemplateInitializers.cpp', import.meta.url), 'utf8')
+      .replace('std::string_view', type);
+    const parser = new Parser().setLanguage(language);
+    const tree = parser.parse(input)!;
+    try {
+      expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+      const call = tree.rootNode.descendantsOfType('call_expression')[0]!;
+      expect(call.childForFieldName('function')?.childForFieldName('name')?.childForFieldName('name')?.text).toBe(
+        'to_array'
+      );
+      const argumentsNode = call.childForFieldName('arguments')!;
+      expect(argumentsNode.namedChildren.map((node) => node.type)).toEqual(['initializer_list']);
+      expect(argumentsNode.namedChildren[0]!.namedChildren.map((node) => node.text)).toEqual([
+        '{1, {"first"}}',
+        '{2, {"second"}}',
+        '{3, {"third"}}',
+      ]);
+      expect(tree.rootNode.descendantsOfType('compound_literal_expression')).toHaveLength(0);
+      const scopedType = tree.rootNode.descendantsOfType('type_descriptor').find((node) => node.text === type)!;
+      expect(scopedType.childForFieldName('type')?.type).toBe('qualified_identifier');
+      expect(scopedType.childForFieldName('type')?.text).toBe(type);
+    } finally {
+      tree.delete();
+      parser.delete();
+    }
+  }
+);

@@ -31884,9 +31884,58 @@
         "type": "FIELD",
         "name": "type",
         "content": {
-          "type": "SYMBOL",
-          "name": "_type_identifier"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_type_identifier"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_template_argument_qualified_type_identifier"
+              },
+              "named": true,
+              "value": "qualified_identifier"
+            }
+          ]
         }
+      }
+    },
+    "_template_argument_qualified_type_identifier": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "_scope_resolution"
+          },
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_type_identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_template_argument_qualified_type_identifier"
+                  },
+                  "named": true,
+                  "value": "qualified_identifier"
+                }
+              ]
+            }
+          }
+        ]
       }
     },
     "namespace_definition": {
