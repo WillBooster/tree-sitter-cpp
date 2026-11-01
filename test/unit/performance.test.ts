@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
@@ -9,9 +11,9 @@ parser.setLanguage(await loadCurrentWasmBuild());
 
 // Consumers parse files being edited, so recovering from many errors must stay linear: ten times the lines take about
 // ten times as long, against a hundred times for quadratic recovery. The ratio catches a cost that grows faster than
-// the input even on a slow CI runner; it would pass a parser that is uniformly slower, so the larger parse also has a
-// generous ceiling, about 35 times the 0.06 s of CPU time it takes here. The parses are timed in the CPU time of the
-// thread that runs them: wall-clock time is inflated unevenly by the test files running alongside, and the process's
+// the input even on a slow CI runner; it would pass a uniformly slower parser, so a throughput bound also limits
+// CPU time to 25 microseconds per input byte: two seconds for the original 80 KB control.
+// The parses are timed in the CPU time of their thread: wall-clock time is inflated unevenly by the test files running alongside, and the process's
 // CPU time also counts the engine's background threads, which compile the Wasm build and collect garbage during the
 // parses. 2,000 and 20,000 lines measured after warm-up parses and in alternation, each keeping its fastest run, give
 // 10 to 13 locally; 18 leaves a margin over that and fails for growth faster than about n^1.25.
@@ -77,10 +79,11 @@ function expectLinearParseTime(small: string, large: string, hasError: boolean):
     smallFastest = Math.min(smallFastest, parseCpuTime(small, hasError));
     largeFastest = Math.min(largeFastest, parseCpuTime(large, hasError));
   }
-  const timings = `small=${smallFastest}us large=${largeFastest}us, bytes=${small.length}/${large.length}`;
+  const largeBytes = Buffer.byteLength(large);
+  const timings = `small=${smallFastest}us large=${largeFastest}us, bytes=${Buffer.byteLength(small)}/${largeBytes}`;
   expect(largeFastest / smallFastest, timings).toBeLessThan(18);
   // process.threadCpuUsage reports microseconds.
-  expect(largeFastest, timings).toBeLessThan(2_000_000);
+  expect(largeFastest, timings).toBeLessThan(largeBytes * 25);
 }
 
 function parseCpuTime(source: string, expectedError: boolean): number {
