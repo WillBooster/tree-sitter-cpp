@@ -67,7 +67,6 @@ static bool scan_empty_initializer_conditional(InitializerConditionals *state, T
             initializer_conditional_push(state, node);
         }
         if (!initializer_conditional_accept_header(state, lexer, directive)) {
-            state->invalid_directive_order = true;
             return initializer_conditional_nonempty(state);
         }
         if (!state->frame_count) return true;
@@ -82,7 +81,10 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
         return true;
     }
     InitializerConditionalFrame *frame = &state->frames[state->frame_count - 1];
-    if (frame->has_else) return false;
+    if (frame->has_else) {
+        state->invalid_directive_order = true;
+        return false;
+    }
     frame->has_else = directive == INITIALIZER_ELSE;
     return initializer_conditional_header(lexer) != frame->has_else;
 }
