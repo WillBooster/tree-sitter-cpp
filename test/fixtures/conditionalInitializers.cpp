@@ -1,3 +1,7 @@
+#define HEADER_AVAILABLE __has_include
+#define Π __has_include
+#define VALUE_IDENTITY(value) (value)
+
 struct Pair { int first; int second; };
 
 int global =
@@ -128,6 +132,13 @@ int literalConditions =
 #if __has_include("missing/*")
 #endif
 #if __has_include(<missing/*>)
+#endif
+#if HEADER_AVAILABLE(<missing/*>)
+#endif
+#if Π(<missing/*>)
+#endif
+#if VALUE_IDENTITY(1 < 2 /* multiline
+comparison */)
 #endif
 #if 1 < 2 /* multiline
 comment */

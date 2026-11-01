@@ -115,3 +115,19 @@ test('resets empty-group source facts between full parses on a reused parser', (
     parser.delete();
   }
 });
+
+test.each(['\n', '\r\n'])('preserves conditional header comments with newline %j', (newline) => {
+  const parser = new Parser().setLanguage(language);
+  const input = 'int value =\n#if 1\n#if A // condition comment\n#endif\n1\n#else\n2\n#endif\n;'.replaceAll(
+    '\n',
+    newline
+  );
+  const tree = parser.parse(input)!;
+  try {
+    expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
+    expect(tree.rootNode.descendantsOfType('init_declarator')[0]?.childForFieldName('value')?.type).toBe('preproc_if');
+  } finally {
+    tree.delete();
+    parser.delete();
+  }
+});

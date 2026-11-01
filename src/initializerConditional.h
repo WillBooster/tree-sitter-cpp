@@ -3,6 +3,8 @@
 
 #include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
+#include "pragma.h"
+#include "cppTrivia.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -30,6 +32,12 @@ typedef struct {
     bool invalid_directive_order;
 } InitializerConditionals;
 
+typedef struct {
+    bool after_identifier;
+    bool argument_start;
+    uint32_t call_depth;
+} InitializerHeaderContext;
+
 typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_OTHER } InitializerDirective;
 
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive);
@@ -39,10 +47,9 @@ static void initializer_conditional_push(InitializerConditionals *state, uint32_
 static bool initializer_conditional_nonempty(InitializerConditionals *state);
 static InitializerDirective initializer_conditional_directive(TSLexer *lexer);
 static bool initializer_conditional_header(TSLexer *lexer);
-static bool initializer_conditional_header_predicate(TSLexer *lexer);
+static void initializer_conditional_header_identifier(TSLexer *lexer);
+static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c);
 static void initializer_conditional_literal(TSLexer *lexer, int32_t closing);
-static bool initializer_conditional_trivia(TSLexer *lexer);
-static bool initializer_conditional_comment(TSLexer *lexer);
 
 // code-gauge-allow functionCognitiveComplexity 19 -- The proof loop keeps directive order and memo updates together; header validation is already separate.
 static bool scan_empty_initializer_conditional(InitializerConditionals *state, TSLexer *lexer) {
@@ -53,7 +60,8 @@ static bool scan_empty_initializer_conditional(InitializerConditionals *state, T
     if (state->nodes[first].kind != INITIALIZER_UNKNOWN) return state->nodes[first].kind == INITIALIZER_EMPTY;
     state->frame_count = 0;
     for (;;) {
-        if (!initializer_conditional_trivia(lexer) || lexer->lookahead != '#') {
+        bool newline = false;
+        if (!skip_cpp_trivia(lexer, &newline) || lexer->lookahead != '#') {
             return initializer_conditional_nonempty(state);
         }
         lexer->get_position(lexer, &position);
@@ -91,12 +99,7 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
 
 static bool initializer_conditional_splice(TSLexer *lexer) {
     lexer->advance(lexer, false);
-    if (lexer->lookahead != '\n' && lexer->lookahead != '\r') return false;
-    int32_t newline = lexer->lookahead;
-    lexer->advance(lexer, false);
-    if ((newline == '\r' && lexer->lookahead == '\n') ||
-        (newline == '\n' && lexer->lookahead == '\r')) lexer->advance(lexer, false);
-    return true;
+    return scan_preproc_newline(lexer, false);
 }
 
 static uint32_t initializer_conditional_node(InitializerConditionals *state, uint32_t position) {
@@ -157,10 +160,11 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     return INITIALIZER_OTHER;
 }
 
-// code-gauge-allow functionCognitiveComplexity 20 -- Token categories keep comments, literals and header names in one line scan.
+// code-gauge-allow functionCognitiveComplexity 21 -- Token categories keep comments, literals and header names in one line scan.
+// code-gauge-allow functionNcss 34 -- The line scan keeps token consumption and call-context transitions together.
 static bool initializer_conditional_header(TSLexer *lexer) {
     bool content = false;
-    bool header_predicate = false;
+    InitializerHeaderContext context = {0};
     while (!lexer->eof(lexer)) {
         if (lexer->lookahead == '\n' || lexer->lookahead == '\r') {
             lexer->advance(lexer, false);
@@ -169,34 +173,46 @@ static bool initializer_conditional_header(TSLexer *lexer) {
         if (lexer->lookahead == '\\') {
             content |= !initializer_conditional_splice(lexer);
         } else if (lexer->lookahead == '/') {
-            content |= !initializer_conditional_comment(lexer);
-        } else if (lexer->lookahead == '\'' || lexer->lookahead == '"' || (header_predicate && lexer->lookahead == '<')) {
+            bool newline = false;
+            if (!skip_cpp_comment(lexer, &newline)) {
+                content = true;
+                initializer_conditional_header_punctuation(&context, '/');
+            }
+        } else if (lexer->lookahead == '\'' || lexer->lookahead == '"' || (context.argument_start && lexer->lookahead == '<')) {
             initializer_conditional_literal(lexer, lexer->lookahead == '<' ? '>' : lexer->lookahead);
             content = true;
-            header_predicate = false;
-        } else if (iswalpha(lexer->lookahead) || lexer->lookahead == '_') {
-            header_predicate = initializer_conditional_header_predicate(lexer);
+            context.after_identifier = false;
+            context.argument_start = false;
+        } else if (preproc_word(lexer->lookahead, false)) {
+            initializer_conditional_header_identifier(lexer);
+            context.after_identifier = true;
+            context.argument_start = false;
             content = true;
         } else {
             bool token = !iswspace(lexer->lookahead);
             content |= token;
-            if (token && lexer->lookahead != '(') header_predicate = false;
+            if (token) initializer_conditional_header_punctuation(&context, lexer->lookahead);
             lexer->advance(lexer, false);
         }
     }
     return content;
 }
 
-static bool initializer_conditional_header_predicate(TSLexer *lexer) {
-    char word[32] = {0};
-    unsigned length = 0;
-    bool ascii = true;
-    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
-        if (length < sizeof(word) - 1 && lexer->lookahead < 0x80) word[length++] = (char)lexer->lookahead;
-        else ascii = false;
+static void initializer_conditional_header_identifier(TSLexer *lexer) {
+    do {
         lexer->advance(lexer, false);
+    } while (preproc_word(lexer->lookahead, true));
+}
+
+static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c) {
+    if (c == '(') {
+        context->argument_start = context->after_identifier;
+        if (context->after_identifier || context->call_depth) context->call_depth++;
+    } else {
+        context->argument_start = c == ',' && context->call_depth;
+        if (c == ')' && context->call_depth) context->call_depth--;
     }
-    return ascii && (!strcmp(word, "__has_include") || !strcmp(word, "__has_include_next") || !strcmp(word, "__has_embed"));
+    context->after_identifier = false;
 }
 
 static void initializer_conditional_literal(TSLexer *lexer, int32_t closing) {
@@ -211,43 +227,6 @@ static void initializer_conditional_literal(TSLexer *lexer, int32_t closing) {
             if (c == closing) return;
         }
     }
-}
-
-static bool initializer_conditional_trivia(TSLexer *lexer) {
-    while (!lexer->eof(lexer)) {
-        if (iswspace(lexer->lookahead)) {
-            lexer->advance(lexer, false);
-        } else if (lexer->lookahead == '/') {
-            if (!initializer_conditional_comment(lexer)) return false;
-        } else if (lexer->lookahead == '\\') {
-            if (!initializer_conditional_splice(lexer)) return false;
-        } else {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool initializer_conditional_comment(TSLexer *lexer) {
-    lexer->advance(lexer, false);
-    if (lexer->lookahead == '/') {
-        int32_t previous = 0;
-        while (!lexer->eof(lexer) && (lexer->lookahead != '\n' || previous == '\\')) {
-            if (lexer->lookahead != '\r') previous = lexer->lookahead;
-            lexer->advance(lexer, false);
-        }
-        return true;
-    }
-    if (lexer->lookahead != '*') return false;
-    lexer->advance(lexer, false);
-    bool star = false;
-    while (!lexer->eof(lexer)) {
-        int32_t c = lexer->lookahead;
-        lexer->advance(lexer, false);
-        if (star && c == '/') return true;
-        star = c == '*';
-    }
-    return false;
 }
 
 static void delete_initializer_conditionals(InitializerConditionals *state) {

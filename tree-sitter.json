@@ -14,7 +14,8 @@
         "src/keywords.h",
         "src/functionMacro.h",
         "src/conditionalMacro.h",
-        "src/initializerConditional.h"
+        "src/initializerConditional.h",
+        "src/cppTrivia.h"
       ]
     }
   ],

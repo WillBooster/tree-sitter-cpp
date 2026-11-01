@@ -2,6 +2,7 @@
 #include "tree_sitter/parser.h"
 #include "conditionalMacro.h"
 #include "initializerConditional.h"
+#include "cppTrivia.h"
 
 #include <string.h>
 #include <stdint.h>
@@ -106,10 +107,8 @@ void *tree_sitter_cpp_external_scanner_create() {
 
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
-static bool skip_macro_boundary_trivia(TSLexer *lexer, bool *newline);
 static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer);
 static bool scan_macro_boundary_name(TSLexer *lexer, MacroName *name);
-static bool skip_cpp_comment(TSLexer *lexer, bool *newline);
 static bool scan_preprocessor(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols);
 static bool scan_pack_index_operator(TSLexer *lexer);
@@ -167,7 +166,7 @@ static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbo
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     lexer->mark_end(lexer);
     bool newline = false;
-    if (!skip_macro_boundary_trivia(lexer, &newline)) return false;
+    if (!skip_cpp_trivia(lexer, &newline)) return false;
     if (lexer->eof(lexer)) {
         scanner->pending_macro_identifiers = 0;
         lexer->result_symbol = valid_symbols[MACRO_CALL_END] ? MACRO_CALL_END : MACRO_IDENTIFIER_END;
@@ -197,7 +196,7 @@ static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer) {
         static const char *const starters[] = {"class", "concept", "decltype", "enum", "export", "namespace", "struct", "template", "union", "using"};
         if (name.ascii && function_macro_word_in(word, starters, sizeof(starters) / sizeof(starters[0]))) break;
         bool newline = false;
-        if (!skip_macro_boundary_trivia(lexer, &newline) || (!newline && !lexer->eof(lexer))) return false;
+        if (!skip_cpp_trivia(lexer, &newline) || (!newline && !lexer->eof(lexer))) return false;
         remaining++;
     }
     // Tree-sitter records this lookahead on the first boundary, so later edits invalidate the validated suffix.
@@ -216,45 +215,6 @@ static bool scan_macro_boundary_name(TSLexer *lexer, MacroName *name) {
     }
 }
 
-static bool skip_macro_boundary_trivia(TSLexer *lexer, bool *newline) {
-    for (;;) {
-        while (iswspace(lexer->lookahead)) {
-            *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
-            advance(lexer);
-        }
-        if (lexer->lookahead == '\\') {
-            advance(lexer);
-            if (!scan_preproc_newline(lexer, false)) return false;
-        } else if (lexer->lookahead == '/') {
-            if (!skip_cpp_comment(lexer, newline)) return false;
-        } else {
-            return true;
-        }
-    }
-}
-
-static bool skip_cpp_comment(TSLexer *lexer, bool *newline) {
-    advance(lexer);
-    if (lexer->lookahead == '/') {
-        int32_t previous = 0;
-        while (!lexer->eof(lexer) && (lexer->lookahead != '\n' || previous == '\\')) {
-            if (lexer->lookahead != '\r') previous = lexer->lookahead;
-            advance(lexer);
-        }
-        return true;
-    }
-    if (lexer->lookahead != '*') return false;
-    advance(lexer);
-    bool star = false;
-    while (!lexer->eof(lexer)) {
-        int32_t c = lexer->lookahead;
-        *newline |= c == '\n' || c == '\r';
-        advance(lexer);
-        if (star && c == '/') return true;
-        star = c == '*';
-    }
-    return false;
-}
 
 static bool scan_declaration_macro(TSLexer *lexer, const bool *valid_symbols) {
     static const char *const reserved[] = {"namespace", "using", "export", "module", "import"};
