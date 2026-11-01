@@ -3307,6 +3307,14 @@
           {
             "type": "initializer_list",
             "named": true
+          },
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
           }
         ]
       },
@@ -4551,6 +4559,14 @@
           {
             "type": "initializer_list",
             "named": true
+          },
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
           }
         ]
       }
@@ -4674,6 +4690,14 @@
           },
           {
             "type": "parameter_pack_expansion",
+            "named": true
+          },
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
             "named": true
           }
         ]

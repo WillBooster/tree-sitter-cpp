@@ -135,6 +135,7 @@ const BUILTIN_TYPE_KEYWORDS = [
 ];
 
 const preprocIf = C.preprocIf;
+const preprocessor = C.preprocessor;
 
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
 module.exports = grammar(C, {
@@ -1101,7 +1102,7 @@ module.exports = grammar(C, {
 
     init_declarator: ($, original = missingOriginalRule()) =>
       choice(
-        withDeclarator(original, $._declarator),
+        withDeclarator(replaceRuleField(original, 'value', $._initializer_value), $._declarator),
         seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
         // A pointer or reference declarator takes the parameter list that follows its name, so `Foo* p(nullptr);`
         // would otherwise read only as a function taking a parameter of type `nullptr`. These alternatives reduce the
@@ -1125,6 +1126,70 @@ module.exports = grammar(C, {
           PREC.POINTER_ARGUMENT_INITIALIZATION,
           seq(field('declarator', $._argument_initialized_declarator), field('value', $.argument_list))
         )
+      ),
+
+    _initializer_value: ($) => choice($.expression, $.initializer_list, $._conditional_initializer),
+
+    _conditional_initializer: () =>
+      choice(
+        alias(sym('preproc_if_in_initializer'), sym('preproc_if')),
+        alias(sym('preproc_ifdef_in_initializer'), sym('preproc_ifdef'))
+      ),
+
+    ...preprocIf('_in_initializer', () => sym('_initializer_value'), 0, false),
+
+    preproc_if_in_initializer: ($) =>
+      seq(
+        preprocessor('if'),
+        field('condition', sym('_preproc_expression')),
+        alias(token(/\r\n?|\n\r?/), '\n'),
+        $._initializer_conditional_body,
+        preprocessor('endif')
+      ),
+
+    preproc_ifdef_in_initializer: ($) =>
+      seq(
+        choice(preprocessor('ifdef'), preprocessor('ifndef')),
+        field('name', $.identifier),
+        $._initializer_conditional_body,
+        preprocessor('endif')
+      ),
+
+    _initializer_conditional_body: ($) =>
+      choice(
+        seq($._initializer_value, field('alternative', optional($._initializer_alternative))),
+        field('alternative', $._initializer_required_alternative)
+      ),
+
+    _initializer_alternative: () =>
+      choice(
+        ...['preproc_else', 'preproc_elif', 'preproc_elifdef'].map((name) =>
+          alias(sym(name + '_in_initializer'), sym(name))
+        )
+      ),
+
+    _initializer_required_alternative: ($) =>
+      choice(
+        alias($.preproc_else_with_initializer, sym('preproc_else')),
+        alias($.preproc_elif_with_initializer, sym('preproc_elif')),
+        alias($.preproc_elifdef_with_initializer, sym('preproc_elifdef'))
+      ),
+
+    preproc_else_with_initializer: ($) => seq(preprocessor('else'), $._initializer_value),
+
+    preproc_elif_with_initializer: ($) =>
+      seq(
+        preprocessor('elif'),
+        field('condition', sym('_preproc_expression')),
+        alias(token(/\r\n?|\n\r?/), '\n'),
+        $._initializer_conditional_body
+      ),
+
+    preproc_elifdef_with_initializer: ($) =>
+      seq(
+        choice(preprocessor('elifdef'), preprocessor('elifndef')),
+        field('name', $.identifier),
+        $._initializer_conditional_body
       ),
 
     // After a comma, a declaration cannot be the call through a function pointer `x * (*fp)(this);`, so the forms that
@@ -1318,7 +1383,7 @@ module.exports = grammar(C, {
           seq(
             ...ruleMembers(alternative, 'SEQ').map((member) =>
               member.type === 'FIELD' && member.name === 'value'
-                ? field('value', choice(member.content, $.parameter_pack_expansion))
+                ? field('value', choice(member.content, $._conditional_initializer, $.parameter_pack_expansion))
                 : member
             )
           )
@@ -1384,7 +1449,7 @@ module.exports = grammar(C, {
               choice(
                 $.bitfield_clause,
                 field('default_value', $.initializer_list),
-                seq('=', field('default_value', choice($.expression, $.initializer_list)))
+                seq('=', field('default_value', $._initializer_value))
               )
             )
           )
@@ -1707,7 +1772,7 @@ module.exports = grammar(C, {
       choice(
         seq(
           field('declarator', $._built_in_parenthesized_declarator),
-          choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
+          choice(seq('=', field('value', $._initializer_value)), field('value', $.initializer_list))
         ),
         seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list))
       ),
