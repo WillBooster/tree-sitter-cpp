@@ -1842,10 +1842,20 @@ module.exports = grammar(C, {
         alias(sym('_template_close'), '>')
       ),
 
-    // A lone identifier as a template argument is resolved to a type statically instead of by GLR with
+    // An unqualified or scoped identifier as a template argument is resolved to a type statically instead of by GLR with
     // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
     // an earlier error recovery, tree-sitter's version limit could drop the type interpretation.
-    _template_argument_type_identifier: ($) => prec(1, field('type', $._type_identifier)),
+    _template_argument_type_identifier: ($) =>
+      prec(
+        1,
+        field(
+          'type',
+          choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
+        )
+      ),
+
+    _template_argument_qualified_type_identifier: ($) =>
+      prec(1, seq($._scope_resolution, field('name', $._type_identifier))),
 
     namespace_definition: ($) =>
       seq(
