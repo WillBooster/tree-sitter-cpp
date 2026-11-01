@@ -6131,6 +6131,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -6224,6 +6228,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -6347,6 +6355,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -6440,6 +6452,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -6534,6 +6550,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -6627,6 +6647,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -6828,6 +6852,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -6921,6 +6949,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -7044,6 +7076,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -7137,6 +7173,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {

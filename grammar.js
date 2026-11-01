@@ -3127,9 +3127,10 @@ function initializerIf(body) {
   return seq(
     preprocessor('if'),
     field('condition', sym('_preproc_expression')),
-    alias(token(/\r\n?|\n\r?/), '\n'),
+    initializerDirectiveNewline(),
     body,
-    preprocessor('endif')
+    preprocessor('endif'),
+    initializerDirectiveNewline()
   );
 }
 
@@ -3138,29 +3139,35 @@ function initializerIfdef(body) {
   return seq(
     choice(preprocessor('ifdef'), preprocessor('ifndef')),
     field('name', sym('identifier')),
+    initializerDirectiveNewline(),
     body,
-    preprocessor('endif')
+    preprocessor('endif'),
+    initializerDirectiveNewline()
   );
 }
 
 /** @param {RuleOrLiteral} body */
 function initializerElse(body) {
-  return seq(preprocessor('else'), body);
+  return seq(preprocessor('else'), initializerDirectiveNewline(), body);
 }
 
 /** @param {RuleOrLiteral} body */
 function initializerElif(body) {
-  return seq(
-    preprocessor('elif'),
-    field('condition', sym('_preproc_expression')),
-    alias(token(/\r\n?|\n\r?/), '\n'),
-    body
-  );
+  return seq(preprocessor('elif'), field('condition', sym('_preproc_expression')), initializerDirectiveNewline(), body);
 }
 
 /** @param {RuleOrLiteral} body */
 function initializerElifdef(body) {
-  return seq(choice(preprocessor('elifdef'), preprocessor('elifndef')), field('name', sym('identifier')), body);
+  return seq(
+    choice(preprocessor('elifdef'), preprocessor('elifndef')),
+    field('name', sym('identifier')),
+    initializerDirectiveNewline(),
+    body
+  );
+}
+
+function initializerDirectiveNewline() {
+  return seq(repeat(choice(sym('comment'), sym('pragma_operator'))), alias(sym('_preproc_newline'), '\n'));
 }
 
 function initializerFollowingArms() {

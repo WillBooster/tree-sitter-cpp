@@ -116,6 +116,10 @@ test('preserves directives around values and in value-less initializer arms', ()
 
 test.each([
   'int missingValue =\n#if 1\n#else\n#endif\n;',
+  'int sameLineElse =\n#if 1\n1\n#else 2\n#endif\n;',
+  'int sameLineIfdef =\n#ifdef NAME 1\n#else\n2\n#endif\n;',
+  'int sameLineElifdef =\n#if 0\n1\n#elifdef NAME 2\n#else\n3\n#endif\n;',
+  'int sameLineEnd =\n#if 1\n1\n#else\n2\n#endif ;\n',
   'int directivesOnly =\n#if 1\n#define VALUE 1\n#else\n#pragma clang diagnostic ignored "-Wunused"\n#endif\n;',
   'int emptyChain =\n#if 1\n#elif 0\n#else\n#endif\n;',
   'int emptyNested =\n#if 1\n#if INNER\n#endif\n#else\n#ifdef OTHER\n#endif\n#endif\n;',
@@ -151,14 +155,17 @@ test('resets empty-group source facts between full parses on a reused parser', (
 
 test.each(['\n', '\r\n'])('preserves conditional header comments with newline %j', (newline) => {
   const parser = new Parser().setLanguage(language);
-  const input = 'int value =\n#if 1\n#if A // condition comment\n#endif\n1\n#else\n2\n#endif\n;'.replaceAll(
-    '\n',
-    newline
-  );
+  const input =
+    'int value =\n#ifdef ACTIVE /* header comment */\n#if A // condition comment\n#endif /* closing comment */ \\\n/* continuation comment */\n1\n#else /* alternative comment */ \\\n/* continuation comment */\n2\n#endif /* closing comment */ \\\n/* continuation comment */\n;'.replaceAll(
+      '\n',
+      newline
+    );
   const tree = parser.parse(input)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    expect(tree.rootNode.descendantsOfType('init_declarator')[0]?.childForFieldName('value')?.type).toBe('preproc_if');
+    expect(tree.rootNode.descendantsOfType('init_declarator')[0]?.childForFieldName('value')?.type).toBe(
+      'preproc_ifdef'
+    );
   } finally {
     tree.delete();
     parser.delete();
