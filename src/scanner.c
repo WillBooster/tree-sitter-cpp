@@ -1,17 +1,19 @@
 #include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
 #include "conditionalMacro.h"
+#include "initializerConditional.h"
 
 #include <string.h>
 #include <stdint.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, MACRO_CALL_END, MACRO_IDENTIFIER_END };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, MACRO_CALL_END, MACRO_IDENTIFIER_END, EMPTY_INITIALIZER_START };
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
 
 typedef struct {
+    InitializerConditionals initializer_conditionals;
     bool pending_template_close;
     uint32_t pending_macro_identifiers;
     uint8_t delimiter_length;
@@ -127,6 +129,7 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     return found;
 }
 
+// code-gauge-allow functionCognitiveComplexity 17 -- Ordered token dispatch keeps mutually exclusive scanner contexts together.
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     if (valid_symbols[RAW_STRING_DELIMITER] || valid_symbols[RAW_STRING_CONTENT]) {
         return scan_raw_string_token(scanner, lexer, valid_symbols);
@@ -147,6 +150,11 @@ static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbo
         pending_close = lexer->lookahead == '>';
     }
     if (!skip_pack_index_whitespace(lexer, true)) return false;
+    if (valid_symbols[EMPTY_INITIALIZER_START] && lexer->lookahead == '#') {
+        lexer->mark_end(lexer);
+        lexer->result_symbol = EMPTY_INITIALIZER_START;
+        return scan_empty_initializer_conditional(&scanner->initializer_conditionals, lexer);
+    }
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
         return scan_pack_index_operator(lexer);
     }
@@ -352,6 +360,7 @@ void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buf
 
 void tree_sitter_cpp_external_scanner_destroy(void *payload) {
     Scanner *scanner = (Scanner *)payload;
+    delete_initializer_conditionals(&scanner->initializer_conditionals);
     ts_free(scanner);
 }
 

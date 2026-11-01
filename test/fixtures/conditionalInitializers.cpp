@@ -121,4 +121,21 @@ int emptyNestedAlternative =
 #endif
 ;
 
+int literalConditions =
+#if 1
+#if '/' == '/' && '*' == '*'
+#endif
+#if __has_include("missing/*")
+#endif
+#if __has_include(<missing/*>)
+#endif
+#if 1 < 2 /* multiline
+comment */
+#endif
+46
+#else
+47
+#endif
+;
+
 int after() { return 0; }

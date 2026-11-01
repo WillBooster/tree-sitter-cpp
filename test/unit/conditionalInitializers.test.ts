@@ -29,6 +29,7 @@ test('preserves conditional initializer values and following declarations', () =
       ['nested', 'preproc_if'],
       ['emptyNestedPrimary', 'preproc_if'],
       ['emptyNestedAlternative', 'preproc_if'],
+      ['literalConditions', 'preproc_if'],
     ]);
     const global = initializers[0]!.childForFieldName('value')!;
     expect(global.childForFieldName('condition')?.text).toBe('SELECT');
@@ -90,6 +91,20 @@ test.each([
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(true);
   } finally {
     tree.delete();
+    parser.delete();
+  }
+});
+
+test('resets empty-group source facts between full parses on a reused parser', () => {
+  const parser = new Parser().setLanguage(language);
+  const invalid = 'int invalid =\n#if A\n1\n#if E\n#else\n#elif F\n#endif\n#endif\n;';
+  try {
+    for (const input of [invalid, source, invalid, source]) {
+      const tree = parser.parse(input)!;
+      expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(input === invalid);
+      tree.delete();
+    }
+  } finally {
     parser.delete();
   }
 });

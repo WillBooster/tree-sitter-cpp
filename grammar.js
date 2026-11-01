@@ -150,6 +150,7 @@ module.exports = grammar(C, {
     ...original,
     sym('_macro_call_end'),
     sym('_macro_identifier_end'),
+    sym('_empty_initializer_start'),
   ],
 
   conflicts: ($, original) => [
@@ -1138,9 +1139,12 @@ module.exports = grammar(C, {
 
     ...preprocIf('_in_initializer', () => sym('_initializer_branch_content'), 0, false),
 
-    ...preprocIf('_without_initializer', () => sym('_empty_initializer_conditional')),
+    ...preprocIf('_without_initializer', () => sym('_nested_empty_initializer_conditional')),
 
-    _empty_initializer_conditional: () =>
+    _empty_initializer_conditional: ($) =>
+      seq(sym('_empty_initializer_start'), $._nested_empty_initializer_conditional),
+
+    _nested_empty_initializer_conditional: () =>
       choice(
         alias(sym('preproc_if_without_initializer'), sym('preproc_if')),
         alias(sym('preproc_ifdef_without_initializer'), sym('preproc_ifdef'))

@@ -36,6 +36,28 @@ test('parses conditional initializer branches in linear time', { timeout: 60_000
   expectLinearParseTime(input(2000), input(20_000), false);
 });
 
+test('recovers from malformed nested initializer alternatives in linear time', { timeout: 60_000 }, () => {
+  expectLinearParseTime(malformedInitializerAlternatives(2000), malformedInitializerAlternatives(20_000), true);
+});
+
+test.each(['empty', 'value'])(
+  'parses deeply nested %s initializer groups in linear time',
+  { timeout: 60_000 },
+  (kind) => {
+    const input = (count: number): string =>
+      'int value =\n#if A\n' +
+      '#if E\n'.repeat(count) +
+      (kind === 'value' ? '1\n' : '') +
+      '#endif\n'.repeat(count) +
+      '#else\n2\n#endif\n;';
+    expectLinearParseTime(input(2000), input(20_000), false);
+  }
+);
+
+function malformedInitializerAlternatives(count: number): string {
+  return 'int value =\n#if A\n1\n' + '#if E\n#else\n#elif F\n'.repeat(count) + '#endif\n'.repeat(count) + '#endif\n;';
+}
+
 function expectLinearParseTime(small: string, large: string, hasError: boolean): void {
   parseCpuTime(large, hasError);
   parseCpuTime(large, hasError);
