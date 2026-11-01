@@ -27233,8 +27233,142 @@
           "name": "preproc_function_def"
         },
         {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "preproc_call_in_initializer"
+          },
+          "named": true,
+          "value": "preproc_call"
+        }
+      ]
+    },
+    "preproc_call_in_initializer": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "directive",
+          "content": {
+            "type": "ALIAS",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*undef"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*line"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*error"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*warning"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*pragma"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*embed"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*include_next"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*import"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*ident"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*region"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*endregion"
+                },
+                {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*using"
+                }
+              ]
+            },
+            "named": true,
+            "value": "preproc_directive"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "comment"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "pragma_operator"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "FIELD",
+                  "name": "argument",
+                  "content": {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_preproc_directive_arg"
+                    },
+                    "named": true,
+                    "value": "preproc_arg"
+                  }
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "comment"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "pragma_operator"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
           "type": "SYMBOL",
-          "name": "preproc_call"
+          "name": "_preproc_newline"
         }
       ]
     },

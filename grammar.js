@@ -1167,7 +1167,40 @@ module.exports = grammar(C, {
       ),
 
     _initializer_nonconditional_directive: ($) =>
-      choice($.preproc_include, $.preproc_def, $.preproc_function_def, $.preproc_call),
+      choice(
+        $.preproc_include,
+        $.preproc_def,
+        $.preproc_function_def,
+        alias(sym('preproc_call_in_initializer'), $.preproc_call)
+      ),
+
+    preproc_call_in_initializer: () =>
+      replaceRuleField(
+        C.grammar.rules.preproc_call,
+        'directive',
+        alias(
+          choice(
+            ...[
+              'undef',
+              'line',
+              'error',
+              'warning',
+              'pragma',
+              'embed',
+              'include_next',
+              'import',
+              'ident',
+              'region',
+              'endregion',
+              'using',
+            ].map((command) => {
+              const rule = preprocessor(command);
+              return rule.type === 'ALIAS' ? rule.content : rule;
+            })
+          ),
+          sym('preproc_directive')
+        )
+      ),
 
     _empty_initializer_content: ($) =>
       choice($._empty_initializer_conditional, $._initializer_nonconditional_directive),

@@ -121,6 +121,8 @@ test.each([
   'int emptyNested =\n#if 1\n#if INNER\n#endif\n#else\n#ifdef OTHER\n#endif\n#endif\n;',
   'int missingEnd =\n#if 1\n1\n#else\n2\n;',
   'int invalidValue =\n#if 1\n1 2\n#else\n3\n#endif\n;',
+  'int duplicateElse =\n#if 1\n1\n#else\n2\n#else\n#endif\n;',
+  'int lateElif =\n#if 1\n1\n#else\n2\n#elif OTHER\n3\n#endif\n;',
 ])('reports incomplete or invalid conditional initializer syntax: %s', (input) => {
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(input)!;
