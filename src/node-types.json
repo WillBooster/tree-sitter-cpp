@@ -3307,6 +3307,14 @@
           {
             "type": "initializer_list",
             "named": true
+          },
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
           }
         ]
       },
@@ -4551,6 +4559,14 @@
           {
             "type": "initializer_list",
             "named": true
+          },
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
           }
         ]
       }
@@ -4674,6 +4690,14 @@
           },
           {
             "type": "parameter_pack_expansion",
+            "named": true
+          },
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
             "named": true
           }
         ]
@@ -6107,6 +6131,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -6200,6 +6228,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -6323,6 +6355,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -6416,6 +6452,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -6510,6 +6550,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -6603,6 +6647,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -6735,7 +6783,7 @@
     "named": true,
     "fields": {
       "alternative": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
           {
@@ -6801,6 +6849,10 @@
         },
         {
           "type": "alias_declaration",
+          "named": true
+        },
+        {
+          "type": "comment",
           "named": true
         },
         {
@@ -6897,6 +6949,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {
@@ -6979,7 +7035,7 @@
     "named": true,
     "fields": {
       "alternative": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
           {
@@ -7017,6 +7073,10 @@
         },
         {
           "type": "alias_declaration",
+          "named": true
+        },
+        {
+          "type": "comment",
           "named": true
         },
         {
@@ -7113,6 +7173,10 @@
         },
         {
           "type": "parameter_pack_expansion",
+          "named": true
+        },
+        {
+          "type": "pragma_operator",
           "named": true
         },
         {

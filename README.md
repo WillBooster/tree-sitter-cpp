@@ -153,7 +153,8 @@ and the release build regenerate the parsers before compiling them.
 - a check (`test/unit/grammarPackage.test.ts`) that `tree-sitter.json` is published in the npm package and the crate,
   that the scanner headers are published in the crate, and that the vendored scanner headers match the installed
   @willbooster/tree-sitter-c. After updating that dependency, run `script/copy-c-scanner`.
-  The scanner headers are verbatim copies from that package; their generator paths refer to the C repository.
+  Only the headers listed in `script/copy-c-scanner` are verbatim copies from that package; their generator paths
+  refer to the C repository. `src/cppTrivia.h` and `src/initializerConditional.h` are maintained here.
   Review the C scanner dispatch and external-token order against `src/scanner.c` when updating the dependency;
 - a check (`test/unit/runtimeVersion.test.ts`) that `@willbooster/web-tree-sitter` in `package.json` and
   `willbooster-tree-sitter` in `Cargo.lock` are the same version, since the Wasm tests run on the former and the Rust

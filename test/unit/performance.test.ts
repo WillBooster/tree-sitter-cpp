@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
@@ -9,9 +11,9 @@ parser.setLanguage(await loadCurrentWasmBuild());
 
 // Consumers parse files being edited, so recovering from many errors must stay linear: ten times the lines take about
 // ten times as long, against a hundred times for quadratic recovery. The ratio catches a cost that grows faster than
-// the input even on a slow CI runner; it would pass a parser that is uniformly slower, so the larger parse also has a
-// generous ceiling, about 35 times the 0.06 s of CPU time it takes here. The parses are timed in the CPU time of the
-// thread that runs them: wall-clock time is inflated unevenly by the test files running alongside, and the process's
+// the input even on a slow CI runner; it would pass a uniformly slower parser, so a throughput bound also limits
+// CPU time to 25 microseconds per input byte: two seconds for the original 80 KB control.
+// The parses are timed in the CPU time of their thread: wall-clock time is inflated unevenly by the test files running alongside, and the process's
 // CPU time also counts the engine's background threads, which compile the Wasm build and collect garbage during the
 // parses. 2,000 and 20,000 lines measured after warm-up parses and in alternation, each keeping its fastest run, give
 // 10 to 13 locally; 18 leaves a margin over that and fails for growth faster than about n^1.25.
@@ -30,6 +32,44 @@ test.each(['plain', 'conditional'])('parses %s bare-marker chains in linear time
   expectLinearParseTime(input(2000), input(20_000), false);
 });
 
+test('parses conditional initializer branches in linear time', { timeout: 60_000 }, () => {
+  const block = '{ int value =\n#if FEATURE\n#if EMPTY\n#endif\n1\n#else\n2\n#endif\n; }\n';
+  const input = (count: number): string => `void conditional() {\n${block.repeat(count)}}`;
+  expectLinearParseTime(input(2000), input(20_000), false);
+});
+
+test('recovers from malformed nested initializer alternatives in linear time', { timeout: 60_000 }, () => {
+  expectLinearParseTime(malformedInitializerAlternatives(2000), malformedInitializerAlternatives(20_000), true);
+});
+
+test.each(['empty', 'value'])(
+  'parses deeply nested %s initializer groups in linear time',
+  { timeout: 60_000 },
+  (kind) => {
+    const input = (count: number): string =>
+      'int value =\n#if A\n' +
+      '#if E\n'.repeat(count) +
+      (kind === 'value' ? '1\n' : '') +
+      '#endif\n'.repeat(count) +
+      '#else\n2\n#endif\n;';
+    expectLinearParseTime(input(2000), input(20_000), false);
+  }
+);
+
+test.each(['elif', 'elifdef', 'elifndef'])(
+  'recovers from invalid #%s initializer bodies in linear time',
+  { timeout: 60_000 },
+  (directive) => {
+    const input = (count: number): string =>
+      'int value =\n#if A\n1\n' + `#${directive} B\na b\n`.repeat(count) + '#endif\n;';
+    expectLinearParseTime(input(2000), input(20_000), true);
+  }
+);
+
+function malformedInitializerAlternatives(count: number): string {
+  return 'int value =\n#if A\n1\n' + '#if E\n#else\n#elif F\n'.repeat(count) + '#endif\n'.repeat(count) + '#endif\n;';
+}
+
 function expectLinearParseTime(small: string, large: string, hasError: boolean): void {
   parseCpuTime(large, hasError);
   parseCpuTime(large, hasError);
@@ -39,9 +79,11 @@ function expectLinearParseTime(small: string, large: string, hasError: boolean):
     smallFastest = Math.min(smallFastest, parseCpuTime(small, hasError));
     largeFastest = Math.min(largeFastest, parseCpuTime(large, hasError));
   }
-  expect(largeFastest / smallFastest).toBeLessThan(18);
+  const largeBytes = Buffer.byteLength(large);
+  const timings = `small=${smallFastest}us large=${largeFastest}us, bytes=${Buffer.byteLength(small)}/${largeBytes}`;
+  expect(largeFastest / smallFastest, timings).toBeLessThan(18);
   // process.threadCpuUsage reports microseconds.
-  expect(largeFastest).toBeLessThan(2_000_000);
+  expect(largeFastest, timings).toBeLessThan(largeBytes * 25);
 }
 
 function parseCpuTime(source: string, expectedError: boolean): number {

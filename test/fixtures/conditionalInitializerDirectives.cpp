@@ -1,0 +1,52 @@
+int first =
+#if 1
+#define VALUE(value) value
+  1
+#undef VALUE
+#else
+#error unsupported
+#endif
+;
+
+int second =
+#if 0
+#error unsupported
+#elif 0
+#pragma clang diagnostic ignored "-Wunused"
+#elifdef UNUSED
+#define OMITTED 1
+#else
+#line 100 "conditionalInitializerDirectives.cpp"
+  2
+#undef OMITTED
+#endif
+;
+
+int third =
+#if 1
+#if 0
+_Pragma("clang diagnostic push")
+#include <missing/*>
+#vendor_specific anything
+#Vendor_123 arbitrary tokens
+#define COMPARISON F(< /* replacement
+comment */ >)
+#warning can't /* diagnostic
+comment */
+#define EMPTY(value) value /* multiline
+#elif is not a directive here */
+#else
+_Pragma("clang diagnostic push")
+#pragma clang diagnostic ignored "-Wunused"
+#endif
+  3
+#if 0
+#include "missing/*"
+#error unsupported
+#endif
+#else
+#error unsupported
+#endif
+;
+
+int after() { return first + second + third; }

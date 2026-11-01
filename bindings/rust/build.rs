@@ -33,6 +33,8 @@ fn main() {
         "keywords.h",
         "functionMacro.h",
         "conditionalMacro.h",
+        "initializerConditional.h",
+        "cppTrivia.h",
     ] {
         println!("cargo:rerun-if-changed={}", src_dir.join(header).display());
     }

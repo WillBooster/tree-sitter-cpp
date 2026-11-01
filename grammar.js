@@ -135,6 +135,7 @@ const BUILTIN_TYPE_KEYWORDS = [
 ];
 
 const preprocIf = C.preprocIf;
+const preprocessor = C.preprocessor;
 
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
 module.exports = grammar(C, {
@@ -149,6 +150,8 @@ module.exports = grammar(C, {
     ...original,
     sym('_macro_call_end'),
     sym('_macro_identifier_end'),
+    sym('_empty_initializer_start'),
+    sym('_initializer_directive_name'),
   ],
 
   conflicts: ($, original) => [
@@ -1101,7 +1104,7 @@ module.exports = grammar(C, {
 
     init_declarator: ($, original = missingOriginalRule()) =>
       choice(
-        withDeclarator(original, $._declarator),
+        withDeclarator(replaceRuleField(original, 'value', $._initializer_value), $._declarator),
         seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
         // A pointer or reference declarator takes the parameter list that follows its name, so `Foo* p(nullptr);`
         // would otherwise read only as a function taking a parameter of type `nullptr`. These alternatives reduce the
@@ -1126,6 +1129,116 @@ module.exports = grammar(C, {
           seq(field('declarator', $._argument_initialized_declarator), field('value', $.argument_list))
         )
       ),
+
+    _initializer_value: ($) => choice($.expression, $.initializer_list, $._conditional_initializer),
+
+    _conditional_initializer: () =>
+      choice(
+        alias(sym('preproc_if_in_initializer'), sym('preproc_if')),
+        alias(sym('preproc_ifdef_in_initializer'), sym('preproc_ifdef'))
+      ),
+
+    preproc_if_in_initializer: () => initializerIf(sym('_initializer_conditional_body')),
+
+    preproc_ifdef_in_initializer: () => initializerIfdef(sym('_initializer_conditional_body')),
+
+    preproc_else_in_initializer: () => initializerElse(optional(sym('_initializer_branch_content'))),
+
+    preproc_elif_in_initializer: () => initializerElif(optional(sym('_initializer_branch_content'))),
+
+    preproc_elifdef_in_initializer: () => initializerElifdef(optional(sym('_initializer_branch_content'))),
+
+    preproc_if_without_initializer: () => initializerIf(emptyInitializerBody()),
+
+    preproc_ifdef_without_initializer: () => initializerIfdef(emptyInitializerBody()),
+
+    preproc_else_without_initializer: () => initializerElse(repeat(sym('_nested_empty_initializer_content'))),
+
+    preproc_elif_without_initializer: () => initializerElif(repeat(sym('_nested_empty_initializer_content'))),
+
+    preproc_elifdef_without_initializer: () => initializerElifdef(repeat(sym('_nested_empty_initializer_content'))),
+
+    _empty_initializer_conditional: ($) =>
+      seq(sym('_empty_initializer_start'), $._nested_empty_initializer_conditional),
+
+    _nested_empty_initializer_conditional: () =>
+      choice(
+        alias(sym('preproc_if_without_initializer'), sym('preproc_if')),
+        alias(sym('preproc_ifdef_without_initializer'), sym('preproc_ifdef'))
+      ),
+
+    _initializer_nonconditional_directive: ($) =>
+      choice(
+        $.preproc_include,
+        $.preproc_def,
+        $.preproc_function_def,
+        alias(sym('preproc_call_in_initializer'), $.preproc_call)
+      ),
+
+    preproc_call_in_initializer: () =>
+      replaceRuleField(
+        C.grammar.rules.preproc_call,
+        'directive',
+        alias(sym('_initializer_directive_name'), sym('preproc_directive'))
+      ),
+
+    _empty_initializer_content: ($) =>
+      choice($._empty_initializer_conditional, $._initializer_nonconditional_directive),
+
+    _nested_empty_initializer_content: ($) =>
+      choice($._nested_empty_initializer_conditional, $._initializer_nonconditional_directive),
+
+    _initializer_branch_content: ($) => choice($._initializer_branch_value, repeat1($._empty_initializer_content)),
+
+    _initializer_branch_value: ($) =>
+      seq(repeat($._empty_initializer_content), $._initializer_value, repeat($._empty_initializer_content)),
+
+    _initializer_conditional_body: ($) =>
+      choice(
+        seq($._initializer_branch_value, initializerFollowingArms()),
+        seq(
+          repeat($._empty_initializer_content),
+          repeat(field('alternative', $._initializer_empty_elif)),
+          choice(
+            seq(field('alternative', $._initializer_value_elif), initializerFollowingArms()),
+            field('alternative', alias($.preproc_else_with_initializer, sym('preproc_else')))
+          )
+        )
+      ),
+
+    _initializer_elif: () =>
+      choice(
+        alias(sym('preproc_elif_in_initializer'), sym('preproc_elif')),
+        alias(sym('preproc_elifdef_in_initializer'), sym('preproc_elifdef'))
+      ),
+
+    _initializer_empty_elif: () =>
+      choice(
+        alias(sym('preproc_elif_without_value'), sym('preproc_elif')),
+        alias(sym('preproc_elifdef_without_value'), sym('preproc_elifdef'))
+      ),
+
+    _initializer_value_elif: () =>
+      choice(
+        alias(sym('preproc_elif_with_initializer'), sym('preproc_elif')),
+        alias(sym('preproc_elifdef_with_initializer'), sym('preproc_elifdef'))
+      ),
+
+    _empty_initializer_elif: () =>
+      choice(
+        alias(sym('preproc_elif_without_initializer'), sym('preproc_elif')),
+        alias(sym('preproc_elifdef_without_initializer'), sym('preproc_elifdef'))
+      ),
+
+    preproc_else_with_initializer: () => initializerElse(sym('_initializer_branch_value')),
+
+    preproc_elif_with_initializer: () => initializerElif(sym('_initializer_branch_value')),
+
+    preproc_elifdef_with_initializer: () => initializerElifdef(sym('_initializer_branch_value')),
+
+    preproc_elif_without_value: () => initializerElif(repeat(sym('_empty_initializer_content'))),
+
+    preproc_elifdef_without_value: () => initializerElifdef(repeat(sym('_empty_initializer_content'))),
 
     // After a comma, a declaration cannot be the call through a function pointer `x * (*fp)(this);`, so the forms that
     // only take the fallback above take the keyword reading too, as in `Foo* k, *(*l)(nullptr);`.
@@ -1318,7 +1431,7 @@ module.exports = grammar(C, {
           seq(
             ...ruleMembers(alternative, 'SEQ').map((member) =>
               member.type === 'FIELD' && member.name === 'value'
-                ? field('value', choice(member.content, $.parameter_pack_expansion))
+                ? field('value', choice(member.content, $._conditional_initializer, $.parameter_pack_expansion))
                 : member
             )
           )
@@ -1384,7 +1497,7 @@ module.exports = grammar(C, {
               choice(
                 $.bitfield_clause,
                 field('default_value', $.initializer_list),
-                seq('=', field('default_value', choice($.expression, $.initializer_list)))
+                seq('=', field('default_value', $._initializer_value))
               )
             )
           )
@@ -1707,7 +1820,7 @@ module.exports = grammar(C, {
       choice(
         seq(
           field('declarator', $._built_in_parenthesized_declarator),
-          choice(seq('=', field('value', choice($.initializer_list, $.expression))), field('value', $.initializer_list))
+          choice(seq('=', field('value', $._initializer_value)), field('value', $.initializer_list))
         ),
         seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list))
       ),
@@ -3006,6 +3119,69 @@ function cppTypeSpecifier($, sized) {
       )
     ),
     alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(2)), sym('type_identifier'))
+  );
+}
+
+/** @param {RuleOrLiteral} body */
+function initializerIf(body) {
+  return seq(
+    preprocessor('if'),
+    field('condition', sym('_preproc_expression')),
+    initializerDirectiveNewline(),
+    body,
+    preprocessor('endif'),
+    initializerDirectiveNewline()
+  );
+}
+
+/** @param {RuleOrLiteral} body */
+function initializerIfdef(body) {
+  return seq(
+    choice(preprocessor('ifdef'), preprocessor('ifndef')),
+    field('name', sym('identifier')),
+    initializerDirectiveNewline(),
+    body,
+    preprocessor('endif'),
+    initializerDirectiveNewline()
+  );
+}
+
+/** @param {RuleOrLiteral} body */
+function initializerElse(body) {
+  return seq(preprocessor('else'), initializerDirectiveNewline(), body);
+}
+
+/** @param {RuleOrLiteral} body */
+function initializerElif(body) {
+  return seq(preprocessor('elif'), field('condition', sym('_preproc_expression')), initializerDirectiveNewline(), body);
+}
+
+/** @param {RuleOrLiteral} body */
+function initializerElifdef(body) {
+  return seq(
+    choice(preprocessor('elifdef'), preprocessor('elifndef')),
+    field('name', sym('identifier')),
+    initializerDirectiveNewline(),
+    body
+  );
+}
+
+function initializerDirectiveNewline() {
+  return seq(repeat(choice(sym('comment'), sym('pragma_operator'))), alias(sym('_preproc_newline'), '\n'));
+}
+
+function initializerFollowingArms() {
+  return seq(
+    repeat(field('alternative', sym('_initializer_elif'))),
+    optional(field('alternative', alias(sym('preproc_else_in_initializer'), sym('preproc_else'))))
+  );
+}
+
+function emptyInitializerBody() {
+  return seq(
+    repeat(sym('_nested_empty_initializer_content')),
+    repeat(field('alternative', sym('_empty_initializer_elif'))),
+    optional(field('alternative', alias(sym('preproc_else_without_initializer'), sym('preproc_else'))))
   );
 }
 
