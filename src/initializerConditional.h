@@ -204,9 +204,11 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
 static bool initializer_conditional_word(TSLexer *lexer, MacroName *word) {
     bool has_name = false;
     for (;;) {
-        MacroNameCharacter character = scan_macro_name_character(lexer, true, word);
+        MacroName next = *word;
+        MacroNameCharacter character = scan_macro_name_character(lexer, true, &next);
         if (character == MACRO_NAME_SPLICE) continue;
         if (character != MACRO_NAME_CHARACTER) return has_name;
+        *word = next;
         has_name = true;
         lexer->mark_end(lexer);
     }
