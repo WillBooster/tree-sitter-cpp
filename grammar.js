@@ -1855,7 +1855,16 @@ module.exports = grammar(C, {
       ),
 
     _template_argument_qualified_type_identifier: ($) =>
-      prec(1, seq($._scope_resolution, field('name', $._type_identifier))),
+      prec(
+        1,
+        seq(
+          $._scope_resolution,
+          field(
+            'name',
+            choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
+          )
+        )
+      ),
 
     namespace_definition: ($) =>
       seq(

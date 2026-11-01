@@ -31917,8 +31917,22 @@
             "type": "FIELD",
             "name": "name",
             "content": {
-              "type": "SYMBOL",
-              "name": "_type_identifier"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_type_identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_template_argument_qualified_type_identifier"
+                  },
+                  "named": true,
+                  "value": "qualified_identifier"
+                }
+              ]
             }
           }
         ]
