@@ -9,7 +9,7 @@
 
 // @ts-check
 
-/** @import {GrammarSymbols, Rule, RuleOrLiteral} from '@willbooster/web-tree-sitter/dsl' */
+/** @import {GrammarSymbols, Rule, RuleOrLiteral, SymbolRule} from '@willbooster/web-tree-sitter/dsl' */
 
 // The CLI injects the DSL before loading this CommonJS grammar.
 const { grammar, alias, blank, choice, field, optional, prec, repeat, repeat1, seq, sym, token } =
@@ -155,12 +155,17 @@ module.exports = grammar(C, {
   ],
 
   conflicts: ($, original) => [
-    [$.type_definition, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$._type_definition_head, $.sized_type_specifier, $._built_in_declaration_specifiers],
     [$.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$.type_definition, $._built_in_declaration_specifiers],
-    [$.type_definition, $._macro_declaration_specifiers, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$._type_definition_head, $._built_in_declaration_specifiers],
+    [
+      $._type_definition_head,
+      $._macro_declaration_specifiers,
+      $.sized_type_specifier,
+      $._built_in_declaration_specifiers,
+    ],
     [$._macro_declaration_specifiers, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$.type_definition, $._macro_declaration_specifiers, $._built_in_declaration_specifiers],
+    [$._type_definition_head, $._macro_declaration_specifiers, $._built_in_declaration_specifiers],
     [sym('preproc_elif'), sym('preproc_elif_in_block')],
     [sym('preproc_elifdef'), sym('preproc_elifdef_in_block')],
     [sym('preproc_if'), sym('preproc_if_in_block')],
@@ -200,9 +205,9 @@ module.exports = grammar(C, {
     [$.type_specifier, $._top_level_expression_statement, $.expression],
     [$._top_level_expression_statement, $.expression_statement],
     [$._declaration_specifiers, $._statement_declaration_specifiers],
-    [$.type_definition, $._declaration_modifiers, $._statement_declaration_modifiers],
-    [$._statement_type_definition, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$._statement_type_definition, $._declaration_modifiers, $._statement_declaration_modifiers],
+    [$._type_definition_head, $._declaration_modifiers, $._statement_declaration_modifiers],
+    [$._statement_type_definition_head, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$._statement_type_definition_head, $._declaration_modifiers, $._statement_declaration_modifiers],
     [$._declaration_modifiers, $._case_body_attributed_statement, $._case_label_attributes],
     [
       $._declaration_modifiers,
@@ -210,13 +215,13 @@ module.exports = grammar(C, {
       $._case_body_attributed_statement,
       $._case_label_attributes,
     ],
-    [$.type_definition, $._field_declaration_list_item],
-    [$.type_definition, $._declaration_modifiers, $._field_declaration_list_item],
+    [$._type_definition_head, $._field_declaration_list_item],
+    [$._type_definition_head, $._declaration_modifiers, $._field_declaration_list_item],
     [$._declarator, $.type_specifier, $.macro_specifier],
     [$._declaration_specifiers, $._statement_empty_declaration],
     [$._declaration_modifiers, $.attributed_statement, $.case_statement],
     [$._type_name_specifier, $.typeof_specifier],
-    [$.type_definition, $._macro_declaration_specifiers, $._sized_bit_int_specifier],
+    [$._type_definition_head, $._macro_declaration_specifiers, $._sized_bit_int_specifier],
     [$._macro_declaration_specifiers, $._sized_bit_int_specifier],
     [$._conditional_function_specifiers],
     [$._type_name_specifier, $.call_expression, $.built_in_function_type_descriptor],
@@ -226,9 +231,9 @@ module.exports = grammar(C, {
     [$._macro_declaration_specifiers, $.attributed_declarator],
     [$._macro_declaration_specifiers],
     [$.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$.type_definition, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$._statement_type_definition, $.type_specifier, $._built_in_declaration_specifiers],
-    [$.type_definition, $._declaration_modifiers, $._statement_empty_declaration],
+    [$._type_definition_head, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+    [$._statement_type_definition_head, $.type_specifier, $._built_in_declaration_specifiers],
+    [$._type_definition_head, $._declaration_modifiers, $._statement_empty_declaration],
     [$._declaration_modifiers, $._statement_declaration_modifiers],
     [$._declarator, $.attributed_declarator, $.type_specifier, $.expression, $.macro_specifier],
     [$._type_name_specifier, $.call_expression],
@@ -242,16 +247,21 @@ module.exports = grammar(C, {
     [$._declarator, $.expression, $.macro_specifier],
     [$._macro_declaration_specifiers, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
     [
-      $.type_definition,
+      $._type_definition_head,
       $._macro_declaration_specifiers,
       $.type_specifier,
       $.sized_type_specifier,
       $._built_in_declaration_specifiers,
     ],
     [$._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
-    [$.type_definition, $._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
+    [$._type_definition_head, $._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
     [$._conditional_function_specifiers, $._declaration_specifiers],
-    [$.type_definition, $._macro_declaration_specifiers, $._declaration_modifiers, $._statement_empty_declaration],
+    [
+      $._type_definition_head,
+      $._macro_declaration_specifiers,
+      $._declaration_modifiers,
+      $._statement_empty_declaration,
+    ],
     [$._declaration_modifiers, $._statement_empty_declaration],
     [$._declaration_modifiers, $._empty_declaration, $._statement_empty_declaration],
     [
@@ -263,7 +273,7 @@ module.exports = grammar(C, {
     ],
     [
       $._conditional_function_specifiers,
-      $.type_definition,
+      $._type_definition_head,
       $._declaration_specifiers,
       $._built_in_declaration_specifiers,
       $._constructor_specifiers,
@@ -285,7 +295,7 @@ module.exports = grammar(C, {
     [$.expression, $.explicit_object_parameter_declaration],
     [$._declarator, $.attributed_declarator, $.expression],
     [$._declarator, $.attributed_declarator, $.type_specifier, $.expression],
-    ...original,
+    ...withTypeDefinitionHeads(original),
     [sym('preproc_if_in_parameter_prefix'), sym('preproc_if_in_parameter_group')],
     [sym('preproc_elif_in_parameter_prefix'), sym('preproc_elif_in_parameter_group')],
     [sym('preproc_ifdef_in_parameter_prefix'), sym('preproc_ifdef_in_parameter_group')],
@@ -344,8 +354,8 @@ module.exports = grammar(C, {
     [$._type_declarator, $.typeof_specifier],
     [$._declarator, $.type_specifier, $.typeof_specifier],
     [$._declarator, $.expression, $.va_arg_expression],
-    [$.type_definition, $._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
-    [$.type_definition, $.type_specifier, $._built_in_declaration_specifiers],
+    [$._type_definition_head, $._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
+    [$._type_definition_head, $.type_specifier, $._built_in_declaration_specifiers],
     [$.storage_class_specifier, $.expression],
     [$.sized_type_specifier, $._sized_bit_int_specifier, $._top_level_expression_statement],
     [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression],
@@ -706,6 +716,13 @@ module.exports = grammar(C, {
     declaration: ($) => cppDeclaration($),
 
     _statement_declaration: ($) => cppDeclaration($),
+
+    // A typedef's tokens before its `;` are a rule of their own so that every context a typedef appears in shares their
+    // parse states; only the state after the `;` differs by what may follow the typedef.
+    _type_definition_head: () => withoutTrailingSemicolon(C.grammar.rules.type_definition),
+    type_definition: ($) => seq($._type_definition_head, ';'),
+    _statement_type_definition_head: () => withoutTrailingSemicolon(C.grammar.rules._statement_type_definition),
+    _statement_type_definition: ($) => seq($._statement_type_definition_head, ';'),
 
     _built_in_declarator: ($) =>
       choice($._built_in_parenthesized_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
@@ -3379,6 +3396,27 @@ function missingOriginalRule() {
 function ruleMembers(rule, expectedType) {
   if (rule.type !== expectedType) throw new Error(`Expected an inherited ${expectedType} rule.`);
   return rule.members;
+}
+
+/**
+ * Points the inherited conflicts at the rules that hold a typedef's tokens before its `;`.
+ * @param {SymbolRule<string>[][]} conflicts
+ */
+function withTypeDefinitionHeads(conflicts) {
+  /** @type {Record<string, string>} */
+  const heads = {
+    type_definition: '_type_definition_head',
+    _statement_type_definition: '_statement_type_definition_head',
+  };
+  return conflicts.map((rules) => rules.map((rule) => sym(heads[rule.name] ?? rule.name)));
+}
+
+/** @param {Rule} rule */
+function withoutTrailingSemicolon(rule) {
+  const members = ruleMembers(rule, 'SEQ');
+  const last = members.at(-1);
+  if (last?.type !== 'STRING' || last.value !== ';') throw new Error('Expected an inherited rule ending with `;`.');
+  return seq(...members.slice(0, -1));
 }
 
 /** @param {Rule} rule */
