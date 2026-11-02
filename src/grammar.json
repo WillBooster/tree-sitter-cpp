@@ -6408,119 +6408,8 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "PREC_DYNAMIC",
-              "value": 1,
-              "content": {
-                "type": "STRING",
-                "value": "__extension__"
-              }
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "macro_specifier"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "_leading_conditional_macro_specifier"
-              }
-            ]
-          }
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "type_qualifier"
-                  }
-                },
-                {
-                  "type": "STRING",
-                  "value": "typedef"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "_type_definition_type"
-                }
-              ]
-            },
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "_declaration_modifiers"
-                  }
-                },
-                {
-                  "type": "FIELD",
-                  "name": "type",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "_non_identifier_type_specifier"
-                  }
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "type_qualifier"
-                  }
-                },
-                {
-                  "type": "STRING",
-                  "value": "typedef"
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "CHOICE",
-                    "members": [
-                      {
-                        "type": "SYMBOL",
-                        "name": "type_qualifier"
-                      },
-                      {
-                        "type": "SYMBOL",
-                        "name": "_non_identifier_type_specifier"
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
           "type": "SYMBOL",
-          "name": "_type_definition_declarators"
-        },
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "SYMBOL",
-            "name": "attribute_specifier"
-          }
+          "name": "_type_definition_head"
         },
         {
           "type": "STRING",
@@ -6532,103 +6421,8 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "PREC_DYNAMIC",
-              "value": 1,
-              "content": {
-                "type": "STRING",
-                "value": "__extension__"
-              }
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "type_qualifier"
-                  }
-                },
-                {
-                  "type": "STRING",
-                  "value": "typedef"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "_type_definition_type"
-                }
-              ]
-            },
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "_statement_declaration_modifiers"
-                  }
-                },
-                {
-                  "type": "FIELD",
-                  "name": "type",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "_non_identifier_type_specifier"
-                  }
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "type_qualifier"
-                  }
-                },
-                {
-                  "type": "STRING",
-                  "value": "typedef"
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "CHOICE",
-                    "members": [
-                      {
-                        "type": "SYMBOL",
-                        "name": "type_qualifier"
-                      },
-                      {
-                        "type": "SYMBOL",
-                        "name": "_non_identifier_type_specifier"
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
           "type": "SYMBOL",
-          "name": "_type_definition_declarators"
-        },
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "SYMBOL",
-            "name": "attribute_specifier"
-          }
+          "name": "_statement_type_definition_head"
         },
         {
           "type": "STRING",
@@ -22808,6 +22602,230 @@
           ]
         }
       }
+    },
+    "_type_definition_head": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 1,
+              "content": {
+                "type": "STRING",
+                "value": "__extension__"
+              }
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "macro_specifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_leading_conditional_macro_specifier"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": "typedef"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "_type_definition_type"
+                }
+              ]
+            },
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_declaration_modifiers"
+                  }
+                },
+                {
+                  "type": "FIELD",
+                  "name": "type",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_non_identifier_type_specifier"
+                  }
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": "typedef"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "type_qualifier"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_non_identifier_type_specifier"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_type_definition_declarators"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_specifier"
+          }
+        }
+      ]
+    },
+    "_statement_type_definition_head": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 1,
+              "content": {
+                "type": "STRING",
+                "value": "__extension__"
+              }
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": "typedef"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "_type_definition_type"
+                }
+              ]
+            },
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_statement_declaration_modifiers"
+                  }
+                },
+                {
+                  "type": "FIELD",
+                  "name": "type",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_non_identifier_type_specifier"
+                  }
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": "typedef"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "type_qualifier"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_non_identifier_type_specifier"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_type_definition_declarators"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_specifier"
+          }
+        }
+      ]
     },
     "_built_in_declarator": {
       "type": "CHOICE",
@@ -39298,7 +39316,7 @@
   ],
   "conflicts": [
     [
-      "type_definition",
+      "_type_definition_head",
       "sized_type_specifier",
       "_built_in_declaration_specifiers"
     ],
@@ -39307,11 +39325,11 @@
       "_built_in_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_built_in_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "sized_type_specifier",
       "_built_in_declaration_specifiers"
@@ -39322,7 +39340,7 @@
       "_built_in_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "_built_in_declaration_specifiers"
     ],
@@ -39453,18 +39471,18 @@
       "_statement_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_declaration_modifiers",
       "_statement_declaration_modifiers"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "type_specifier",
       "sized_type_specifier",
       "_built_in_declaration_specifiers"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "_declaration_modifiers",
       "_statement_declaration_modifiers"
     ],
@@ -39480,11 +39498,11 @@
       "_case_label_attributes"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_field_declaration_list_item"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_declaration_modifiers",
       "_field_declaration_list_item"
     ],
@@ -39507,7 +39525,7 @@
       "typeof_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "_sized_bit_int_specifier"
     ],
@@ -39552,18 +39570,18 @@
       "_built_in_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "type_specifier",
       "sized_type_specifier",
       "_built_in_declaration_specifiers"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "type_specifier",
       "_built_in_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_declaration_modifiers",
       "_statement_empty_declaration"
     ],
@@ -39632,7 +39650,7 @@
       "_built_in_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "type_specifier",
       "sized_type_specifier",
@@ -39644,7 +39662,7 @@
       "_built_in_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "type_specifier",
       "_built_in_declaration_specifiers"
@@ -39654,7 +39672,7 @@
       "_declaration_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "_declaration_modifiers",
       "_statement_empty_declaration"
@@ -39677,7 +39695,7 @@
     ],
     [
       "_conditional_function_specifiers",
-      "type_definition",
+      "_type_definition_head",
       "_declaration_specifiers",
       "_built_in_declaration_specifiers",
       "_constructor_specifiers"
@@ -39747,7 +39765,7 @@
     ],
     [
       "declaration",
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "_declaration_modifiers",
       "_statement_empty_declaration"
@@ -39851,21 +39869,21 @@
     ],
     [
       "_statement_declaration",
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "_statement_declaration_modifiers"
     ],
     [
       "_statement_declaration",
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "_statement_declaration_modifiers",
       "_statement_empty_declaration"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers"
     ],
     [
@@ -39914,7 +39932,7 @@
       "sized_type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "type_specifier",
       "sized_type_specifier"
@@ -39925,18 +39943,18 @@
       "_sized_bit_int_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "type_specifier",
       "_sized_bit_int_specifier"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "type_specifier",
       "sized_type_specifier"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "type_specifier",
       "_sized_bit_int_specifier"
     ],
@@ -39945,17 +39963,17 @@
       "sized_type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_macro_declaration_specifiers",
       "sized_type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "type_specifier",
       "sized_type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "type_specifier",
       "_sized_bit_int_specifier"
     ],
@@ -39973,7 +39991,7 @@
     ],
     [
       "_macro_declaration_specifiers",
-      "type_definition",
+      "_type_definition_head",
       "type_specifier"
     ],
     [
@@ -40047,38 +40065,38 @@
       "expression"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_declaration_modifiers"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "_statement_declaration_modifiers"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "type_qualifier",
       "extension_expression"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "type_qualifier",
       "extension_expression"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "type_qualifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_declaration_modifiers",
       "_empty_declaration"
     ],
     [
-      "_statement_type_definition",
+      "_statement_type_definition_head",
       "type_qualifier"
     ],
     [
@@ -40138,15 +40156,15 @@
       "atomic_type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_type_declarator"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "sized_type_specifier"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_sized_bit_int_specifier"
     ],
     [
@@ -40448,13 +40466,13 @@
       "va_arg_expression"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "_declaration_specifiers",
       "_built_in_declaration_specifiers",
       "_constructor_specifiers"
     ],
     [
-      "type_definition",
+      "_type_definition_head",
       "type_specifier",
       "_built_in_declaration_specifiers"
     ],
