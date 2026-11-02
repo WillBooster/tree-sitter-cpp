@@ -605,18 +605,19 @@ module.exports = grammar(C, {
 
     annotation: ($) => seq('=', choice($.expression, $.parameter_pack_expansion)),
 
-    attribute_declaration: ($) =>
+    // Everything between the outer brackets is a rule of its own so that every context an attribute appears in shares
+    // its parse states; only the states at the final `]` differ by what may follow the attribute.
+    attribute_declaration: ($) => seq('[', $._attribute_declaration_body, ']'),
+    _attribute_declaration_body: ($) =>
       choice(
         seq(
-          '[',
           '[',
           optional(seq('using', field('namespace', $._contextual_identifier), ':')),
           optional($.attribute),
           repeat(seq(',', optional($.attribute))),
-          ']',
           ']'
         ),
-        seq('[', '[', commaSep1($.annotation), ']', ']')
+        seq('[', commaSep1($.annotation), ']')
       ),
 
     // When used in a trailing return type, these specifiers can now occur immediately before
@@ -808,9 +809,7 @@ module.exports = grammar(C, {
     enum_specifier: ($) =>
       prec.right(
         seq(
-          'enum',
-          optional(choice('class', 'struct')),
-          repeat($.attribute_declaration),
+          $._enum_head,
           choice(
             seq(
               field('name', $._class_name),
@@ -822,6 +821,9 @@ module.exports = grammar(C, {
           optional($.attribute_specifier)
         )
       ),
+
+    // A rule of its own so that every context an enum appears in shares the states before its name or body.
+    _enum_head: ($) => seq('enum', optional(choice('class', 'struct')), repeat($.attribute_declaration)),
 
     _enum_base_clause: ($) =>
       prec.left(
