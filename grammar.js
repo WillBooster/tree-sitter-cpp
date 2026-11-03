@@ -3168,7 +3168,13 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       _trailing_macro_specifier: ($) => trailingAnnotationRule($, (name) => field('name', name)),
 
       _trailing_macro_call_expression: ($) =>
-        trailingAnnotationRule($, (name) => seq(field('function', name), field('arguments', $.argument_list))),
+        trailingAnnotationRule($, (name) =>
+          seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
+        ),
+
+      // A macro takes C++ expressions such as `foo::bar` and types such as `int`, an expression where both read.
+      _trailing_macro_argument_list: ($) =>
+        seq('(', commaSep(choice($.expression, prec.dynamic(-1, $.type_descriptor), $.initializer_list)), ')'),
     },
   })
 );

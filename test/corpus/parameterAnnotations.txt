@@ -13,7 +13,7 @@ int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC _
 void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
 template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED);
 auto lambda = [](int argc UNUSED) { return argc; };
-void qualified(int scoped ATTR(foo::bar), int both UNUSED [[maybe_unused]]);
+void qualified(int scoped ATTR(foo::bar), int typed ATTR(int), int both UNUSED [[maybe_unused]]);
 int following(void) { return 0; }
 
 ---
@@ -261,6 +261,14 @@ int following(void) { return 0; }
               (qualified_identifier
                 scope: (namespace_identifier)
                 name: (identifier)))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (type_descriptor
+                type: (primitive_type)))))
         (parameter_declaration
           type: (primitive_type)
           declarator: (identifier)
