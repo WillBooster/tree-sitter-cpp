@@ -193,8 +193,8 @@ const MACRO_CASE_IDENTIFIER = new RegExp(
   )}`
 );
 
-// Names spelled like macros, or reserved for the implementation and so never a parameter's own name, other than keywords
-// (see `assertMacroCaseIdentifierSpellsNoKeyword`). Rule order, not precedence, must settle names that it and
+// Names spelled like macros or with the implementation's `__` prefix, which a trailing annotation must have, other than
+// keywords (see `assertMacroCaseIdentifierSpellsNoKeyword`). Rule order, not precedence, must settle names that it and
 // `identifier` both match in full, and rules this grammar adds follow the C grammar's, so it is inserted into the C
 // rules right before `identifier`; keywords lex through `identifier`, the word token.
 const BASE = /** @type {typeof C} */ ({
