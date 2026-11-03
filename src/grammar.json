@@ -40299,7 +40299,7 @@
     },
     "_trailing_macro_specifier": {
       "type": "PREC_DYNAMIC",
-      "value": -2,
+      "value": -1,
       "content": {
         "type": "FIELD",
         "name": "name",
@@ -40316,7 +40316,7 @@
     },
     "_trailing_macro_call_expression": {
       "type": "PREC_DYNAMIC",
-      "value": -2,
+      "value": -1,
       "content": {
         "type": "SEQ",
         "members": [

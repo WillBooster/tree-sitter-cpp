@@ -3389,7 +3389,7 @@ function* keywordStrings(node) {
  * @param {(name: Rule) => Rule} annotation
  */
 function trailingAnnotationRule($, annotation) {
-  return prec.dynamic(-2, annotation(alias(sym('_macro_case_identifier'), $.identifier)));
+  return prec.dynamic(-1, annotation(alias(sym('_macro_case_identifier'), $.identifier)));
 }
 
 /**
