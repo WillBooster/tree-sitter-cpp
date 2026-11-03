@@ -12,7 +12,7 @@ int reserved(const char **argv __maybe_unused, void *arg __unused);
 int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC __restrict restricted);
 int upper(int *CC BUFFER[3], char *CC ARGS[], int *CC HANDLER(int), int *CC TAGGED[2] [[maybe_unused]], int *CC ANNOTATED(int) UNUSED);
 void bounded(const void *__sized_by(n) source, const void *_LIBC_SIZE(n) __dst, void *__unsafe_indexable *__counted_by(count) results, int operators ATTR(1, *));
-void bounds(char *buf __counted_by(len), int len, void *data GUARDED_BY(lock), char **names ATTR(), int *CC NAMED(int));
+void bounds(char *buf __counted_by(len), int len, void *data GUARDED_BY(lock), char **names ATTR(), int *CC NAMED(int), int *CC UPPER(size));
 void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
 template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED, int sized ATTR(sizeof(Args)...));
 auto lambda = [](int argc UNUSED) { return argc; };
@@ -316,7 +316,15 @@ int following(void) { return 0; }
               declarator: (identifier)
               parameters: (parameter_list
                 (parameter_declaration
-                  type: (primitive_type)))))))))
+                  type: (primitive_type))))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier))
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (identifier)))))))
   (declaration
     type: (primitive_type)
     declarator: (function_declarator
