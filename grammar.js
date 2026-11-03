@@ -1266,7 +1266,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       // and arguments as a function declarator (+1) whose following name is a trailing annotation (-1), whatever the
       // arguments are; system headers write this marker, while a function-typed parameter returning a pointer and
       // annotated after its parameter list is rare.
-      _leading_macro_call_expression: ($) => leadingMacroCallRule($, 2, $.identifier),
+      _leading_macro_call_expression: ($) => leadingMacroCallRule($, 3, $.identifier),
 
       // A later one, as `FOO(int)` in `int *CC FOO(int) UNUSED`, ranks below that reading.
       _later_macro_call_expression: ($) =>
@@ -1295,8 +1295,10 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       _macro_case_array_declarator: ($) =>
         withDeclarator(C.grammar.rules.array_declarator, $._macro_case_parameter_declarator),
 
+      // Unlike other function declarators (+1), it does not outrank reading the marker before it as the declarator and it
+      // as a call annotation (-1), so `char *CC BUF(len)` keeps the annotation; a type argument ranks that reading lower.
       _macro_case_function_declarator: ($) =>
-        prec.dynamic(1, seq(field('declarator', $._macro_case_parameter_declarator), $._function_declarator_seq)),
+        seq(field('declarator', $._macro_case_parameter_declarator), $._function_declarator_seq),
 
       // A standard attribute right after the declarator belongs to an `attributed_declarator`, so only one after a macro
       // annotation, as in `int x UNUSED [[maybe_unused]]`, is an annotation of its own.
@@ -3272,8 +3274,10 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
         ),
 
-      // A macro takes the arguments of a call and also types, as in `ATTR(int)`, an expression where both read.
-      _trailing_macro_argument_list: ($) => callArgumentList($, prec.dynamic(-1, $.type_descriptor)),
+      // A macro takes the arguments of a call and also types, as in `ATTR(int)`, an expression where both read. A type
+      // argument ranks two below an expression, which a function declarator reading of the same parentheses ties with
+      // otherwise: `int *CC FOO(int)` declares a function, while `char *buf __counted_by(len)` is annotated.
+      _trailing_macro_argument_list: ($) => callArgumentList($, prec.dynamic(-2, $.type_descriptor)),
     },
   })
 );

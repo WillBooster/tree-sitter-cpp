@@ -26556,7 +26556,7 @@
     },
     "_leading_macro_call_expression": {
       "type": "PREC_DYNAMIC",
-      "value": 2,
+      "value": 3,
       "content": {
         "type": "SEQ",
         "members": [
@@ -26778,25 +26778,21 @@
       }
     },
     "_macro_case_function_declarator": {
-      "type": "PREC_DYNAMIC",
-      "value": 1,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "FIELD",
-            "name": "declarator",
-            "content": {
-              "type": "SYMBOL",
-              "name": "_macro_case_parameter_declarator"
-            }
-          },
-          {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "declarator",
+          "content": {
             "type": "SYMBOL",
-            "name": "_function_declarator_seq"
+            "name": "_macro_case_parameter_declarator"
           }
-        ]
-      }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_function_declarator_seq"
+        }
+      ]
     },
     "_parameter_annotation": {
       "type": "CHOICE",
@@ -40391,7 +40387,7 @@
                     },
                     {
                       "type": "PREC_DYNAMIC",
-                      "value": -1,
+                      "value": -2,
                       "content": {
                         "type": "SYMBOL",
                         "name": "type_descriptor"
@@ -40448,7 +40444,7 @@
                             },
                             {
                               "type": "PREC_DYNAMIC",
-                              "value": -1,
+                              "value": -2,
                               "content": {
                                 "type": "SYMBOL",
                                 "name": "type_descriptor"
@@ -40504,7 +40500,7 @@
                                   },
                                   {
                                     "type": "PREC_DYNAMIC",
-                                    "value": -1,
+                                    "value": -2,
                                     "content": {
                                       "type": "SYMBOL",
                                       "name": "type_descriptor"
