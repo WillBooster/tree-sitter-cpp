@@ -26418,13 +26418,8 @@
                   "type": "FIELD",
                   "name": "declarator",
                   "content": {
-                    "type": "ALIAS",
-                    "content": {
-                      "type": "SYMBOL",
-                      "name": "_named_variadic_declarator"
-                    },
-                    "named": true,
-                    "value": "variadic_declarator"
+                    "type": "SYMBOL",
+                    "name": "_annotatable_variadic_declarator"
                   }
                 },
                 {
@@ -26469,6 +26464,47 @@
         }
       ]
     },
+    "_annotatable_variadic_declarator": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_named_variadic_declarator"
+          },
+          "named": true,
+          "value": "variadic_declarator"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_annotatable_variadic_array_declarator"
+          },
+          "named": true,
+          "value": "array_declarator"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_annotatable_variadic_pointer_declarator"
+          },
+          "named": true,
+          "value": "pointer_declarator"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_annotatable_variadic_reference_declarator"
+          },
+          "named": true,
+          "value": "reference_declarator"
+        }
+      ]
+    },
     "_named_variadic_declarator": {
       "type": "SEQ",
       "members": [
@@ -26479,6 +26515,278 @@
         {
           "type": "SYMBOL",
           "name": "_contextual_identifier"
+        }
+      ]
+    },
+    "_annotatable_variadic_array_declarator": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "declarator",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_annotatable_variadic_declarator"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "["
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "type_qualifier"
+                },
+                {
+                  "type": "STRING",
+                  "value": "static"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "size",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "expression"
+                    },
+                    {
+                      "type": "STRING",
+                      "value": "*"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "]"
+          }
+        ]
+      }
+    },
+    "_annotatable_variadic_pointer_declarator": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "ms_based_modifier"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  }
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "STRING",
+              "value": "*"
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
+            },
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "ms_pointer_modifier"
+                      },
+                      {
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "SYMBOL",
+                            "name": "type_qualifier"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "attribute_specifier"
+                          },
+                          {
+                            "type": "PREC",
+                            "value": -1,
+                            "content": {
+                              "type": "SYMBOL",
+                              "name": "ms_call_modifier"
+                            }
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "macro_specifier"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "_conditional_macro_specifier"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "ms_call_modifier"
+                        },
+                        {
+                          "type": "REPEAT",
+                          "content": {
+                            "type": "CHOICE",
+                            "members": [
+                              {
+                                "type": "SYMBOL",
+                                "name": "ms_pointer_modifier"
+                              },
+                              {
+                                "type": "CHOICE",
+                                "members": [
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "type_qualifier"
+                                  },
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "attribute_specifier"
+                                  },
+                                  {
+                                    "type": "PREC",
+                                    "value": -1,
+                                    "content": {
+                                      "type": "SYMBOL",
+                                      "name": "ms_call_modifier"
+                                    }
+                                  },
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "macro_specifier"
+                                  },
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "_conditional_macro_specifier"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "FIELD",
+              "name": "declarator",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_annotatable_variadic_declarator"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "_annotatable_variadic_reference_declarator": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "&"
+            },
+            {
+              "type": "STRING",
+              "value": "bitand"
+            },
+            {
+              "type": "STRING",
+              "value": "&&"
+            },
+            {
+              "type": "STRING",
+              "value": "and"
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "ms_call_modifier"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_annotatable_variadic_declarator"
         }
       ]
     },
@@ -39547,6 +39855,19 @@
     }
   ],
   "conflicts": [
+    [
+      "_annotatable_variadic_pointer_declarator"
+    ],
+    [
+      "variadic_declarator",
+      "_named_variadic_declarator"
+    ],
+    [
+      "pointer_declarator",
+      "abstract_pointer_declarator",
+      "_annotatable_variadic_pointer_declarator",
+      "variadic_pointer_declarator"
+    ],
     [
       "_type_definition_head",
       "sized_type_specifier",

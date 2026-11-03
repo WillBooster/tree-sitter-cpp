@@ -230,6 +230,14 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
+      [$._annotatable_variadic_pointer_declarator],
+      [$.variadic_declarator, $._named_variadic_declarator],
+      [
+        $.pointer_declarator,
+        $.abstract_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+      ],
       [$._type_definition_head, $.sized_type_specifier, $._built_in_declaration_specifiers],
       [$.sized_type_specifier, $._built_in_declaration_specifiers],
       [$._type_definition_head, $._built_in_declaration_specifiers],
@@ -1214,17 +1222,30 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         seq(
           $._declaration_specifiers,
           choice(
-            seq(
-              field('declarator', alias($._named_variadic_declarator, $.variadic_declarator)),
-              repeat1($._parameter_annotation)
-            ),
+            seq(field('declarator', $._annotatable_variadic_declarator), repeat1($._parameter_annotation)),
             field('declarator', $._variadic_declarator)
           )
         ),
 
       variadic_declarator: ($) => seq('...', optional($._contextual_identifier)),
 
+      // `_variadic_declarator` whose pack is named, as in `T&&... args`.
+      _annotatable_variadic_declarator: ($) =>
+        choice(
+          alias($._named_variadic_declarator, $.variadic_declarator),
+          alias($._annotatable_variadic_array_declarator, $.array_declarator),
+          alias($._annotatable_variadic_pointer_declarator, $.pointer_declarator),
+          alias($._annotatable_variadic_reference_declarator, $.reference_declarator)
+        ),
+
       _named_variadic_declarator: ($) => seq('...', $._contextual_identifier),
+
+      _annotatable_variadic_array_declarator: ($) =>
+        withDeclarator(C.grammar.rules.array_declarator, $._annotatable_variadic_declarator),
+
+      _annotatable_variadic_pointer_declarator: ($) => withPointerDeclarator($, $._annotatable_variadic_declarator),
+
+      _annotatable_variadic_reference_declarator: ($) => withReferenceDeclarator($, $._annotatable_variadic_declarator),
 
       _variadic_declarator: ($) =>
         choice(

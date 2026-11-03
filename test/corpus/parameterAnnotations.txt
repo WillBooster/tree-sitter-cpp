@@ -11,7 +11,7 @@ int hooks(void (*lower)(void) __unused, void (*called)(void) ATTR(1), int sized 
 int reserved(const char **argv __maybe_unused, void *arg __unused);
 int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC __restrict restricted);
 void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
-template <typename... Args> void pack(Args... args UNUSED);
+template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED);
 auto lambda = [](int argc UNUSED) { return argc; };
 int following(void) { return 0; }
 
@@ -213,6 +213,20 @@ int following(void) { return 0; }
             type: (type_identifier)
             declarator: (variadic_declarator
               (identifier))
+            (macro_specifier
+              name: (identifier)))
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (reference_declarator
+              (variadic_declarator
+                (identifier)))
+            (macro_specifier
+              name: (identifier)))
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (pointer_declarator
+              declarator: (variadic_declarator
+                (identifier)))
             (macro_specifier
               name: (identifier)))))))
   (declaration
