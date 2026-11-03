@@ -26555,6 +26555,24 @@
           "type": "ALIAS",
           "content": {
             "type": "SYMBOL",
+            "name": "_macro_case_attributed_declarator"
+          },
+          "named": true,
+          "value": "attributed_declarator"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_macro_case_unattributed_declarator"
+        }
+      ]
+    },
+    "_macro_case_unattributed_declarator": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
             "name": "_macro_case_identifier"
           },
           "named": true,
@@ -26577,6 +26595,22 @@
           },
           "named": true,
           "value": "function_declarator"
+        }
+      ]
+    },
+    "_macro_case_attributed_declarator": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_macro_case_unattributed_declarator"
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_declaration"
+          }
         }
       ]
     },
@@ -40343,6 +40377,17 @@
   ],
   "conflicts": [
     [
+      "_macro_case_attributed_declarator"
+    ],
+    [
+      "_macro_case_parameter_declarator",
+      "_macro_case_attributed_declarator"
+    ],
+    [
+      "_macro_case_macro_specifier",
+      "_macro_case_unattributed_declarator"
+    ],
+    [
       "pointer_declarator",
       "_parameter_pointer_declarator"
     ],
@@ -40350,10 +40395,6 @@
       "pointer_declarator",
       "abstract_pointer_declarator",
       "_parameter_pointer_declarator"
-    ],
-    [
-      "_macro_case_macro_specifier",
-      "_macro_case_parameter_declarator"
     ],
     [
       "pointer_declarator",

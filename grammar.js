@@ -230,9 +230,11 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
+      [$._macro_case_attributed_declarator],
+      [$._macro_case_parameter_declarator, $._macro_case_attributed_declarator],
+      [$._macro_case_macro_specifier, $._macro_case_unattributed_declarator],
       [$.pointer_declarator, $._parameter_pointer_declarator],
       [$.pointer_declarator, $.abstract_pointer_declarator, $._parameter_pointer_declarator],
-      [$._macro_case_macro_specifier, $._macro_case_parameter_declarator],
       [
         $.pointer_declarator,
         $._parameter_pointer_declarator,
@@ -1253,12 +1255,22 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       _macro_case_macro_specifier: () =>
         prec.dynamic(-2, field('name', alias(sym('_macro_case_identifier'), sym('identifier')))),
 
+      // The declarator forms that start with a name, split as `_declarator` is.
       _macro_case_parameter_declarator: ($) =>
+        choice(
+          alias($._macro_case_attributed_declarator, $.attributed_declarator),
+          $._macro_case_unattributed_declarator
+        ),
+
+      _macro_case_unattributed_declarator: ($) =>
         choice(
           alias(sym('_macro_case_identifier'), $.identifier),
           alias($._macro_case_array_declarator, $.array_declarator),
           alias($._macro_case_function_declarator, $.function_declarator)
         ),
+
+      _macro_case_attributed_declarator: ($) =>
+        seq($._macro_case_unattributed_declarator, repeat1($.attribute_declaration)),
 
       _macro_case_array_declarator: ($) =>
         withDeclarator(C.grammar.rules.array_declarator, $._macro_case_parameter_declarator),
