@@ -230,6 +230,23 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
+      [$.pointer_declarator, $._parameter_pointer_declarator],
+      [$.pointer_declarator, $.abstract_pointer_declarator, $._parameter_pointer_declarator],
+      [$._macro_case_macro_specifier, $._macro_case_parameter_declarator],
+      [
+        $.pointer_declarator,
+        $._parameter_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+      ],
+      [
+        $.pointer_declarator,
+        $.abstract_pointer_declarator,
+        $._parameter_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+      ],
+      [$.macro_specifier, $._parameter_declarator],
       [$._annotatable_variadic_pointer_declarator],
       [$.variadic_declarator, $._named_variadic_declarator],
       [
@@ -1164,7 +1181,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           seq(
             $._declaration_specifiers,
             choice(
-              seq(field('declarator', $._declarator), repeat($._parameter_annotation)),
+              seq(field('declarator', $._parameter_declarator), repeat($._parameter_annotation)),
               seq(optional(field('declarator', $._abstract_declarator)), repeat($.attribute_specifier))
             )
           ),
@@ -1180,6 +1197,75 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
 
       // A standard attribute right after the declarator belongs to an `attributed_declarator`, so only one after a macro
       // annotation, as in `int x UNUSED [[maybe_unused]]`, is an annotation of its own.
+      // `_declarator` whose pointer declarators keep a macro-cased name after a leading marker: there the name lexes as
+      // `_macro_case_identifier`, since the marker may also be the declarator and the name a trailing annotation, so
+      // `int *CC FOO[3]` would otherwise lose its declarator reading.
+      _parameter_declarator: ($) =>
+        choice(
+          $.attributed_declarator,
+          alias($._parameter_pointer_declarator, $.pointer_declarator),
+          $.function_declarator,
+          $.array_declarator,
+          $.parenthesized_declarator,
+          $.identifier,
+          alias(choice('va_arg', '__builtin_va_arg', ...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
+          $.reference_declarator,
+          alias($.qualified_pointer_declarator, $.qualified_identifier),
+          $.qualified_identifier,
+          $.template_function,
+          $.operator_name,
+          $.destructor_name,
+          $.structured_binding_declarator
+        ),
+
+      // The macro-cased forms are valid only after a first leading marker, since right after `*` the token would take
+      // the operand of an expression reading such as `foo(width * HEIGHT)`.
+      _parameter_pointer_declarator: ($) => {
+        const modifier = choice(
+          $.ms_pointer_modifier,
+          $.type_qualifier,
+          $.attribute_specifier,
+          prec(-1, $.ms_call_modifier),
+          $._conditional_macro_specifier
+        );
+        return prec.dynamic(
+          1,
+          prec.right(
+            seq(
+              optional($.ms_based_modifier),
+              optional(prec.dynamic(2, $.ms_call_modifier)),
+              '*',
+              repeat($.attribute_declaration),
+              repeat(modifier),
+              choice(
+                field('declarator', $._parameter_declarator),
+                seq(
+                  $.macro_specifier,
+                  repeat(choice(modifier, $.macro_specifier, alias($._macro_case_macro_specifier, $.macro_specifier))),
+                  field('declarator', choice($._parameter_declarator, $._macro_case_parameter_declarator))
+                )
+              )
+            )
+          )
+        );
+      },
+
+      _macro_case_macro_specifier: () =>
+        prec.dynamic(-2, field('name', alias(sym('_macro_case_identifier'), sym('identifier')))),
+
+      _macro_case_parameter_declarator: ($) =>
+        choice(
+          alias(sym('_macro_case_identifier'), $.identifier),
+          alias($._macro_case_array_declarator, $.array_declarator),
+          alias($._macro_case_function_declarator, $.function_declarator)
+        ),
+
+      _macro_case_array_declarator: ($) =>
+        withDeclarator(C.grammar.rules.array_declarator, $._macro_case_parameter_declarator),
+
+      _macro_case_function_declarator: ($) =>
+        prec.dynamic(1, seq(field('declarator', $._macro_case_parameter_declarator), $._function_declarator_seq)),
+
       _parameter_annotation: ($) =>
         choice(
           $.attribute_specifier,
@@ -1205,7 +1291,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           seq(
             $._declaration_specifiers,
             choice(
-              seq(field('declarator', $._declarator), repeat($._parameter_annotation)),
+              seq(field('declarator', $._parameter_declarator), repeat($._parameter_annotation)),
               field('declarator', optional($.abstract_reference_declarator))
             ),
             '=',
@@ -3239,17 +3325,14 @@ function* keywordStrings(node) {
 }
 
 /**
- * Ranks a trailing parameter annotation against a leading marker (-2) that reads `int *A B` the other way: an
- * annotation named like a macro (`char **argv UNUSED`) outranks it, and any other name ranks below it
- * (`int *CC pointer`, `int *CC callback(int)`), since macro definitions are unknown.
+ * Makes a trailing parameter annotation, whose name must be spelled like a macro since any other name after a
+ * declarator is more likely misread, as in `const void *__sized_by(n) s1`. It outranks a leading marker (-2) that reads
+ * `int *A B` the other way (`char **argv UNUSED`), since macro definitions are unknown.
  * @param {NoInfer<GrammarSymbols<'identifier'>>} $
  * @param {(name: Rule) => Rule} annotation
  */
 function trailingAnnotationRule($, annotation) {
-  return choice(
-    prec.dynamic(-1, annotation(alias(sym('_macro_case_identifier'), $.identifier))),
-    prec.dynamic(-3, annotation($.identifier))
-  );
+  return prec.dynamic(-1, annotation(alias(sym('_macro_case_identifier'), $.identifier)));
 }
 
 /**

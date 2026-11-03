@@ -10,6 +10,7 @@ int forms(char buffer[] UNUSED, int (*callback)(int) UNUSED, int *CC marked UNUS
 int hooks(void (*lower)(void) __unused, void (*called)(void) ATTR(1), int sized ATTR(2) UNUSED);
 int reserved(const char **argv __maybe_unused, void *arg __unused);
 int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC __restrict restricted);
+int upper(int *CC BUFFER[3], char *CC ARGS[], int *CC HANDLER(int));
 void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
 template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED);
 auto lambda = [](int argc UNUSED) { return argc; };
@@ -176,6 +177,36 @@ int following(void) { return 0; }
             (ms_pointer_modifier
               (ms_restrict_modifier))
             declarator: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (array_declarator
+              declarator: (identifier)
+              size: (number_literal))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (array_declarator
+              declarator: (identifier))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (function_declarator
+              declarator: (identifier)
+              parameters: (parameter_list
+                (parameter_declaration
+                  type: (primitive_type)))))))))
   (declaration
     type: (primitive_type)
     declarator: (function_declarator
