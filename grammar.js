@@ -3258,9 +3258,23 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
         ),
 
-      // A macro takes C++ expressions such as `foo::bar` and types such as `int`, an expression where both read.
+      // A macro takes the arguments of a call, such as `foo::bar` and `sizeof(T)...`, and types such as `int`, an
+      // expression where both read.
       _trailing_macro_argument_list: ($) =>
-        seq('(', commaSep(choice($.expression, prec.dynamic(-1, $.type_descriptor), $.initializer_list)), ')'),
+        seq(
+          '(',
+          commaSep(
+            choice(
+              $.expression,
+              $.parameter_pack_expansion,
+              $.initializer_list,
+              $.compound_statement,
+              $.operator_argument,
+              prec.dynamic(-1, $.type_descriptor)
+            )
+          ),
+          ')'
+        ),
     },
   })
 );

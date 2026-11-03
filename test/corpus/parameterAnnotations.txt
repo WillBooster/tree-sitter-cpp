@@ -12,7 +12,7 @@ int reserved(const char **argv __maybe_unused, void *arg __unused);
 int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC __restrict restricted);
 int upper(int *CC BUFFER[3], char *CC ARGS[], int *CC HANDLER(int));
 void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
-template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED);
+template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED, int sized ATTR(sizeof(Args)...));
 auto lambda = [](int argc UNUSED) { return argc; };
 void qualified(int scoped ATTR(foo::bar), int typed ATTR(int), int both UNUSED [[maybe_unused]]);
 int following(void) { return 0; }
@@ -260,7 +260,17 @@ int following(void) { return 0; }
               declarator: (variadic_declarator
                 (identifier)))
             (macro_specifier
-              name: (identifier)))))))
+              name: (identifier)))
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (identifier)
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (parameter_pack_expansion
+                  pattern: (sizeof_expression
+                    value: (parenthesized_expression
+                      (identifier)))))))))))
   (declaration
     type: (placeholder_type_specifier
       (auto))
