@@ -230,7 +230,9 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
-      [$._trailing_macro_argument_list],
+      [$._type_name_specifier, $._sized_type_name, $.sized_type_specifier],
+      [$._sized_type_name, $.sized_type_specifier],
+      [$._sized_type_name, $.sized_type_specifier, $.expression],
       [$.macro_specifier, $._later_macro_call_expression],
       [$._later_macro_call_expression, $._macro_case_macro_specifier],
       [$._declarator, $.macro_specifier, $._later_macro_call_expression],
@@ -1264,10 +1266,10 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       },
 
       // A first leading marker with arguments, as in `const void *__sized_by(n) buffer`, outranks the reading of its name
-      // and arguments as a function declarator (+1) whose following name is a trailing annotation (-1), whatever the
-      // arguments are; system headers write this marker, while a function-typed parameter returning a pointer and
-      // annotated after its parameter list is rare.
-      _leading_macro_call_expression: ($) => leadingMacroCallRule($, 3, $.identifier),
+      // and arguments as a function declarator (+1) whose following name is a trailing annotation (-1), even with two
+      // type arguments (-2 each); system headers write this marker, while a function-typed parameter returning a pointer
+      // and annotated after its parameter list is rare.
+      _leading_macro_call_expression: ($) => leadingMacroCallRule($, 5, $.identifier),
 
       // A later one, as `FOO(int)` in `int *CC FOO(int) UNUSED`, ranks below that reading.
       _later_macro_call_expression: ($) =>
@@ -3275,12 +3277,21 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
         ),
 
-      // A macro takes the arguments of a call and also types, as in `ATTR(int)`. A list with a type ranks two below one
-      // without, once however many types it has, so an expression reads where both do (`ATTR(std::string)`), and a
-      // function declarator reading of the same parentheses outranks a trailing annotation only with a type:
-      // `int *CC FOO(int)` declares a function, while `char *buf __counted_by(len)` is annotated.
+      // A macro takes the arguments of a call and also types, as in `ATTR(int)`, an expression where both read. A type
+      // argument ranks two below an expression, which a function declarator reading of the same parentheses ties with
+      // otherwise: `int *CC FOO(int)` declares a function, while `char *buf __counted_by(len)` is annotated. A sized type
+      // alone, as `long` in `ATTR(int, long)`, ranks one below instead, since `long` also reads as an identifier at two
+      // below.
       _trailing_macro_argument_list: ($) =>
-        choice(callArgumentList($), prec.dynamic(-2, callArgumentList($, $.type_descriptor))),
+        callArgumentList(
+          $,
+          choice(
+            prec.dynamic(-2, $.type_descriptor),
+            prec.dynamic(-1, alias($._sized_type_descriptor, $.type_descriptor))
+          )
+        ),
+
+      _sized_type_descriptor: ($) => field('type', $.sized_type_specifier),
     },
   })
 );
