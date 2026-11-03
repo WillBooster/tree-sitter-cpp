@@ -230,6 +230,14 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
+      [$.macro_specifier, $._leading_macro_call_expression],
+      [$._macro_case_leading_macro_call_expression, $._macro_case_macro_specifier],
+      [
+        $._macro_case_leading_macro_call_expression,
+        $._macro_case_macro_specifier,
+        $._macro_case_unattributed_declarator,
+      ],
+      [$._declarator, $.macro_specifier, $._leading_macro_call_expression],
       [$._macro_case_attributed_declarator],
       [$._macro_case_parameter_declarator, $._macro_case_attributed_declarator],
       [$._macro_case_macro_specifier, $._macro_case_unattributed_declarator],
@@ -1197,8 +1205,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           )
         ),
 
-      // A standard attribute right after the declarator belongs to an `attributed_declarator`, so only one after a macro
-      // annotation, as in `int x UNUSED [[maybe_unused]]`, is an annotation of its own.
       // `_declarator` whose pointer declarators keep a macro-cased name after a leading marker: there the name lexes as
       // `_macro_case_identifier`, since the marker may also be the declarator and the name a trailing annotation, so
       // `int *CC FOO[3]` would otherwise lose its declarator reading.
@@ -1242,8 +1248,16 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
               choice(
                 field('declarator', $._parameter_declarator),
                 seq(
-                  $.macro_specifier,
-                  repeat(choice(modifier, $.macro_specifier, alias($._macro_case_macro_specifier, $.macro_specifier))),
+                  choice($.macro_specifier, alias($._leading_macro_call_expression, $.call_expression)),
+                  repeat(
+                    choice(
+                      modifier,
+                      $.macro_specifier,
+                      alias($._macro_case_macro_specifier, $.macro_specifier),
+                      alias($._leading_macro_call_expression, $.call_expression),
+                      alias($._macro_case_leading_macro_call_expression, $.call_expression)
+                    )
+                  ),
                   field('declarator', choice($._parameter_declarator, $._macro_case_parameter_declarator))
                 )
               )
@@ -1251,6 +1265,26 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           )
         );
       },
+
+      // A leading marker with arguments, as in `const void *__sized_by(n) buffer`. It outranks the reading of its name
+      // and arguments as a function declarator, whose following name would be a trailing annotation.
+      _leading_macro_call_expression: ($) =>
+        prec.dynamic(
+          1,
+          seq(
+            field('function', $.identifier),
+            field('arguments', alias($._trailing_macro_argument_list, $.argument_list))
+          )
+        ),
+
+      _macro_case_leading_macro_call_expression: ($) =>
+        prec.dynamic(
+          1,
+          seq(
+            field('function', alias(sym('_macro_case_identifier'), $.identifier)),
+            field('arguments', alias($._trailing_macro_argument_list, $.argument_list))
+          )
+        ),
 
       _macro_case_macro_specifier: () =>
         prec.dynamic(-2, field('name', alias(sym('_macro_case_identifier'), sym('identifier')))),
@@ -1278,6 +1312,8 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       _macro_case_function_declarator: ($) =>
         prec.dynamic(1, seq(field('declarator', $._macro_case_parameter_declarator), $._function_declarator_seq)),
 
+      // A standard attribute right after the declarator belongs to an `attributed_declarator`, so only one after a macro
+      // annotation, as in `int x UNUSED [[maybe_unused]]`, is an annotation of its own.
       _parameter_annotation: ($) =>
         choice(
           $.attribute_specifier,
@@ -2828,27 +2864,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
 
       // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
       // The operator arguments are added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
-      argument_list: ($) => {
-        const argument = choice(
-          $.expression,
-          $.parameter_pack_expansion,
-          $.initializer_list,
-          $.compound_statement,
-          $.operator_argument
-        );
-        const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
-        return seq(
-          '(',
-          optional(
-            choice(
-              argument,
-              alias(choice('and', 'bitand'), $.identifier),
-              seq(anyArgument, repeat1(seq(',', anyArgument)))
-            )
-          ),
-          ')'
-        );
-      },
+      argument_list: ($) => callArgumentList($),
 
       operator_argument: () =>
         choice(
@@ -3270,26 +3286,35 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
         ),
 
-      // A macro takes the arguments of a call, such as `foo::bar` and `sizeof(T)...`, and types such as `int`, an
-      // expression where both read.
-      _trailing_macro_argument_list: ($) =>
-        seq(
-          '(',
-          commaSep(
-            choice(
-              $.expression,
-              $.parameter_pack_expansion,
-              $.initializer_list,
-              $.compound_statement,
-              $.operator_argument,
-              prec.dynamic(-1, $.type_descriptor)
-            )
-          ),
-          ')'
-        ),
+      // A macro takes the arguments of a call and also types, as in `ATTR(int)`, an expression where both read.
+      _trailing_macro_argument_list: ($) => callArgumentList($, prec.dynamic(-1, $.type_descriptor)),
     },
   })
 );
+
+/**
+ * The arguments of a call, and `extra` as a further argument form.
+ * @param {NoInfer<GrammarSymbols<'expression' | 'parameter_pack_expansion' | 'initializer_list' | 'compound_statement' | 'operator_argument' | '_declarator_operator_argument' | 'identifier'>>} $
+ * @param {Rule} [extra]
+ */
+function callArgumentList($, extra) {
+  const argument = choice(
+    $.expression,
+    $.parameter_pack_expansion,
+    $.initializer_list,
+    $.compound_statement,
+    $.operator_argument,
+    ...(extra ? [extra] : [])
+  );
+  const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
+  return seq(
+    '(',
+    optional(
+      choice(argument, alias(choice('and', 'bitand'), $.identifier), seq(anyArgument, repeat1(seq(',', anyArgument))))
+    ),
+    ')'
+  );
+}
 
 /**
  * Returns a regular expression source that matches every string of a character in `first` followed by characters in

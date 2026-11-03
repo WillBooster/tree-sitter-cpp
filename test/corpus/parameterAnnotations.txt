@@ -11,6 +11,7 @@ int hooks(void (*lower)(void) __unused, void (*called)(void) ATTR(1), int sized 
 int reserved(const char **argv __maybe_unused, void *arg __unused);
 int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC __restrict restricted);
 int upper(int *CC BUFFER[3], char *CC ARGS[], int *CC HANDLER(int), int *CC TAGGED[2] [[maybe_unused]]);
+void bounded(const void *__sized_by(n) source, const void *_LIBC_SIZE(n) __dst, void *__unsafe_indexable *__counted_by(count) results, int operators ATTR(1, *));
 void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
 template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED, int sized ATTR(sizeof(Args)...));
 auto lambda = [](int argc UNUSED) { return argc; };
@@ -219,6 +220,48 @@ int following(void) { return 0; }
               (attribute_declaration
                 (attribute
                   name: (identifier)))))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (identifier)))
+            declarator: (identifier)))
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (identifier)))
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (pointer_declarator
+              (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (identifier)))
+              declarator: (identifier))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal)
+              (operator_argument)))))))
   (declaration
     type: (primitive_type)
     declarator: (function_declarator
