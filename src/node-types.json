@@ -5475,11 +5475,55 @@
         "required": false,
         "types": [
           {
-            "type": "_declarator",
+            "type": "abstract_reference_declarator",
             "named": true
           },
           {
-            "type": "abstract_reference_declarator",
+            "type": "array_declarator",
+            "named": true
+          },
+          {
+            "type": "attributed_declarator",
+            "named": true
+          },
+          {
+            "type": "destructor_name",
+            "named": true
+          },
+          {
+            "type": "function_declarator",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "operator_name",
+            "named": true
+          },
+          {
+            "type": "parenthesized_declarator",
+            "named": true
+          },
+          {
+            "type": "pointer_declarator",
+            "named": true
+          },
+          {
+            "type": "qualified_identifier",
+            "named": true
+          },
+          {
+            "type": "reference_declarator",
+            "named": true
+          },
+          {
+            "type": "structured_binding_declarator",
+            "named": true
+          },
+          {
+            "type": "template_function",
             "named": true
           }
         ]
@@ -5515,6 +5559,10 @@
         },
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "call_expression",
           "named": true
         },
         {
@@ -5631,7 +5679,47 @@
             "named": true
           },
           {
-            "type": "_declarator",
+            "type": "array_declarator",
+            "named": true
+          },
+          {
+            "type": "attributed_declarator",
+            "named": true
+          },
+          {
+            "type": "destructor_name",
+            "named": true
+          },
+          {
+            "type": "function_declarator",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "operator_name",
+            "named": true
+          },
+          {
+            "type": "parenthesized_declarator",
+            "named": true
+          },
+          {
+            "type": "pointer_declarator",
+            "named": true
+          },
+          {
+            "type": "reference_declarator",
+            "named": true
+          },
+          {
+            "type": "structured_binding_declarator",
+            "named": true
+          },
+          {
+            "type": "template_function",
             "named": true
           }
         ]
@@ -5657,6 +5745,10 @@
         },
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "call_expression",
           "named": true
         },
         {
@@ -5903,6 +5995,10 @@
         },
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "call_expression",
           "named": true
         },
         {
@@ -9316,6 +9412,10 @@
         },
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "call_expression",
           "named": true
         },
         {

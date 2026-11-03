@@ -1,0 +1,397 @@
+================================
+Object-like macros after parameter declarators
+================================
+
+#define UNUSED __attribute__((unused))
+#define CC
+#define ATTR(...)
+int plain(int argc UNUSED, const char **argv UNUSED) { return 0; }
+int forms(char buffer[] UNUSED, int (*callback)(int) UNUSED, int *CC marked UNUSED, int value __unused);
+int hooks(void (*lower)(void) __unused, void (*called)(void) ATTR(1), int sized ATTR(2) UNUSED);
+int reserved(const char **argv __maybe_unused, void *arg __unused);
+int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC __restrict restricted);
+int upper(int *CC BUFFER[3], char *CC ARGS[], int *CC HANDLER(int), int *CC TAGGED[2] [[maybe_unused]], int *CC ANNOTATED(int) UNUSED);
+void bounded(const void *__sized_by(n) source, const void *_LIBC_SIZE(n) __dst, void *__unsafe_indexable *__counted_by(count) results, int operators ATTR(1, *));
+void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
+template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED, int sized ATTR(sizeof(Args)...));
+auto lambda = [](int argc UNUSED) { return argc; };
+void qualified(int scoped ATTR(foo::bar), int typed ATTR(int), int both UNUSED [[maybe_unused]]);
+int following(void) { return 0; }
+
+---
+
+(translation_unit
+  (preproc_def
+    name: (identifier)
+    value: (preproc_arg))
+  (preproc_def
+    name: (identifier))
+  (preproc_function_def
+    name: (identifier)
+    parameters: (preproc_params))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (macro_specifier
+            name: (identifier)))
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (pointer_declarator
+              declarator: (identifier)))
+          (macro_specifier
+            name: (identifier)))))
+    body: (compound_statement
+      (return_statement
+        (number_literal))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (array_declarator
+            declarator: (identifier))
+          (macro_specifier
+            name: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (parenthesized_declarator
+              declarator: (pointer_declarator
+                declarator: (identifier)))
+            parameters: (parameter_list
+              (parameter_declaration
+                type: (primitive_type))))
+          (macro_specifier
+            name: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (identifier))
+          (macro_specifier
+            name: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (macro_specifier
+            name: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (parenthesized_declarator
+              declarator: (pointer_declarator
+                declarator: (identifier)))
+            parameters: (parameter_list
+              (parameter_declaration
+                type: (primitive_type))))
+          (macro_specifier
+            name: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (function_declarator
+            declarator: (parenthesized_declarator
+              declarator: (pointer_declarator
+                declarator: (identifier)))
+            parameters: (parameter_list
+              (parameter_declaration
+                type: (primitive_type))))
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal)))
+          (macro_specifier
+            name: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (pointer_declarator
+              declarator: (identifier)))
+          (macro_specifier
+            name: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier))
+          (macro_specifier
+            name: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (pointer_declarator
+              (macro_specifier
+                name: (identifier))
+              declarator: (identifier))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (function_declarator
+              declarator: (identifier)
+              parameters: (parameter_list
+                (parameter_declaration
+                  type: (primitive_type))))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            (ms_pointer_modifier
+              (ms_restrict_modifier))
+            declarator: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (array_declarator
+              declarator: (identifier)
+              size: (number_literal))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (array_declarator
+              declarator: (identifier))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (function_declarator
+              declarator: (identifier)
+              parameters: (parameter_list
+                (parameter_declaration
+                  type: (primitive_type))))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (attributed_declarator
+              (array_declarator
+                declarator: (identifier)
+                size: (number_literal))
+              (attribute_declaration
+                (attribute
+                  name: (identifier))))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (function_declarator
+              declarator: (identifier)
+              parameters: (parameter_list
+                (parameter_declaration
+                  type: (primitive_type)))))
+          (macro_specifier
+            name: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (identifier)))
+            declarator: (identifier)))
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (identifier)))
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (macro_specifier
+              name: (identifier))
+            declarator: (pointer_declarator
+              (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (identifier)))
+              declarator: (identifier))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal)
+              (operator_argument)))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (qualified_identifier
+            scope: (namespace_identifier)
+            name: (type_identifier))
+          declarator: (reference_declarator
+            (identifier))
+          (macro_specifier
+            name: (identifier)))
+        (parameter_declaration
+          type: (type_identifier)
+          declarator: (reference_declarator
+            (identifier))
+          (macro_specifier
+            name: (identifier)))
+        (optional_parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (macro_specifier
+            name: (identifier))
+          default_value: (number_literal)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier))
+            (macro_specifier
+              name: (identifier)))
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (reference_declarator
+              (variadic_declarator
+                (identifier)))
+            (macro_specifier
+              name: (identifier)))
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (pointer_declarator
+              declarator: (variadic_declarator
+                (identifier)))
+            (macro_specifier
+              name: (identifier)))
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (identifier)
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (parameter_pack_expansion
+                  pattern: (sizeof_expression
+                    value: (parenthesized_expression
+                      (identifier)))))))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)
+              (macro_specifier
+                name: (identifier)))))
+        body: (compound_statement
+          (return_statement
+            (identifier))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (qualified_identifier
+                scope: (namespace_identifier)
+                name: (identifier)))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (type_descriptor
+                type: (primitive_type)))))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)
+          (macro_specifier
+            name: (identifier))
+          (attribute_declaration
+            (attribute
+              name: (identifier)))))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))
+    body: (compound_statement
+      (return_statement
+        (number_literal)))))

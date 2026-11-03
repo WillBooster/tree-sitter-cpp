@@ -137,2875 +137,3253 @@ const BUILTIN_TYPE_KEYWORDS = [
 const preprocIf = C.preprocIf;
 const preprocessor = C.preprocessor;
 
+// Every keyword of the grammar that `MACRO_CASE_IDENTIFIER` would otherwise spell.
+const MACRO_CASE_KEYWORDS = [
+  'NULL',
+  '__alignof',
+  '__alignof__',
+  '__asm',
+  '__asm__',
+  '__attribute',
+  '__attribute__',
+  '__based',
+  '__builtin_available',
+  '__builtin_va_arg',
+  '__cdecl',
+  '__clrcall',
+  '__complex__',
+  '__declspec',
+  '__except',
+  '__extension__',
+  '__fastcall',
+  '__finally',
+  '__forceinline',
+  '__inline',
+  '__inline__',
+  '__leave',
+  '__ptr32',
+  '__ptr64',
+  '__restrict',
+  '__restrict__',
+  '__sptr',
+  '__stdcall',
+  '__thiscall',
+  '__thread',
+  '__try',
+  '__typeof',
+  '__typeof__',
+  '__typeof_unqual',
+  '__typeof_unqual__',
+  '__unaligned',
+  '__uptr',
+  '__vectorcall',
+  '__volatile__',
+];
+const UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const IDENTIFIER_CHARACTERS = `${UPPER_CASE}abcdefghijklmnopqrstuvwxyz0123456789_`;
+const MACRO_CASE_IDENTIFIER = new RegExp(
+  `${identifierExcept(
+    ['', ...MACRO_CASE_KEYWORDS.filter((keyword) => !keyword.startsWith('__'))],
+    `${UPPER_CASE}_`,
+    `${UPPER_CASE}0123456789_`
+  )}|__${identifierExcept(
+    MACRO_CASE_KEYWORDS.filter((keyword) => keyword.startsWith('__')).map((keyword) => keyword.slice(2)),
+    IDENTIFIER_CHARACTERS,
+    IDENTIFIER_CHARACTERS
+  )}`
+);
+
+// Names spelled like macros or with the implementation's `__` prefix, which a trailing annotation must have, other than
+// keywords (see `assertMacroCaseIdentifierSpellsNoKeyword`). Rule order, not precedence, must settle names that it and
+// `identifier` both match in full, and rules this grammar adds follow the C grammar's, so it is inserted into the C
+// rules right before `identifier`; keywords lex through `identifier`, the word token.
+const BASE = /** @type {typeof C} */ ({
+  ...C,
+  grammar: {
+    ...C.grammar,
+    rules: Object.fromEntries(
+      Object.entries(C.grammar.rules).flatMap((entry) =>
+        entry[0] === 'identifier'
+          ? [['_macro_case_identifier', { type: 'PATTERN', value: MACRO_CASE_IDENTIFIER.source }], entry]
+          : [entry]
+      )
+    ),
+  },
+});
+
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
-module.exports = grammar(C, {
-  name: 'cpp',
+module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
+  grammar(BASE, {
+    name: 'cpp',
 
-  externals: (_, original) => [
-    sym('raw_string_delimiter'),
-    sym('raw_string_content'),
-    sym('_pack_index_operator'),
-    sym('_template_close'),
-    sym('_split_template_close'),
-    ...original,
-    sym('_macro_call_end'),
-    sym('_macro_identifier_end'),
-    sym('_empty_initializer_start'),
-    sym('_initializer_directive_name'),
-  ],
+    externals: (_, original) => [
+      sym('raw_string_delimiter'),
+      sym('raw_string_content'),
+      sym('_pack_index_operator'),
+      sym('_template_close'),
+      sym('_split_template_close'),
+      ...original,
+      sym('_macro_call_end'),
+      sym('_macro_identifier_end'),
+      sym('_empty_initializer_start'),
+      sym('_initializer_directive_name'),
+    ],
 
-  conflicts: ($, original) => [
-    [$._type_definition_head, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$._type_definition_head, $._built_in_declaration_specifiers],
-    [
-      $._type_definition_head,
-      $._macro_declaration_specifiers,
-      $.sized_type_specifier,
-      $._built_in_declaration_specifiers,
-    ],
-    [$._macro_declaration_specifiers, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$._type_definition_head, $._macro_declaration_specifiers, $._built_in_declaration_specifiers],
-    [sym('preproc_elif'), sym('preproc_elif_in_block')],
-    [sym('preproc_elifdef'), sym('preproc_elifdef_in_block')],
-    [sym('preproc_if'), sym('preproc_if_in_block')],
-    [$.pointer_declarator, $.abstract_pointer_declarator, $.variadic_pointer_declarator],
-    [sym('preproc_else'), sym('preproc_else_in_block')],
-    [sym('preproc_ifdef'), sym('preproc_ifdef_in_block')],
-    [$.declaration, $._statement_declaration],
-    [$._sized_type_identifier, $._enum_base_clause],
-    [$._non_pack_unnamed_parameter, $._non_pack_sized_type],
-    [$._function_declaration_declarator, $._function_attributes_start],
-    [$._statement_declaration_modifiers, $._declaration_specifiers],
-    [
-      $._declaration_modifiers,
-      $._statement_declaration_modifiers,
-      $._single_case_statement,
-      $._single_attributed_statement,
-    ],
-    [$._initialized_declarator, $.condition_declaration],
-    [$._non_pack_sized_type],
-    [$._declaration_modifiers, $._non_pack_sized_type],
-    [$.primitive_type, $._non_pack_unnamed_parameter, $._non_pack_sized_type],
-    [
-      $.pointer_declarator,
-      $._initialized_pointer_declarator,
-      $.argument_initialized_pointer_declarator,
-      $.parenthesized_argument_initialized_pointer_declarator,
-    ],
-    [$._declarator, $.macro_specifier, $._argument_initialized_name],
-    [$._type_name_specifier, $.template_type],
-    [$._declaration_specifiers, $._empty_declaration, $._statement_empty_declaration],
-    [$.statement, $._top_level_statement],
-    [$._top_level_item, $._non_case_statement, $._top_level_statement],
-    [$._non_case_statement, $._top_level_statement],
-    [$._top_level_item, $._block_item],
-    [$.sized_type_specifier, $._top_level_expression_statement, $.expression],
-    [$._top_level_expression_statement, $.expression],
-    [$.type_specifier, $._top_level_expression_statement, $.expression],
-    [$._top_level_expression_statement, $.expression_statement],
-    [$._declaration_specifiers, $._statement_declaration_specifiers],
-    [$._type_definition_head, $._declaration_modifiers, $._statement_declaration_modifiers],
-    [$._statement_type_definition_head, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$._statement_type_definition_head, $._declaration_modifiers, $._statement_declaration_modifiers],
-    [$._declaration_modifiers, $._case_body_attributed_statement, $._case_label_attributes],
-    [
-      $._declaration_modifiers,
-      $._statement_declaration_modifiers,
-      $._case_body_attributed_statement,
-      $._case_label_attributes,
-    ],
-    [$._type_definition_head, $._field_declaration_list_item],
-    [$._type_definition_head, $._declaration_modifiers, $._field_declaration_list_item],
-    [$._declarator, $.type_specifier, $.macro_specifier],
-    [$._declaration_specifiers, $._statement_empty_declaration],
-    [$._declaration_modifiers, $.attributed_statement, $.case_statement],
-    [$._type_name_specifier, $.typeof_specifier],
-    [$._type_definition_head, $._macro_declaration_specifiers, $._sized_bit_int_specifier],
-    [$._macro_declaration_specifiers, $._sized_bit_int_specifier],
-    [$._conditional_function_specifiers],
-    [$._type_name_specifier, $.call_expression, $.built_in_function_type_descriptor],
-    [$._type_name_specifier, $.typeof_specifier, $.expression],
-    [$._type_name_specifier, $.expression, $.va_arg_expression],
-    [$._type_name_specifier, $.expression, $.template_type, $.template_function],
-    [$._macro_declaration_specifiers, $.attributed_declarator],
-    [$._macro_declaration_specifiers],
-    [$.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$._type_definition_head, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [$._statement_type_definition_head, $.type_specifier, $._built_in_declaration_specifiers],
-    [$._type_definition_head, $._declaration_modifiers, $._statement_empty_declaration],
-    [$._declaration_modifiers, $._statement_declaration_modifiers],
-    [$._declarator, $.attributed_declarator, $.type_specifier, $.expression, $.macro_specifier],
-    [$._type_name_specifier, $.call_expression],
-    [$._sized_type_name, $.expression, $.call_expression],
-    [$._sized_type_name, $.expression],
-    [$._declarator, $._type_name_specifier, $.typeof_specifier, $.expression],
-    [$._declarator, $.attributed_declarator, $._type_name_specifier, $.expression],
-    [$._declarator, $._type_name_specifier, $.expression],
-    [$._declarator, $._type_name_specifier, $.expression, $.va_arg_expression],
-    [$._declarator, $.attributed_declarator, $.expression, $.macro_specifier],
-    [$._declarator, $.expression, $.macro_specifier],
-    [$._macro_declaration_specifiers, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
-    [
-      $._type_definition_head,
-      $._macro_declaration_specifiers,
-      $.type_specifier,
-      $.sized_type_specifier,
-      $._built_in_declaration_specifiers,
-    ],
-    [$._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
-    [$._type_definition_head, $._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
-    [$._conditional_function_specifiers, $._declaration_specifiers],
-    [
-      $._type_definition_head,
-      $._macro_declaration_specifiers,
-      $._declaration_modifiers,
-      $._statement_empty_declaration,
-    ],
-    [$._declaration_modifiers, $._statement_empty_declaration],
-    [$._declaration_modifiers, $._empty_declaration, $._statement_empty_declaration],
-    [
-      $._macro_declaration_specifiers,
-      $._declaration_modifiers,
-      $.attributed_statement,
-      $.case_statement,
-      $.using_declaration,
-    ],
-    [
-      $._conditional_function_specifiers,
-      $._type_definition_head,
-      $._declaration_specifiers,
-      $._built_in_declaration_specifiers,
-      $._constructor_specifiers,
-    ],
-    [
-      $._macro_declaration_specifiers,
-      $._declarator,
-      $.attributed_declarator,
-      $.type_specifier,
-      $.expression,
-      $.macro_specifier,
-    ],
-    [$._declarator, $.type_specifier, $.expression, $.macro_specifier],
-    [$.type_specifier, $.expression, $.macro_specifier],
-    [$._macro_declaration_specifiers, $._declarator, $.attributed_declarator, $.type_specifier, $.expression],
-    [$._class_declaration_item, $._class_name],
-    [$.attribute, $._scope_resolution],
-    [$.expression, $.contract_specifier],
-    [$.expression, $.explicit_object_parameter_declaration],
-    [$._declarator, $.attributed_declarator, $.expression],
-    [$._declarator, $.attributed_declarator, $.type_specifier, $.expression],
-    ...withTypeDefinitionHeads(original),
-    [sym('preproc_if_in_parameter_prefix'), sym('preproc_if_in_parameter_group')],
-    [sym('preproc_elif_in_parameter_prefix'), sym('preproc_elif_in_parameter_group')],
-    [sym('preproc_ifdef_in_parameter_prefix'), sym('preproc_ifdef_in_parameter_group')],
-    [sym('preproc_elifdef_in_parameter_prefix'), sym('preproc_elifdef_in_parameter_group')],
-    [
-      sym('preproc_if_in_parameter_clause'),
-      sym('preproc_if_in_parameter_prefix'),
-      sym('preproc_if_in_parameter_group'),
-    ],
-    [sym('preproc_else_in_parameter_prefix'), sym('preproc_else_in_parameter_group')],
-    [
-      sym('preproc_elif_in_parameter_clause'),
-      sym('preproc_elif_in_parameter_prefix'),
-      sym('preproc_elif_in_parameter_group'),
-    ],
-    [
-      sym('preproc_ifdef_in_parameter_clause'),
-      sym('preproc_ifdef_in_parameter_prefix'),
-      sym('preproc_ifdef_in_parameter_group'),
-    ],
-    [
-      sym('preproc_elifdef_in_parameter_clause'),
-      sym('preproc_elifdef_in_parameter_prefix'),
-      sym('preproc_elifdef_in_parameter_group'),
-    ],
-    [$._non_variadic_parameter_group, $._parameter_clause],
-    [
-      sym('preproc_else_in_parameter_clause'),
-      sym('preproc_else_in_parameter_prefix'),
-      sym('preproc_else_in_parameter_group'),
-    ],
-    [$.parameter_declaration, $.variadic_parameter_declaration],
-    [$.sized_type_specifier, $._non_pack_sized_type],
-    [$.sized_type_specifier, $.expression, $._non_pack_sized_type],
-    [$.sized_type_specifier, $.expression, $.call_expression, $._non_pack_sized_type],
-    [$.primitive_type, $._non_pack_unnamed_parameter],
-    [$.primitive_type, $._non_pack_sized_type],
-    [$._class_declaration, $._instantiated_class_name],
-    [$._field_initializer_sequence],
-    [$._field_initializer_conditionals],
-    [sym('preproc_elifdef_in_initializer_list'), sym('preproc_elifdef_in_block')],
-    [sym('preproc_if_in_initializer_list'), sym('preproc_if_in_block')],
-    [sym('preproc_elif_in_initializer_list'), sym('preproc_elif_in_block')],
-    [sym('preproc_else_in_initializer_list'), sym('preproc_else_in_block')],
-    [sym('preproc_ifdef_in_initializer_list'), sym('preproc_ifdef_in_block')],
-    [$.comma_expression, $._initializer_element],
-    [$._block_item, $._initializer_directive],
-    [$.type_specifier, $.expression, $.template_type],
-    [$.type_specifier, $.expression, $.va_arg_expression],
-    [$._declarator, $.type_specifier, $.typeof_specifier, $.expression],
-    [$.typeof_specifier, $.expression],
-    [$.typeof_specifier, $.type_specifier],
-    [$.type_specifier, $.template_type],
-    [$.type_specifier, $.optional_type_parameter_declaration],
-    [$.type_specifier, $.typeof_specifier, $.expression],
-    [$._type_declarator, $.typeof_specifier],
-    [$._declarator, $.type_specifier, $.typeof_specifier],
-    [$._declarator, $.expression, $.va_arg_expression],
-    [$._type_definition_head, $._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
-    [$._type_definition_head, $.type_specifier, $._built_in_declaration_specifiers],
-    [$.storage_class_specifier, $.expression],
-    [$.sized_type_specifier, $._sized_bit_int_specifier, $._top_level_expression_statement],
-    [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression],
-    [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression, $.call_expression],
-    [$.expression, $.template_type],
-    [$._declarator, $.type_specifier, $.expression, $.va_arg_expression],
-    [$.pack_index_expression, $.pack_index_type],
-    [$._declaration_modifiers, $.friend_declaration],
-    [$.type_qualifier, $.friend_declaration],
-    [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
-    [$._declaration_modifiers, $.attributed_statement, $.case_statement, $.using_declaration],
-    [$.attributed_statement, $.case_statement, $.using_declaration],
-    [$.attributed_statement, $.case_statement],
-    [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement],
-    [$._single_case_statement, $._single_attributed_statement],
-    [$._declaration_modifiers, $._case_body_attributed_statement],
-
-    [$.template_function, $.template_type],
-    [$.template_function, $.template_type, $.expression],
-    [$.template_function, $.template_type, $.qualified_identifier],
-    [$.template_function, $.template_type, $.qualified_identifier, $.qualified_type_identifier],
-    [$.template_type, $.qualified_type_identifier],
-    [$.qualified_type_identifier, $.qualified_identifier],
-    [$.comma_expression, $.initializer_list],
-    [$.expression, $._declarator],
-    [$.expression, $.structured_binding_declarator],
-    [$.expression, $._declarator, $.type_specifier],
-    [$.expression, $.identifier_parameter_pack_expansion],
-    [$.expression, $._lambda_capture_identifier],
-    [$.expression, $._lambda_capture],
-    [$.expression, $.structured_binding_declarator, $._lambda_capture_identifier],
-    [$.structured_binding_declarator, $._lambda_capture_identifier],
-    [$.parameter_list, $.argument_list],
-    [$.type_specifier, $.call_expression],
-    [$.sized_type_specifier, $.expression, $.call_expression],
-    [$.sized_type_specifier, $.expression],
-    [$.sized_type_specifier, $._top_level_expression_statement],
-    [$.expression, $.call_expression],
-    [$._binary_fold_operator, $._fold_operator],
-    [$._function_declarator_core],
-    [$._trailing_return_type_descriptor],
-    [$._trailing_abstract_pointer_declarator],
-    [$._trailing_abstract_reference_declarator],
-    [$._sizeof_reference_pointer_declarator],
-    [$._sizeof_reference_qualified_pointer_declarator],
-    [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
-    [$._declarator, $.argument_initialized_rvalue_reference_declarator],
-    [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
-    [$.function_definition_pointer_declarator],
-    [$.argument_initialized_pointer_declarator],
-    [$.parenthesized_argument_initialized_pointer_declarator],
-    [$.required_parentheses_pointer_declarator],
-    [$.direct_initialized_pointer_declarator],
-    [$.variadic_pointer_declarator],
-    [$.qualified_pointer_declarator],
-    [$.abstract_qualified_pointer_declarator],
-    [$.qualified_pointer_type_declarator],
-    [$.qualified_pointer_field_declarator],
-    [$._trailing_abstract_qualified_pointer_declarator],
-    [$.null, $.expression_keyword_parameter],
-    [$.expression, $.expression_keyword_parameter],
-    [$.expression_keyword_parameter, $.operator_argument],
-    [$._declarator, $._argument_initialized_name],
-    [$.init_declarator, $._argument_initialized_declarator],
-    [$._argument_initialized_declarator, $.later_keyword_argument_init_declarator],
-    [$.expression, $.parenthesized_qualified_identifier],
-    [$.initializer_pair, $.comma_expression],
-    [$.expression_statement, $._for_statement_body],
-    [$.init_statement, $._for_statement_body],
-    [$.field_expression, $.template_method, $.template_type],
-    [$.field_expression, $.template_method],
-    [$.sizeof_operand_field_expression, $.template_method, $.template_type],
-    [$.sizeof_operand_field_expression, $.template_method],
-    [$.qualified_field_identifier, $.template_method, $.template_type],
-    [$.type_specifier, $.template_type, $.template_function, $.expression],
-    [$.splice_type_specifier, $.splice_expression],
-    [$.destructor_name, $._template_destructor_name],
-    [$._declarator, $.parenthesized_pointer_declarator],
-    [$._declarator, $.built_in_parenthesized_declarator],
-    [$.required_parentheses_function_declarator, $._direct_initialized_parenthesized_declarator],
-    [$.built_in_parenthesized_function_declarator, $._direct_initialized_declarator],
-    [$._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
-    [$.type_specifier, $._built_in_declaration_specifiers],
-    [$.type_specifier, $.call_expression, $._built_in_declaration_specifiers],
-    [$.type_specifier, $.call_expression, $.built_in_function_type_descriptor],
-    [$._declarator, $._function_definition_declarator],
-  ],
-
-  inline: ($, original) => [...original, $._namespace_identifier, $._contextual_identifier],
-
-  precedences: ($) => [
-    [$.argument_list, $.type_qualifier],
-    [$._expression_not_binary, $._class_name],
-  ],
-
-  rules: {
-    _top_level_expression_statement: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        prec.dynamic(
-          -1,
-          choice(seq($.call_expression, sym('_macro_call_end')), seq($.identifier, sym('_macro_identifier_end')))
-        )
-      ),
-
-    _top_level_item: ($, original = missingOriginalRule()) =>
-      choice(
-        ...ruleMembers(original, 'CHOICE').filter(
-          (member) => !isOldStyleFunctionDefinition(member) && !isContextualCItem(member)
-        ),
-        sym('preproc_if'),
-        sym('preproc_ifdef'),
-        $.namespace_definition,
-        $.concept_definition,
-        $.namespace_alias_definition,
+    conflicts: ($, original) => [
+      [$.macro_specifier, $._later_macro_call_expression],
+      [$._later_macro_call_expression, $._macro_case_macro_specifier],
+      [$._declarator, $.macro_specifier, $._later_macro_call_expression],
+      [$._later_macro_call_expression, $._macro_case_macro_specifier, $._macro_case_unattributed_declarator],
+      [$._declarator, $.macro_specifier, $._leading_macro_call_expression],
+      [$._macro_case_attributed_declarator],
+      [$._macro_case_parameter_declarator, $._macro_case_attributed_declarator],
+      [$._macro_case_macro_specifier, $._macro_case_unattributed_declarator],
+      [$.pointer_declarator, $._parameter_pointer_declarator],
+      [$.pointer_declarator, $.abstract_pointer_declarator, $._parameter_pointer_declarator],
+      [
+        $.pointer_declarator,
+        $._parameter_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+      ],
+      [
+        $.pointer_declarator,
+        $.abstract_pointer_declarator,
+        $._parameter_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+      ],
+      [$.macro_specifier, $._parameter_declarator],
+      [$._annotatable_variadic_pointer_declarator],
+      [$.variadic_declarator, $._named_variadic_declarator],
+      [
+        $.pointer_declarator,
+        $.abstract_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+      ],
+      [$._type_definition_head, $.sized_type_specifier, $._built_in_declaration_specifiers],
+      [$.sized_type_specifier, $._built_in_declaration_specifiers],
+      [$._type_definition_head, $._built_in_declaration_specifiers],
+      [
+        $._type_definition_head,
+        $._macro_declaration_specifiers,
+        $.sized_type_specifier,
+        $._built_in_declaration_specifiers,
+      ],
+      [$._macro_declaration_specifiers, $.sized_type_specifier, $._built_in_declaration_specifiers],
+      [$._type_definition_head, $._macro_declaration_specifiers, $._built_in_declaration_specifiers],
+      [sym('preproc_elif'), sym('preproc_elif_in_block')],
+      [sym('preproc_elifdef'), sym('preproc_elifdef_in_block')],
+      [sym('preproc_if'), sym('preproc_if_in_block')],
+      [$.pointer_declarator, $.abstract_pointer_declarator, $.variadic_pointer_declarator],
+      [sym('preproc_else'), sym('preproc_else_in_block')],
+      [sym('preproc_ifdef'), sym('preproc_ifdef_in_block')],
+      [$.declaration, $._statement_declaration],
+      [$._sized_type_identifier, $._enum_base_clause],
+      [$._non_pack_unnamed_parameter, $._non_pack_sized_type],
+      [$._function_declaration_declarator, $._function_attributes_start],
+      [$._statement_declaration_modifiers, $._declaration_specifiers],
+      [
+        $._declaration_modifiers,
+        $._statement_declaration_modifiers,
+        $._single_case_statement,
+        $._single_attributed_statement,
+      ],
+      [$._initialized_declarator, $.condition_declaration],
+      [$._non_pack_sized_type],
+      [$._declaration_modifiers, $._non_pack_sized_type],
+      [$.primitive_type, $._non_pack_unnamed_parameter, $._non_pack_sized_type],
+      [
+        $.pointer_declarator,
+        $._initialized_pointer_declarator,
+        $.argument_initialized_pointer_declarator,
+        $.parenthesized_argument_initialized_pointer_declarator,
+      ],
+      [$._declarator, $.macro_specifier, $._argument_initialized_name],
+      [$._type_name_specifier, $.template_type],
+      [$._declaration_specifiers, $._empty_declaration, $._statement_empty_declaration],
+      [$.statement, $._top_level_statement],
+      [$._top_level_item, $._non_case_statement, $._top_level_statement],
+      [$._non_case_statement, $._top_level_statement],
+      [$._top_level_item, $._block_item],
+      [$.sized_type_specifier, $._top_level_expression_statement, $.expression],
+      [$._top_level_expression_statement, $.expression],
+      [$.type_specifier, $._top_level_expression_statement, $.expression],
+      [$._top_level_expression_statement, $.expression_statement],
+      [$._declaration_specifiers, $._statement_declaration_specifiers],
+      [$._type_definition_head, $._declaration_modifiers, $._statement_declaration_modifiers],
+      [$._statement_type_definition_head, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+      [$._statement_type_definition_head, $._declaration_modifiers, $._statement_declaration_modifiers],
+      [$._declaration_modifiers, $._case_body_attributed_statement, $._case_label_attributes],
+      [
+        $._declaration_modifiers,
+        $._statement_declaration_modifiers,
+        $._case_body_attributed_statement,
+        $._case_label_attributes,
+      ],
+      [$._type_definition_head, $._field_declaration_list_item],
+      [$._type_definition_head, $._declaration_modifiers, $._field_declaration_list_item],
+      [$._declarator, $.type_specifier, $.macro_specifier],
+      [$._declaration_specifiers, $._statement_empty_declaration],
+      [$._declaration_modifiers, $.attributed_statement, $.case_statement],
+      [$._type_name_specifier, $.typeof_specifier],
+      [$._type_definition_head, $._macro_declaration_specifiers, $._sized_bit_int_specifier],
+      [$._macro_declaration_specifiers, $._sized_bit_int_specifier],
+      [$._conditional_function_specifiers],
+      [$._type_name_specifier, $.call_expression, $.built_in_function_type_descriptor],
+      [$._type_name_specifier, $.typeof_specifier, $.expression],
+      [$._type_name_specifier, $.expression, $.va_arg_expression],
+      [$._type_name_specifier, $.expression, $.template_type, $.template_function],
+      [$._macro_declaration_specifiers, $.attributed_declarator],
+      [$._macro_declaration_specifiers],
+      [$.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+      [$._type_definition_head, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+      [$._statement_type_definition_head, $.type_specifier, $._built_in_declaration_specifiers],
+      [$._type_definition_head, $._declaration_modifiers, $._statement_empty_declaration],
+      [$._declaration_modifiers, $._statement_declaration_modifiers],
+      [$._declarator, $.attributed_declarator, $.type_specifier, $.expression, $.macro_specifier],
+      [$._type_name_specifier, $.call_expression],
+      [$._sized_type_name, $.expression, $.call_expression],
+      [$._sized_type_name, $.expression],
+      [$._declarator, $._type_name_specifier, $.typeof_specifier, $.expression],
+      [$._declarator, $.attributed_declarator, $._type_name_specifier, $.expression],
+      [$._declarator, $._type_name_specifier, $.expression],
+      [$._declarator, $._type_name_specifier, $.expression, $.va_arg_expression],
+      [$._declarator, $.attributed_declarator, $.expression, $.macro_specifier],
+      [$._declarator, $.expression, $.macro_specifier],
+      [$._macro_declaration_specifiers, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+      [
+        $._type_definition_head,
+        $._macro_declaration_specifiers,
+        $.type_specifier,
+        $.sized_type_specifier,
+        $._built_in_declaration_specifiers,
+      ],
+      [$._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
+      [$._type_definition_head, $._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
+      [$._conditional_function_specifiers, $._declaration_specifiers],
+      [
+        $._type_definition_head,
+        $._macro_declaration_specifiers,
+        $._declaration_modifiers,
+        $._statement_empty_declaration,
+      ],
+      [$._declaration_modifiers, $._statement_empty_declaration],
+      [$._declaration_modifiers, $._empty_declaration, $._statement_empty_declaration],
+      [
+        $._macro_declaration_specifiers,
+        $._declaration_modifiers,
+        $.attributed_statement,
+        $.case_statement,
         $.using_declaration,
-        $.alias_declaration,
-        $.static_assert_declaration,
-        $.consteval_block_declaration,
-        $.template_declaration,
-        $.template_instantiation,
-        $.module_declaration,
-        $.export_declaration,
-        $.import_declaration,
-        $.global_module_fragment_declaration,
-        $.private_module_fragment_declaration,
-        alias($.constructor_or_destructor_definition, $.function_definition),
-        alias($.operator_cast_definition, $.function_definition),
-        alias($.operator_cast_declaration, $.declaration)
-      ),
+      ],
+      [
+        $._conditional_function_specifiers,
+        $._type_definition_head,
+        $._declaration_specifiers,
+        $._built_in_declaration_specifiers,
+        $._constructor_specifiers,
+      ],
+      [
+        $._macro_declaration_specifiers,
+        $._declarator,
+        $.attributed_declarator,
+        $.type_specifier,
+        $.expression,
+        $.macro_specifier,
+      ],
+      [$._declarator, $.type_specifier, $.expression, $.macro_specifier],
+      [$.type_specifier, $.expression, $.macro_specifier],
+      [$._macro_declaration_specifiers, $._declarator, $.attributed_declarator, $.type_specifier, $.expression],
+      [$._class_declaration_item, $._class_name],
+      [$.attribute, $._scope_resolution],
+      [$.expression, $.contract_specifier],
+      [$.expression, $.explicit_object_parameter_declaration],
+      [$._declarator, $.attributed_declarator, $.expression],
+      [$._declarator, $.attributed_declarator, $.type_specifier, $.expression],
+      ...withTypeDefinitionHeads(original),
+      [sym('preproc_if_in_parameter_prefix'), sym('preproc_if_in_parameter_group')],
+      [sym('preproc_elif_in_parameter_prefix'), sym('preproc_elif_in_parameter_group')],
+      [sym('preproc_ifdef_in_parameter_prefix'), sym('preproc_ifdef_in_parameter_group')],
+      [sym('preproc_elifdef_in_parameter_prefix'), sym('preproc_elifdef_in_parameter_group')],
+      [
+        sym('preproc_if_in_parameter_clause'),
+        sym('preproc_if_in_parameter_prefix'),
+        sym('preproc_if_in_parameter_group'),
+      ],
+      [sym('preproc_else_in_parameter_prefix'), sym('preproc_else_in_parameter_group')],
+      [
+        sym('preproc_elif_in_parameter_clause'),
+        sym('preproc_elif_in_parameter_prefix'),
+        sym('preproc_elif_in_parameter_group'),
+      ],
+      [
+        sym('preproc_ifdef_in_parameter_clause'),
+        sym('preproc_ifdef_in_parameter_prefix'),
+        sym('preproc_ifdef_in_parameter_group'),
+      ],
+      [
+        sym('preproc_elifdef_in_parameter_clause'),
+        sym('preproc_elifdef_in_parameter_prefix'),
+        sym('preproc_elifdef_in_parameter_group'),
+      ],
+      [$._non_variadic_parameter_group, $._parameter_clause],
+      [
+        sym('preproc_else_in_parameter_clause'),
+        sym('preproc_else_in_parameter_prefix'),
+        sym('preproc_else_in_parameter_group'),
+      ],
+      [$.parameter_declaration, $.variadic_parameter_declaration],
+      [$.sized_type_specifier, $._non_pack_sized_type],
+      [$.sized_type_specifier, $.expression, $._non_pack_sized_type],
+      [$.sized_type_specifier, $.expression, $.call_expression, $._non_pack_sized_type],
+      [$.primitive_type, $._non_pack_unnamed_parameter],
+      [$.primitive_type, $._non_pack_sized_type],
+      [$._class_declaration, $._instantiated_class_name],
+      [$._field_initializer_sequence],
+      [$._field_initializer_conditionals],
+      [sym('preproc_elifdef_in_initializer_list'), sym('preproc_elifdef_in_block')],
+      [sym('preproc_if_in_initializer_list'), sym('preproc_if_in_block')],
+      [sym('preproc_elif_in_initializer_list'), sym('preproc_elif_in_block')],
+      [sym('preproc_else_in_initializer_list'), sym('preproc_else_in_block')],
+      [sym('preproc_ifdef_in_initializer_list'), sym('preproc_ifdef_in_block')],
+      [$.comma_expression, $._initializer_element],
+      [$._block_item, $._initializer_directive],
+      [$.type_specifier, $.expression, $.template_type],
+      [$.type_specifier, $.expression, $.va_arg_expression],
+      [$._declarator, $.type_specifier, $.typeof_specifier, $.expression],
+      [$.typeof_specifier, $.expression],
+      [$.typeof_specifier, $.type_specifier],
+      [$.type_specifier, $.template_type],
+      [$.type_specifier, $.optional_type_parameter_declaration],
+      [$.type_specifier, $.typeof_specifier, $.expression],
+      [$._type_declarator, $.typeof_specifier],
+      [$._declarator, $.type_specifier, $.typeof_specifier],
+      [$._declarator, $.expression, $.va_arg_expression],
+      [
+        $._type_definition_head,
+        $._declaration_specifiers,
+        $._built_in_declaration_specifiers,
+        $._constructor_specifiers,
+      ],
+      [$._type_definition_head, $.type_specifier, $._built_in_declaration_specifiers],
+      [$.storage_class_specifier, $.expression],
+      [$.sized_type_specifier, $._sized_bit_int_specifier, $._top_level_expression_statement],
+      [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression],
+      [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression, $.call_expression],
+      [$.expression, $.template_type],
+      [$._declarator, $.type_specifier, $.expression, $.va_arg_expression],
+      [$.pack_index_expression, $.pack_index_type],
+      [$._declaration_modifiers, $.friend_declaration],
+      [$.type_qualifier, $.friend_declaration],
+      [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
+      [$._declaration_modifiers, $.attributed_statement, $.case_statement, $.using_declaration],
+      [$.attributed_statement, $.case_statement, $.using_declaration],
+      [$.attributed_statement, $.case_statement],
+      [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement],
+      [$._single_case_statement, $._single_attributed_statement],
+      [$._declaration_modifiers, $._case_body_attributed_statement],
 
-    _block_item: ($, original = missingOriginalRule()) =>
-      choice(
-        ...ruleMembers(original, 'CHOICE').filter(
-          (member) =>
-            !isOldStyleFunctionDefinition(member) &&
-            !isContextualCItem(member) &&
-            !(
-              member.type === 'SYMBOL' &&
-              (member.name.startsWith('preproc_if') || member.name === '_statement_empty_declaration')
-            )
-        ),
-        $.function_definition,
-        $.declaration,
-        $.type_definition,
-        $._empty_declaration,
-        $.namespace_definition,
-        $.concept_definition,
-        $.namespace_alias_definition,
-        $.using_declaration,
-        $.alias_declaration,
-        $.static_assert_declaration,
-        $.consteval_block_declaration,
-        $.template_declaration,
-        $.template_instantiation,
-        $.export_declaration,
-        $.import_declaration,
-        alias(sym('preproc_if_in_block'), sym('preproc_if')),
-        alias(sym('preproc_ifdef_in_block'), sym('preproc_ifdef')),
-        alias($.constructor_or_destructor_definition, $.function_definition),
-        alias($.operator_cast_definition, $.function_definition),
-        alias($.operator_cast_declaration, $.declaration)
-      ),
+      [$.template_function, $.template_type],
+      [$.template_function, $.template_type, $.expression],
+      [$.template_function, $.template_type, $.qualified_identifier],
+      [$.template_function, $.template_type, $.qualified_identifier, $.qualified_type_identifier],
+      [$.template_type, $.qualified_type_identifier],
+      [$.qualified_type_identifier, $.qualified_identifier],
+      [$.comma_expression, $.initializer_list],
+      [$.expression, $._declarator],
+      [$.expression, $.structured_binding_declarator],
+      [$.expression, $._declarator, $.type_specifier],
+      [$.expression, $.identifier_parameter_pack_expansion],
+      [$.expression, $._lambda_capture_identifier],
+      [$.expression, $._lambda_capture],
+      [$.expression, $.structured_binding_declarator, $._lambda_capture_identifier],
+      [$.structured_binding_declarator, $._lambda_capture_identifier],
+      [$.parameter_list, $.argument_list],
+      [$.type_specifier, $.call_expression],
+      [$.sized_type_specifier, $.expression, $.call_expression],
+      [$.sized_type_specifier, $.expression],
+      [$.sized_type_specifier, $._top_level_expression_statement],
+      [$.expression, $.call_expression],
+      [$._binary_fold_operator, $._fold_operator],
+      [$._function_declarator_core],
+      [$._trailing_return_type_descriptor],
+      [$._trailing_abstract_pointer_declarator],
+      [$._trailing_abstract_reference_declarator],
+      [$._sizeof_reference_pointer_declarator],
+      [$._sizeof_reference_qualified_pointer_declarator],
+      [$._declarator, $.parenthesized_argument_initialized_reference_declarator],
+      [$._declarator, $.argument_initialized_rvalue_reference_declarator],
+      [$._declarator, $.parenthesized_argument_initialized_pointer_declarator],
+      [$.function_definition_pointer_declarator],
+      [$.argument_initialized_pointer_declarator],
+      [$.parenthesized_argument_initialized_pointer_declarator],
+      [$.required_parentheses_pointer_declarator],
+      [$.direct_initialized_pointer_declarator],
+      [$.variadic_pointer_declarator],
+      [$.qualified_pointer_declarator],
+      [$.abstract_qualified_pointer_declarator],
+      [$.qualified_pointer_type_declarator],
+      [$.qualified_pointer_field_declarator],
+      [$._trailing_abstract_qualified_pointer_declarator],
+      [$.null, $.expression_keyword_parameter],
+      [$.expression, $.expression_keyword_parameter],
+      [$.expression_keyword_parameter, $.operator_argument],
+      [$._declarator, $._argument_initialized_name],
+      [$.init_declarator, $._argument_initialized_declarator],
+      [$._argument_initialized_declarator, $.later_keyword_argument_init_declarator],
+      [$.expression, $.parenthesized_qualified_identifier],
+      [$.initializer_pair, $.comma_expression],
+      [$.expression_statement, $._for_statement_body],
+      [$.init_statement, $._for_statement_body],
+      [$.field_expression, $.template_method, $.template_type],
+      [$.field_expression, $.template_method],
+      [$.sizeof_operand_field_expression, $.template_method, $.template_type],
+      [$.sizeof_operand_field_expression, $.template_method],
+      [$.qualified_field_identifier, $.template_method, $.template_type],
+      [$.type_specifier, $.template_type, $.template_function, $.expression],
+      [$.splice_type_specifier, $.splice_expression],
+      [$.destructor_name, $._template_destructor_name],
+      [$._declarator, $.parenthesized_pointer_declarator],
+      [$._declarator, $.built_in_parenthesized_declarator],
+      [$.required_parentheses_function_declarator, $._direct_initialized_parenthesized_declarator],
+      [$.built_in_parenthesized_function_declarator, $._direct_initialized_declarator],
+      [$._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
+      [$.type_specifier, $._built_in_declaration_specifiers],
+      [$.type_specifier, $.call_expression, $._built_in_declaration_specifiers],
+      [$.type_specifier, $.call_expression, $.built_in_function_type_descriptor],
+      [$._declarator, $._function_definition_declarator],
+    ],
 
-    preproc_unary_expression: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $._preproc_expression)))
-      ),
+    inline: ($, original) => [...original, $._namespace_identifier, $._contextual_identifier],
 
-    preproc_binary_expression: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        ...ALTERNATIVE_BINARY_OPERATORS.map(([operator, precedence]) =>
-          prec.left(
-            precedence,
-            seq(
-              field('left', $._preproc_expression),
-              field('operator', operator),
-              field('right', $._preproc_expression)
-            )
-          )
-        )
-      ),
+    precedences: ($) => [
+      [$.argument_list, $.type_qualifier],
+      [$._expression_not_binary, $._class_name],
+    ],
 
-    preproc_argument_list: ($) =>
-      seq(
-        '(',
-        commaSep(
-          choice(
-            $._preproc_expression,
-            $.system_lib_string,
-            $.string_literal,
-            $.operator_argument,
-            alias($._declarator_operator_argument, $.operator_argument)
-          )
-        ),
-        ')'
-      ),
-    _preproc_include_token: ($, original = missingOriginalRule()) => choice(original, $.raw_string_literal),
-
-    ...preprocIf('', () => sym('_top_level_item')),
-    ...preprocIf('_in_block', () => sym('_block_item')),
-
-    placeholder_type_specifier: ($) =>
-      prec(
-        1,
-        seq(
-          field(
-            'constraint',
-            optional(
-              choice(alias($.qualified_type_identifier, $.qualified_identifier), $.template_type, $._type_identifier)
-            )
-          ),
-          choice($.auto, alias($.decltype_auto, $.decltype))
-        )
-      ),
-
-    auto: () => 'auto',
-    decltype_auto: ($) => seq('decltype', '(', $.auto, ')'),
-    decltype: ($) => seq('decltype', '(', choice($.expression, $.comma_expression), ')'),
-
-    type_specifier: ($) => cppTypeSpecifier($, $.sized_type_specifier),
-
-    _type_name_specifier: ($) => cppTypeSpecifier($, alias($._sized_type_name, $.sized_type_specifier)),
-
-    _field_declaration_specifiers: () => C.grammar.rules._declaration_specifiers,
-
-    typeof_specifier: (_, original = missingOriginalRule()) => prec.dynamic(-1, original),
-
-    type_qualifier: (_, original = missingOriginalRule()) => choice(original, 'mutable', 'constinit', 'consteval'),
-
-    type_descriptor: (_, original = missingOriginalRule()) => prec.right(original),
-
-    alignas_qualifier: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        seq(
-          choice('alignas', '_Alignas'),
-          '(',
-          choice($.parameter_pack_expansion, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
-          ')'
-        )
-      ),
-
-    attribute: (_, original = missingOriginalRule()) => prec(1, original),
-
-    annotation: ($) => seq('=', choice($.expression, $.parameter_pack_expansion)),
-
-    // Everything between the outer brackets is a rule of its own so that every context an attribute appears in shares
-    // its parse states; only the states at the final `]` differ by what may follow the attribute.
-    attribute_declaration: ($) => seq('[', $._attribute_declaration_body, ']'),
-    _attribute_declaration_body: ($) =>
-      choice(
-        seq(
-          '[',
-          optional(seq('using', field('namespace', $._contextual_identifier), ':')),
-          optional($.attribute),
-          repeat(seq(',', optional($.attribute))),
-          ']'
-        ),
-        seq('[', commaSep1($.annotation), ']')
-      ),
-
-    // When used in a trailing return type, these specifiers can now occur immediately before
-    // a compound statement. This introduces a shift/reduce conflict that needs to be resolved
-    // with an associativity.
-    _class_declaration: ($) =>
-      seq(
-        repeat(choice($.attribute_specifier, $.alignas_qualifier)),
-        optional($.ms_declspec_modifier),
-        repeat($.attribute_declaration),
-        $._class_declaration_item
-      ),
-    _class_declaration_item: ($) =>
-      prec.right(
-        seq(
-          choice(
-            field('name', $._class_name),
-            seq(
-              optional(field('name', $._class_name)),
-              optional($.virtual_specifier),
-              optional($.base_class_clause),
-              field('body', $.field_declaration_list)
-            ),
-            seq(
-              repeat1($.identifier),
-              field('name', $._class_name),
-              optional($.virtual_specifier),
-              optional($.base_class_clause),
-              field('body', alias($._macro_class_body, $.field_declaration_list))
-            )
-          ),
-          optional($.attribute_specifier)
-        )
-      ),
-
-    _macro_class_body: ($) => prec.dynamic(-1, seq('{', repeat($._macro_class_body_item), '}')),
-
-    _macro_class_body_item: ($) =>
-      choice(
-        prec.dynamic(2, choice($.field_declaration, ...cppClassMembers($))),
-        $.preproc_def,
-        $.preproc_function_def,
-        $.preproc_call,
-        alias(sym('preproc_if_in_macro_class_body'), sym('preproc_if')),
-        alias(sym('preproc_ifdef_in_macro_class_body'), sym('preproc_ifdef'))
-      ),
-
-    ...preprocIf('_in_macro_class_body', () => sym('_macro_class_body_item')),
-
-    class_specifier: ($) => seq('class', $._class_declaration),
-
-    union_specifier: ($) => seq('union', $._class_declaration),
-
-    struct_specifier: ($) => seq('struct', $._class_declaration),
-
-    _class_name: ($) =>
-      prec.right(
+    rules: {
+      _top_level_expression_statement: ($, original = missingOriginalRule()) =>
         choice(
-          $._type_identifier,
-          $.template_type,
-          $.splice_type_specifier,
-          alias($.qualified_type_identifier, $.qualified_identifier)
-        )
-      ),
-
-    function_definition: ($, original = missingOriginalRule()) =>
-      choice(
-        {
-          type: 'SEQ',
-          members: ruleMembers(original, 'SEQ').map((e) =>
-            e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
-          ),
-        },
-        // Only declarators that end in a parameter list take `= default;` or `= delete;`; offering the clause after any
-        // declarator would make `default` a keyword in every initializer, e.g. in `int c = default + 1;` when `default`
-        // is a macro.
-        {
-          type: 'SEQ',
-          members: ruleMembers(original, 'SEQ').map((e) => {
-            if (e.type !== 'FIELD') return e;
-            if (e.name === 'declarator') return field('declarator', $._function_definition_declarator);
-            return e.name === 'body' ? choice($.default_method_clause, $.delete_method_clause) : e;
-          }),
-        }
-      ),
-
-    _function_definition_declarator: ($) =>
-      choice(
-        $.function_declarator,
-        alias($.function_definition_pointer_declarator, $.pointer_declarator),
-        alias($.function_definition_reference_declarator, $.reference_declarator)
-      ),
-    function_definition_pointer_declarator: ($) => withPointerDeclarator($, $._function_definition_declarator),
-    function_definition_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._function_definition_declarator))),
-
-    declaration: ($) => cppDeclaration($),
-
-    _statement_declaration: ($) => cppDeclaration($),
-
-    // A typedef's tokens before its `;` are a rule of their own so that every context a typedef appears in shares their
-    // parse states; only the state after the `;` differs by what may follow the typedef.
-    _type_definition_head: () => withoutTrailingSemicolon(C.grammar.rules.type_definition),
-    type_definition: ($) => seq($._type_definition_head, ';'),
-    _statement_type_definition_head: () => withoutTrailingSemicolon(C.grammar.rules._statement_type_definition),
-    _statement_type_definition: ($) => seq($._statement_type_definition_head, ';'),
-
-    _built_in_declarator: ($) =>
-      choice($._built_in_parenthesized_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
-
-    // The parenthesized declarators that, with a built-in type, carry no PREC.PAREN_DECLARATOR penalty in declarations
-    // and conditions; parameters take them except the parenthesized name (see `parameter_declaration`).
-    _built_in_parenthesized_declarator: ($) =>
-      choice(
-        $._required_parentheses_declarator,
-        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
-        $._built_in_parenthesized_name_declarator
-      ),
-
-    // Parentheses around the name, as in `int(x);`, `int((x)) = 5;`, `int(x)[3];`, and `int(f)();`, without C's
-    // PREC.PAREN_DECLARATOR penalty.
-    _built_in_parenthesized_name_declarator: ($) =>
-      choice(
-        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
-        alias($.built_in_parenthesized_array_declarator, $.array_declarator),
-        alias($.built_in_parenthesized_function_declarator, $.function_declarator)
-      ),
-
-    built_in_parenthesized_declarator: ($) =>
-      seq(
-        '(',
-        field(
-          'declarator',
-          choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator))
+          original,
+          prec.dynamic(
+            -1,
+            choice(seq($.call_expression, sym('_macro_call_end')), seq($.identifier, sym('_macro_identifier_end')))
+          )
         ),
-        ')'
-      ),
-    built_in_parenthesized_array_declarator: ($) =>
-      withDeclarator(
-        C.grammar.rules.array_declarator,
+
+      _top_level_item: ($, original = missingOriginalRule()) =>
+        choice(
+          ...ruleMembers(original, 'CHOICE').filter(
+            (member) => !isOldStyleFunctionDefinition(member) && !isContextualCItem(member)
+          ),
+          sym('preproc_if'),
+          sym('preproc_ifdef'),
+          $.namespace_definition,
+          $.concept_definition,
+          $.namespace_alias_definition,
+          $.using_declaration,
+          $.alias_declaration,
+          $.static_assert_declaration,
+          $.consteval_block_declaration,
+          $.template_declaration,
+          $.template_instantiation,
+          $.module_declaration,
+          $.export_declaration,
+          $.import_declaration,
+          $.global_module_fragment_declaration,
+          $.private_module_fragment_declaration,
+          alias($.constructor_or_destructor_definition, $.function_definition),
+          alias($.operator_cast_definition, $.function_definition),
+          alias($.operator_cast_declaration, $.declaration)
+        ),
+
+      _block_item: ($, original = missingOriginalRule()) =>
+        choice(
+          ...ruleMembers(original, 'CHOICE').filter(
+            (member) =>
+              !isOldStyleFunctionDefinition(member) &&
+              !isContextualCItem(member) &&
+              !(
+                member.type === 'SYMBOL' &&
+                (member.name.startsWith('preproc_if') || member.name === '_statement_empty_declaration')
+              )
+          ),
+          $.function_definition,
+          $.declaration,
+          $.type_definition,
+          $._empty_declaration,
+          $.namespace_definition,
+          $.concept_definition,
+          $.namespace_alias_definition,
+          $.using_declaration,
+          $.alias_declaration,
+          $.static_assert_declaration,
+          $.consteval_block_declaration,
+          $.template_declaration,
+          $.template_instantiation,
+          $.export_declaration,
+          $.import_declaration,
+          alias(sym('preproc_if_in_block'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_block'), sym('preproc_ifdef')),
+          alias($.constructor_or_destructor_definition, $.function_definition),
+          alias($.operator_cast_definition, $.function_definition),
+          alias($.operator_cast_declaration, $.declaration)
+        ),
+
+      preproc_unary_expression: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          prec.left(
+            PREC.UNARY,
+            seq(field('operator', choice('not', 'compl')), field('argument', $._preproc_expression))
+          )
+        ),
+
+      preproc_binary_expression: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          ...ALTERNATIVE_BINARY_OPERATORS.map(([operator, precedence]) =>
+            prec.left(
+              precedence,
+              seq(
+                field('left', $._preproc_expression),
+                field('operator', operator),
+                field('right', $._preproc_expression)
+              )
+            )
+          )
+        ),
+
+      preproc_argument_list: ($) =>
+        seq(
+          '(',
+          commaSep(
+            choice(
+              $._preproc_expression,
+              $.system_lib_string,
+              $.string_literal,
+              $.operator_argument,
+              alias($._declarator_operator_argument, $.operator_argument)
+            )
+          ),
+          ')'
+        ),
+      _preproc_include_token: ($, original = missingOriginalRule()) => choice(original, $.raw_string_literal),
+
+      ...preprocIf('', () => sym('_top_level_item')),
+      ...preprocIf('_in_block', () => sym('_block_item')),
+
+      placeholder_type_specifier: ($) =>
+        prec(
+          1,
+          seq(
+            field(
+              'constraint',
+              optional(
+                choice(alias($.qualified_type_identifier, $.qualified_identifier), $.template_type, $._type_identifier)
+              )
+            ),
+            choice($.auto, alias($.decltype_auto, $.decltype))
+          )
+        ),
+
+      auto: () => 'auto',
+      decltype_auto: ($) => seq('decltype', '(', $.auto, ')'),
+      decltype: ($) => seq('decltype', '(', choice($.expression, $.comma_expression), ')'),
+
+      type_specifier: ($) => cppTypeSpecifier($, $.sized_type_specifier),
+
+      _type_name_specifier: ($) => cppTypeSpecifier($, alias($._sized_type_name, $.sized_type_specifier)),
+
+      _field_declaration_specifiers: () => C.grammar.rules._declaration_specifiers,
+
+      typeof_specifier: (_, original = missingOriginalRule()) => prec.dynamic(-1, original),
+
+      type_qualifier: (_, original = missingOriginalRule()) => choice(original, 'mutable', 'constinit', 'consteval'),
+
+      type_descriptor: (_, original = missingOriginalRule()) => prec.right(original),
+
+      alignas_qualifier: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          seq(
+            choice('alignas', '_Alignas'),
+            '(',
+            choice($.parameter_pack_expansion, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
+            ')'
+          )
+        ),
+
+      attribute: (_, original = missingOriginalRule()) => prec(1, original),
+
+      annotation: ($) => seq('=', choice($.expression, $.parameter_pack_expansion)),
+
+      // Everything between the outer brackets is a rule of its own so that every context an attribute appears in shares
+      // its parse states; only the states at the final `]` differ by what may follow the attribute.
+      attribute_declaration: ($) => seq('[', $._attribute_declaration_body, ']'),
+      _attribute_declaration_body: ($) =>
+        choice(
+          seq(
+            '[',
+            optional(seq('using', field('namespace', $._contextual_identifier), ':')),
+            optional($.attribute),
+            repeat(seq(',', optional($.attribute))),
+            ']'
+          ),
+          seq('[', commaSep1($.annotation), ']')
+        ),
+
+      // When used in a trailing return type, these specifiers can now occur immediately before
+      // a compound statement. This introduces a shift/reduce conflict that needs to be resolved
+      // with an associativity.
+      _class_declaration: ($) =>
+        seq(
+          repeat(choice($.attribute_specifier, $.alignas_qualifier)),
+          optional($.ms_declspec_modifier),
+          repeat($.attribute_declaration),
+          $._class_declaration_item
+        ),
+      _class_declaration_item: ($) =>
+        prec.right(
+          seq(
+            choice(
+              field('name', $._class_name),
+              seq(
+                optional(field('name', $._class_name)),
+                optional($.virtual_specifier),
+                optional($.base_class_clause),
+                field('body', $.field_declaration_list)
+              ),
+              seq(
+                repeat1($.identifier),
+                field('name', $._class_name),
+                optional($.virtual_specifier),
+                optional($.base_class_clause),
+                field('body', alias($._macro_class_body, $.field_declaration_list))
+              )
+            ),
+            optional($.attribute_specifier)
+          )
+        ),
+
+      _macro_class_body: ($) => prec.dynamic(-1, seq('{', repeat($._macro_class_body_item), '}')),
+
+      _macro_class_body_item: ($) =>
+        choice(
+          prec.dynamic(2, choice($.field_declaration, ...cppClassMembers($))),
+          $.preproc_def,
+          $.preproc_function_def,
+          $.preproc_call,
+          alias(sym('preproc_if_in_macro_class_body'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_macro_class_body'), sym('preproc_ifdef'))
+        ),
+
+      ...preprocIf('_in_macro_class_body', () => sym('_macro_class_body_item')),
+
+      class_specifier: ($) => seq('class', $._class_declaration),
+
+      union_specifier: ($) => seq('union', $._class_declaration),
+
+      struct_specifier: ($) => seq('struct', $._class_declaration),
+
+      _class_name: ($) =>
+        prec.right(
+          choice(
+            $._type_identifier,
+            $.template_type,
+            $.splice_type_specifier,
+            alias($.qualified_type_identifier, $.qualified_identifier)
+          )
+        ),
+
+      function_definition: ($, original = missingOriginalRule()) =>
+        choice(
+          {
+            type: 'SEQ',
+            members: ruleMembers(original, 'SEQ').map((e) =>
+              e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
+            ),
+          },
+          // Only declarators that end in a parameter list take `= default;` or `= delete;`; offering the clause after any
+          // declarator would make `default` a keyword in every initializer, e.g. in `int c = default + 1;` when `default`
+          // is a macro.
+          {
+            type: 'SEQ',
+            members: ruleMembers(original, 'SEQ').map((e) => {
+              if (e.type !== 'FIELD') return e;
+              if (e.name === 'declarator') return field('declarator', $._function_definition_declarator);
+              return e.name === 'body' ? choice($.default_method_clause, $.delete_method_clause) : e;
+            }),
+          }
+        ),
+
+      _function_definition_declarator: ($) =>
+        choice(
+          $.function_declarator,
+          alias($.function_definition_pointer_declarator, $.pointer_declarator),
+          alias($.function_definition_reference_declarator, $.reference_declarator)
+        ),
+      function_definition_pointer_declarator: ($) => withPointerDeclarator($, $._function_definition_declarator),
+      function_definition_reference_declarator: ($) =>
+        prec.dynamic(1, prec.right(withReferenceDeclarator($, $._function_definition_declarator))),
+
+      declaration: ($) => cppDeclaration($),
+
+      _statement_declaration: ($) => cppDeclaration($),
+
+      // A typedef's tokens before its `;` are a rule of their own so that every context a typedef appears in shares their
+      // parse states; only the state after the `;` differs by what may follow the typedef.
+      _type_definition_head: () => withoutTrailingSemicolon(C.grammar.rules.type_definition),
+      type_definition: ($) => seq($._type_definition_head, ';'),
+      _statement_type_definition_head: () => withoutTrailingSemicolon(C.grammar.rules._statement_type_definition),
+      _statement_type_definition: ($) => seq($._statement_type_definition_head, ';'),
+
+      _built_in_declarator: ($) =>
+        choice($._built_in_parenthesized_declarator, alias($.required_parentheses_init_declarator, $.init_declarator)),
+
+      // The parenthesized declarators that, with a built-in type, carry no PREC.PAREN_DECLARATOR penalty in declarations
+      // and conditions; parameters take them except the parenthesized name (see `parameter_declaration`).
+      _built_in_parenthesized_declarator: ($) =>
+        choice(
+          $._required_parentheses_declarator,
+          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+          $._built_in_parenthesized_name_declarator
+        ),
+
+      // Parentheses around the name, as in `int(x);`, `int((x)) = 5;`, `int(x)[3];`, and `int(f)();`, without C's
+      // PREC.PAREN_DECLARATOR penalty.
+      _built_in_parenthesized_name_declarator: ($) =>
         choice(
           alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
-          alias($.built_in_parenthesized_array_declarator, $.array_declarator)
-        )
-      ),
-    built_in_parenthesized_function_declarator: ($) =>
-      prec.dynamic(
-        PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
+          alias($.built_in_parenthesized_array_declarator, $.array_declarator),
+          alias($.built_in_parenthesized_function_declarator, $.function_declarator)
+        ),
+
+      built_in_parenthesized_declarator: ($) =>
         seq(
-          field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
-          $._function_declarator_seq
-        )
-      ),
-
-    _built_in_declaration_specifiers: ($) =>
-      prec.right(
-        seq(
-          repeat($._declaration_modifiers),
-          field('type', choice($.primitive_type, $.sized_type_specifier)),
-          repeat($._non_macro_declaration_modifiers)
-        )
-      ),
-
-    virtual_specifier: () => choice('final', 'override'),
-
-    _non_macro_declaration_modifiers: ($, original = missingOriginalRule()) => choice(original, 'virtual'),
-
-    explicit_function_specifier: ($) => choice('explicit', prec(PREC.CALL, seq('explicit', '(', $.expression, ')'))),
-
-    base_class_clause: ($) =>
-      seq(
-        ':',
-        commaSep1(
-          seq(
-            repeat($.attribute_declaration),
-            optional(
-              choice(
-                $.access_specifier,
-                seq($.access_specifier, optional('virtual')),
-                seq('virtual', optional($.access_specifier))
-              )
-            ),
-            choice($._class_name, $.pack_index_type),
-            optional('...')
-          )
-        )
-      ),
-
-    enum_specifier: ($) =>
-      prec.right(
-        seq(
-          $._enum_head,
-          choice(
-            seq(
-              field('name', $._class_name),
-              optional($._enum_base_clause),
-              optional(field('body', $.enumerator_list))
-            ),
-            field('body', $.enumerator_list)
+          '(',
+          field(
+            'declarator',
+            choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator))
           ),
-          optional($.attribute_specifier)
-        )
-      ),
+          ')'
+        ),
+      built_in_parenthesized_array_declarator: ($) =>
+        withDeclarator(
+          C.grammar.rules.array_declarator,
+          choice(
+            alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+            alias($.built_in_parenthesized_array_declarator, $.array_declarator)
+          )
+        ),
+      built_in_parenthesized_function_declarator: ($) =>
+        prec.dynamic(
+          PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
+          seq(
+            field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+            $._function_declarator_seq
+          )
+        ),
 
-    // A rule of its own so that every context an enum appears in shares the states before its name or body.
-    _enum_head: ($) => seq('enum', optional(choice('class', 'struct')), repeat($.attribute_declaration)),
+      _built_in_declaration_specifiers: ($) =>
+        prec.right(
+          seq(
+            repeat($._declaration_modifiers),
+            field('type', choice($.primitive_type, $.sized_type_specifier)),
+            repeat($._non_macro_declaration_modifiers)
+          )
+        ),
 
-    _enum_base_clause: ($) =>
-      prec.left(
+      virtual_specifier: () => choice('final', 'override'),
+
+      _non_macro_declaration_modifiers: ($, original = missingOriginalRule()) => choice(original, 'virtual'),
+
+      explicit_function_specifier: ($) => choice('explicit', prec(PREC.CALL, seq('explicit', '(', $.expression, ')'))),
+
+      base_class_clause: ($) =>
         seq(
           ':',
-          field(
-            'base',
-            choice(
-              alias($.qualified_type_identifier, $.qualified_identifier),
-              $._type_identifier,
-              $.pack_index_type,
-              $.primitive_type,
-              alias($._sized_type_name, $.sized_type_specifier)
+          commaSep1(
+            seq(
+              repeat($.attribute_declaration),
+              optional(
+                choice(
+                  $.access_specifier,
+                  seq($.access_specifier, optional('virtual')),
+                  seq('virtual', optional($.access_specifier))
+                )
+              ),
+              choice($._class_name, $.pack_index_type),
+              optional('...')
             )
           )
-        )
-      ),
-
-    // The `auto` storage class is removed in C++0x in order to allow for the `auto` type.
-    storage_class_specifier: (_, original = missingOriginalRule()) =>
-      choice(
-        ...ruleMembers(original, 'CHOICE').filter((member) => !(member.type === 'STRING' && member.value === 'auto')),
-        'thread_local'
-      ),
-
-    dependent_type: ($) => prec.dynamic(-1, prec.right(seq('typename', $.type_specifier))),
-
-    module_name: ($) => seq($._contextual_identifier, repeat(seq('.', $._contextual_identifier))),
-
-    module_partition: ($) => seq(':', $.module_name),
-
-    module_declaration: ($) =>
-      seq(
-        optional('export'),
-        'module',
-        field('name', $.module_name),
-        field('partition', optional($.module_partition)),
-        optional($.attribute_declaration),
-        ';'
-      ),
-
-    export_declaration: ($) => prec(1, seq('export', choice($._block_item, prec.dynamic(1, $.declaration_list)))),
-
-    import_declaration: ($) =>
-      seq(
-        'import',
-        choice(
-          field('name', $.module_name),
-          field('partition', $.module_partition),
-          field('header', choice($.string_literal, $.system_lib_string))
         ),
-        optional($.attribute_declaration),
-        ';'
-      ),
 
-    global_module_fragment_declaration: () => seq('module', ';'),
-    private_module_fragment_declaration: () => seq('module', ':', 'private', ';'),
+      enum_specifier: ($) =>
+        prec.right(
+          seq(
+            $._enum_head,
+            choice(
+              seq(
+                field('name', $._class_name),
+                optional($._enum_base_clause),
+                optional(field('body', $.enumerator_list))
+              ),
+              field('body', $.enumerator_list)
+            ),
+            optional($.attribute_specifier)
+          )
+        ),
 
-    template_declaration: ($) =>
-      seq(
-        'template',
-        field('parameters', $.template_parameter_list),
-        optional($.requires_clause),
-        choice(
-          $._empty_declaration,
-          $.alias_declaration,
-          $.declaration,
-          $.template_declaration,
-          $.function_definition,
-          $.concept_definition,
-          $.friend_declaration,
-          alias($.constructor_or_destructor_declaration, $.declaration),
-          alias($.constructor_or_destructor_definition, $.function_definition),
-          alias($.operator_cast_declaration, $.declaration),
-          alias($.operator_cast_definition, $.function_definition)
-        )
-      ),
+      // A rule of its own so that every context an enum appears in shares the states before its name or body.
+      _enum_head: ($) => seq('enum', optional(choice('class', 'struct')), repeat($.attribute_declaration)),
 
-    template_instantiation: ($) =>
-      prec(
-        1,
-        seq(
-          optional('extern'),
-          'template',
-          choice(
-            seq(optional($._declaration_specifiers), field('declarator', $._declarator)),
-            // `template class Ring<int>;` instantiates a class and declares nothing.
+      _enum_base_clause: ($) =>
+        prec.left(
+          seq(
+            ':',
             field(
-              'type',
+              'base',
               choice(
-                alias($._instantiated_class_specifier, $.class_specifier),
-                alias($._instantiated_struct_specifier, $.struct_specifier),
-                alias($._instantiated_union_specifier, $.union_specifier)
+                alias($.qualified_type_identifier, $.qualified_identifier),
+                $._type_identifier,
+                $.pack_index_type,
+                $.primitive_type,
+                alias($._sized_type_name, $.sized_type_specifier)
               )
             )
-          ),
-          ';'
-        )
-      ),
-
-    // An explicit instantiation cannot define the class, so these specifiers have no body.
-    _instantiated_class_specifier: ($) => seq('class', $._instantiated_class_name),
-
-    _instantiated_struct_specifier: ($) => seq('struct', $._instantiated_class_name),
-
-    _instantiated_union_specifier: ($) => seq('union', $._instantiated_class_name),
-
-    _instantiated_class_name: ($) =>
-      seq(
-        // Clang rejects `alignas`, `[[...]]`, and trailing attributes here, but accepts these vendor attributes.
-        repeat($.attribute_specifier),
-        optional($.ms_declspec_modifier),
-        // The name is a template-id, or a qualified name such as `Outer<int>::Inner` for a member class.
-        field('name', choice($.template_type, alias($.qualified_type_identifier, $.qualified_identifier)))
-      ),
-
-    template_parameter_list: ($) =>
-      seq(
-        '<',
-        commaSep(
-          choice(
-            $.parameter_declaration,
-            $.optional_parameter_declaration,
-            $.type_parameter_declaration,
-            $.variadic_parameter_declaration,
-            $.variadic_type_parameter_declaration,
-            $.optional_type_parameter_declaration,
-            $.template_template_parameter_declaration
           )
         ),
-        alias(sym('_template_close'), '>')
-      ),
 
-    type_parameter_declaration: ($) => prec(1, seq(choice('typename', 'class'), optional($._type_identifier))),
-
-    variadic_type_parameter_declaration: ($) =>
-      prec(1, seq(choice('typename', 'class'), '...', optional($._type_identifier))),
-
-    optional_type_parameter_declaration: ($) =>
-      seq(
-        choice('typename', 'class'),
-        optional(field('name', $._type_identifier)),
-        '=',
-        field('default_type', $.type_specifier)
-      ),
-
-    template_template_parameter_declaration: ($) =>
-      seq(
-        'template',
-        field('parameters', $.template_parameter_list),
+      // The `auto` storage class is removed in C++0x in order to allow for the `auto` type.
+      storage_class_specifier: (_, original = missingOriginalRule()) =>
         choice(
-          $.type_parameter_declaration,
-          $.variadic_type_parameter_declaration,
-          $.optional_type_parameter_declaration
-        )
-      ),
+          ...ruleMembers(original, 'CHOICE').filter((member) => !(member.type === 'STRING' && member.value === 'auto')),
+          'thread_local'
+        ),
 
-    parameter_list: ($) => seq('(', optional($._parameter_clause), ')'),
+      dependent_type: ($) => prec.dynamic(-1, prec.right(seq('typename', $.type_specifier))),
 
-    ...preprocIf('_in_parameter_clause', () => sym('_parameter_clause'), 0, false),
-    ...preprocIf('_in_parameter_prefix', () => sym('_parameter_prefix'), 0, false),
-    ...preprocIf('_in_parameter_group', () => sym('_non_variadic_parameter_clause'), 0, false),
+      module_name: ($) => seq($._contextual_identifier, repeat(seq('.', $._contextual_identifier))),
 
-    _parameter_clause_item: ($) =>
-      choice(
-        $.parameter_declaration,
-        $.explicit_object_parameter_declaration,
-        $.optional_parameter_declaration,
-        $.variadic_parameter_declaration,
-        alias($.expression_keyword_parameter, $.parameter_declaration)
-      ),
+      module_partition: ($) => seq(':', $.module_name),
 
-    _non_variadic_parameter_group: ($) =>
-      choice(
-        $._parameter_clause_item,
-        alias(sym('preproc_if_in_parameter_group'), sym('preproc_if')),
-        alias(sym('preproc_ifdef_in_parameter_group'), sym('preproc_ifdef'))
-      ),
+      module_declaration: ($) =>
+        seq(
+          optional('export'),
+          'module',
+          field('name', $.module_name),
+          field('partition', optional($.module_partition)),
+          optional($.attribute_declaration),
+          ';'
+        ),
 
-    _parameter_prefix: ($) =>
-      repeat1(
+      export_declaration: ($) => prec(1, seq('export', choice($._block_item, prec.dynamic(1, $.declaration_list)))),
+
+      import_declaration: ($) =>
+        seq(
+          'import',
+          choice(
+            field('name', $.module_name),
+            field('partition', $.module_partition),
+            field('header', choice($.string_literal, $.system_lib_string))
+          ),
+          optional($.attribute_declaration),
+          ';'
+        ),
+
+      global_module_fragment_declaration: () => seq('module', ';'),
+      private_module_fragment_declaration: () => seq('module', ':', 'private', ';'),
+
+      template_declaration: ($) =>
+        seq(
+          'template',
+          field('parameters', $.template_parameter_list),
+          optional($.requires_clause),
+          choice(
+            $._empty_declaration,
+            $.alias_declaration,
+            $.declaration,
+            $.template_declaration,
+            $.function_definition,
+            $.concept_definition,
+            $.friend_declaration,
+            alias($.constructor_or_destructor_declaration, $.declaration),
+            alias($.constructor_or_destructor_definition, $.function_definition),
+            alias($.operator_cast_declaration, $.declaration),
+            alias($.operator_cast_definition, $.function_definition)
+          )
+        ),
+
+      template_instantiation: ($) =>
+        prec(
+          1,
+          seq(
+            optional('extern'),
+            'template',
+            choice(
+              seq(optional($._declaration_specifiers), field('declarator', $._declarator)),
+              // `template class Ring<int>;` instantiates a class and declares nothing.
+              field(
+                'type',
+                choice(
+                  alias($._instantiated_class_specifier, $.class_specifier),
+                  alias($._instantiated_struct_specifier, $.struct_specifier),
+                  alias($._instantiated_union_specifier, $.union_specifier)
+                )
+              )
+            ),
+            ';'
+          )
+        ),
+
+      // An explicit instantiation cannot define the class, so these specifiers have no body.
+      _instantiated_class_specifier: ($) => seq('class', $._instantiated_class_name),
+
+      _instantiated_struct_specifier: ($) => seq('struct', $._instantiated_class_name),
+
+      _instantiated_union_specifier: ($) => seq('union', $._instantiated_class_name),
+
+      _instantiated_class_name: ($) =>
+        seq(
+          // Clang rejects `alignas`, `[[...]]`, and trailing attributes here, but accepts these vendor attributes.
+          repeat($.attribute_specifier),
+          optional($.ms_declspec_modifier),
+          // The name is a template-id, or a qualified name such as `Outer<int>::Inner` for a member class.
+          field('name', choice($.template_type, alias($.qualified_type_identifier, $.qualified_identifier)))
+        ),
+
+      template_parameter_list: ($) =>
+        seq(
+          '<',
+          commaSep(
+            choice(
+              $.parameter_declaration,
+              $.optional_parameter_declaration,
+              $.type_parameter_declaration,
+              $.variadic_parameter_declaration,
+              $.variadic_type_parameter_declaration,
+              $.optional_type_parameter_declaration,
+              $.template_template_parameter_declaration
+            )
+          ),
+          alias(sym('_template_close'), '>')
+        ),
+
+      type_parameter_declaration: ($) => prec(1, seq(choice('typename', 'class'), optional($._type_identifier))),
+
+      variadic_type_parameter_declaration: ($) =>
+        prec(1, seq(choice('typename', 'class'), '...', optional($._type_identifier))),
+
+      optional_type_parameter_declaration: ($) =>
+        seq(
+          choice('typename', 'class'),
+          optional(field('name', $._type_identifier)),
+          '=',
+          field('default_type', $.type_specifier)
+        ),
+
+      template_template_parameter_declaration: ($) =>
+        seq(
+          'template',
+          field('parameters', $.template_parameter_list),
+          choice(
+            $.type_parameter_declaration,
+            $.variadic_type_parameter_declaration,
+            $.optional_type_parameter_declaration
+          )
+        ),
+
+      parameter_list: ($) => seq('(', optional($._parameter_clause), ')'),
+
+      ...preprocIf('_in_parameter_clause', () => sym('_parameter_clause'), 0, false),
+      ...preprocIf('_in_parameter_prefix', () => sym('_parameter_prefix'), 0, false),
+      ...preprocIf('_in_parameter_group', () => sym('_non_variadic_parameter_clause'), 0, false),
+
+      _parameter_clause_item: ($) =>
         choice(
-          seq($._non_variadic_parameter_group, ','),
-          alias(sym('preproc_if_in_parameter_prefix'), sym('preproc_if')),
-          alias(sym('preproc_ifdef_in_parameter_prefix'), sym('preproc_ifdef'))
-        )
-      ),
+          $.parameter_declaration,
+          $.explicit_object_parameter_declaration,
+          $.optional_parameter_declaration,
+          $.variadic_parameter_declaration,
+          alias($.expression_keyword_parameter, $.parameter_declaration)
+        ),
 
-    _non_variadic_parameter_clause: ($) => seq(optional($._parameter_prefix), $._non_variadic_parameter_group),
-
-    _parameter_clause: ($) =>
-      seq(
-        optional($._parameter_prefix),
+      _non_variadic_parameter_group: ($) =>
         choice(
-          $.variadic_parameter,
-          seq($._parameter_clause_item, optional($.variadic_parameter)),
+          $._parameter_clause_item,
+          alias(sym('preproc_if_in_parameter_group'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_parameter_group'), sym('preproc_ifdef'))
+        ),
+
+      _parameter_prefix: ($) =>
+        repeat1(
+          choice(
+            seq($._non_variadic_parameter_group, ','),
+            alias(sym('preproc_if_in_parameter_prefix'), sym('preproc_if')),
+            alias(sym('preproc_ifdef_in_parameter_prefix'), sym('preproc_ifdef'))
+          )
+        ),
+
+      _non_variadic_parameter_clause: ($) => seq(optional($._parameter_prefix), $._non_variadic_parameter_group),
+
+      _parameter_clause: ($) =>
+        seq(
+          optional($._parameter_prefix),
+          choice(
+            $.variadic_parameter,
+            seq($._parameter_clause_item, optional($.variadic_parameter)),
+            prec.dynamic(
+              PREC.CERTAIN_DECLARATION,
+              seq(alias($._non_pack_unnamed_parameter, $.parameter_declaration), $.variadic_parameter)
+            ),
+            alias(sym('preproc_if_in_parameter_clause'), sym('preproc_if')),
+            alias(sym('preproc_ifdef_in_parameter_clause'), sym('preproc_ifdef'))
+          )
+        ),
+
+      _non_pack_unnamed_parameter: ($) =>
+        seq(
+          replaceRuleField(
+            C.grammar.rules._declaration_specifiers,
+            'type',
+            choice(
+              alias($._non_pack_builtin_type, $.primitive_type),
+              alias($._non_pack_sized_type, $.sized_type_specifier)
+            )
+          ),
+          field('declarator', optional($._abstract_declarator))
+        ),
+
+      primitive_type: ($, original = missingOriginalRule()) => {
+        if (original.type !== 'TOKEN') throw new Error('Expected an inherited primitive type token.');
+        const typedefNames = ruleMembers(original.content, 'CHOICE').filter(
+          (rule) => rule.type !== 'STRING' || !BUILTIN_TYPE_KEYWORDS.includes(rule.value)
+        );
+        return choice(token(prec(1, choice(...typedefNames))), $._non_pack_builtin_type);
+      },
+
+      _non_pack_builtin_type: () => token(prec(1, choice(...BUILTIN_TYPE_KEYWORDS))),
+
+      _non_pack_sized_type: ($) =>
+        replaceRuleField(
+          C.grammar.rules.sized_type_specifier,
+          'type',
+          optional(alias($._non_pack_builtin_type, $.primitive_type))
+        ),
+
+      explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
+
+      // A parameter list competes with the argument list of a direct initialization. With a built-in type, the argument
+      // reading of a parameter such as `int (*pf)()` calls a function-style cast, which is never valid, and that of
+      // `int (*p)` is a cast that [dcl.ambig.res] reads as a parameter; with any other type, `name(*obj)()` in
+      // `std::string s(name(*obj)());` is commonly a call, so the parameter reading with parentheses
+      // (PREC.PAREN_DECLARATOR) keeps losing to it there.
+      // A named parameter may end with annotations, such as `UNUSED` and `ATTR(1)` in
+      // `int (*callback)(int) UNUSED ATTR(1)`; an unnamed one takes only attributes.
+      parameter_declaration: ($) =>
+        choice(
+          seq(
+            $._declaration_specifiers,
+            choice(
+              seq(field('declarator', $._parameter_declarator), repeat($._parameter_annotation)),
+              seq(optional(field('declarator', $._abstract_declarator)), repeat($.attribute_specifier))
+            )
+          ),
           prec.dynamic(
             PREC.CERTAIN_DECLARATION,
-            seq(alias($._non_pack_unnamed_parameter, $.parameter_declaration), $.variadic_parameter)
-          ),
-          alias(sym('preproc_if_in_parameter_clause'), sym('preproc_if')),
-          alias(sym('preproc_ifdef_in_parameter_clause'), sym('preproc_ifdef'))
-        )
-      ),
-
-    _non_pack_unnamed_parameter: ($) =>
-      seq(
-        replaceRuleField(
-          C.grammar.rules._declaration_specifiers,
-          'type',
-          choice(
-            alias($._non_pack_builtin_type, $.primitive_type),
-            alias($._non_pack_sized_type, $.sized_type_specifier)
+            seq(
+              $._built_in_declaration_specifiers,
+              field('declarator', $._parameter_parenthesized_declarator),
+              repeat($._parameter_annotation)
+            )
           )
         ),
-        field('declarator', optional($._abstract_declarator))
-      ),
 
-    primitive_type: ($, original = missingOriginalRule()) => {
-      if (original.type !== 'TOKEN') throw new Error('Expected an inherited primitive type token.');
-      const typedefNames = ruleMembers(original.content, 'CHOICE').filter(
-        (rule) => rule.type !== 'STRING' || !BUILTIN_TYPE_KEYWORDS.includes(rule.value)
-      );
-      return choice(token(prec(1, choice(...typedefNames))), $._non_pack_builtin_type);
-    },
-
-    _non_pack_builtin_type: () => token(prec(1, choice(...BUILTIN_TYPE_KEYWORDS))),
-
-    _non_pack_sized_type: ($) =>
-      replaceRuleField(
-        C.grammar.rules.sized_type_specifier,
-        'type',
-        optional(alias($._non_pack_builtin_type, $.primitive_type))
-      ),
-
-    explicit_object_parameter_declaration: ($) => seq($.this, $.parameter_declaration),
-
-    // A parameter list competes with the argument list of a direct initialization. With a built-in type, the argument
-    // reading of a parameter such as `int (*pf)()` calls a function-style cast, which is never valid, and that of
-    // `int (*p)` is a cast that [dcl.ambig.res] reads as a parameter; with any other type, `name(*obj)()` in
-    // `std::string s(name(*obj)());` is commonly a call, so the parameter reading with parentheses
-    // (PREC.PAREN_DECLARATOR) keeps losing to it there.
-    parameter_declaration: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        prec.dynamic(
-          PREC.CERTAIN_DECLARATION,
-          seq(
-            $._built_in_declaration_specifiers,
-            field('declarator', $._parameter_parenthesized_declarator),
-            repeat($.attribute_specifier)
-          )
-        )
-      ),
-
-    // Unlike in declarations, a parenthesized name such as `int (x)` competes here with the function type `int(x)`,
-    // which [dcl.ambig.res] prefers when `x` names a type.
-    _parameter_parenthesized_declarator: ($) =>
-      choice($._required_parentheses_declarator, alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-
-    optional_parameter_declaration: ($) =>
-      choice(
-        seq(
-          $._declaration_specifiers,
-          field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
-          '=',
-          field('default_value', $.expression)
+      // `_declarator` whose pointer declarators keep a macro-cased name after a leading marker: there the name lexes as
+      // `_macro_case_identifier`, since the marker may also be the declarator and the name a trailing annotation, so
+      // `int *CC FOO[3]` would otherwise lose its declarator reading.
+      _parameter_declarator: ($) =>
+        choice(
+          $.attributed_declarator,
+          alias($._parameter_pointer_declarator, $.pointer_declarator),
+          $.function_declarator,
+          $.array_declarator,
+          $.parenthesized_declarator,
+          $.identifier,
+          alias(choice('va_arg', '__builtin_va_arg', ...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
+          $.reference_declarator,
+          alias($.qualified_pointer_declarator, $.qualified_identifier),
+          $.qualified_identifier,
+          $.template_function,
+          $.operator_name,
+          $.destructor_name,
+          $.structured_binding_declarator
         ),
-        prec.dynamic(
-          PREC.CERTAIN_DECLARATION,
+
+      // The macro-cased forms are valid only after a first leading marker, since right after `*` the token would take
+      // the operand of an expression reading such as `foo(width * HEIGHT)`.
+      _parameter_pointer_declarator: ($) => {
+        const modifier = choice(
+          $.ms_pointer_modifier,
+          $.type_qualifier,
+          $.attribute_specifier,
+          prec(-1, $.ms_call_modifier),
+          $._conditional_macro_specifier
+        );
+        return prec.dynamic(
+          1,
+          prec.right(
+            seq(
+              optional($.ms_based_modifier),
+              optional(prec.dynamic(2, $.ms_call_modifier)),
+              '*',
+              repeat($.attribute_declaration),
+              repeat(modifier),
+              choice(
+                field('declarator', $._parameter_declarator),
+                seq(
+                  choice($.macro_specifier, alias($._leading_macro_call_expression, $.call_expression)),
+                  repeat(
+                    choice(
+                      modifier,
+                      $.macro_specifier,
+                      alias($._macro_case_macro_specifier, $.macro_specifier),
+                      alias($._later_macro_call_expression, $.call_expression)
+                    )
+                  ),
+                  field('declarator', choice($._parameter_declarator, $._macro_case_parameter_declarator))
+                )
+              )
+            )
+          )
+        );
+      },
+
+      // A first leading marker with arguments, as in `const void *__sized_by(n) buffer`, outranks the reading of its name
+      // and arguments as a function declarator (+1) whose following name is a trailing annotation (-1), whatever the
+      // arguments are; system headers write this marker, while a function-typed parameter returning a pointer and
+      // annotated after its parameter list is rare.
+      _leading_macro_call_expression: ($) => leadingMacroCallRule($, 2, $.identifier),
+
+      // A later one, as `FOO(int)` in `int *CC FOO(int) UNUSED`, ranks below that reading.
+      _later_macro_call_expression: ($) =>
+        leadingMacroCallRule($, -2, choice($.identifier, alias(sym('_macro_case_identifier'), $.identifier))),
+
+      _macro_case_macro_specifier: () =>
+        prec.dynamic(-2, field('name', alias(sym('_macro_case_identifier'), sym('identifier')))),
+
+      // The declarator forms that start with a name, split as `_declarator` is.
+      _macro_case_parameter_declarator: ($) =>
+        choice(
+          alias($._macro_case_attributed_declarator, $.attributed_declarator),
+          $._macro_case_unattributed_declarator
+        ),
+
+      _macro_case_unattributed_declarator: ($) =>
+        choice(
+          alias(sym('_macro_case_identifier'), $.identifier),
+          alias($._macro_case_array_declarator, $.array_declarator),
+          alias($._macro_case_function_declarator, $.function_declarator)
+        ),
+
+      _macro_case_attributed_declarator: ($) =>
+        seq($._macro_case_unattributed_declarator, repeat1($.attribute_declaration)),
+
+      _macro_case_array_declarator: ($) =>
+        withDeclarator(C.grammar.rules.array_declarator, $._macro_case_parameter_declarator),
+
+      _macro_case_function_declarator: ($) =>
+        prec.dynamic(1, seq(field('declarator', $._macro_case_parameter_declarator), $._function_declarator_seq)),
+
+      // A standard attribute right after the declarator belongs to an `attributed_declarator`, so only one after a macro
+      // annotation, as in `int x UNUSED [[maybe_unused]]`, is an annotation of its own.
+      _parameter_annotation: ($) =>
+        choice(
+          $.attribute_specifier,
           seq(
-            $._built_in_declaration_specifiers,
-            field('declarator', $._parameter_parenthesized_declarator),
+            choice(
+              alias($._trailing_macro_specifier, $.macro_specifier),
+              alias($._trailing_macro_call_expression, $.call_expression)
+            ),
+            repeat($.attribute_declaration)
+          )
+        ),
+
+      // Unlike in declarations, a parenthesized name such as `int (x)` competes here with the function type `int(x)`,
+      // which [dcl.ambig.res] prefers when `x` names a type.
+      _parameter_parenthesized_declarator: ($) =>
+        choice(
+          $._required_parentheses_declarator,
+          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+        ),
+
+      optional_parameter_declaration: ($) =>
+        choice(
+          seq(
+            $._declaration_specifiers,
+            choice(
+              seq(field('declarator', $._parameter_declarator), repeat($._parameter_annotation)),
+              field('declarator', optional($.abstract_reference_declarator))
+            ),
             '=',
             field('default_value', $.expression)
+          ),
+          prec.dynamic(
+            PREC.CERTAIN_DECLARATION,
+            seq(
+              $._built_in_declaration_specifiers,
+              field('declarator', $._parameter_parenthesized_declarator),
+              repeat($._parameter_annotation),
+              '=',
+              field('default_value', $.expression)
+            )
           )
-        )
-      ),
+        ),
 
-    variadic_parameter_declaration: ($) => seq($._declaration_specifiers, field('declarator', $._variadic_declarator)),
+      // Only a named pack takes annotations, so that after `...` a name such as `I` in `size_t... I` lexes as the pack's
+      // name rather than as an annotation.
+      variadic_parameter_declaration: ($) =>
+        seq(
+          $._declaration_specifiers,
+          choice(
+            seq(field('declarator', $._annotatable_variadic_declarator), repeat1($._parameter_annotation)),
+            field('declarator', $._variadic_declarator)
+          )
+        ),
 
-    variadic_declarator: ($) => seq('...', optional($._contextual_identifier)),
+      variadic_declarator: ($) => seq('...', optional($._contextual_identifier)),
 
-    _variadic_declarator: ($) =>
-      choice(
-        $.variadic_declarator,
-        alias($.variadic_array_declarator, $.array_declarator),
-        alias($.variadic_pointer_declarator, $.pointer_declarator),
-        alias($.variadic_reference_declarator, $.reference_declarator)
-      ),
+      // `_variadic_declarator` whose pack is named, as in `T&&... args`.
+      _annotatable_variadic_declarator: ($) =>
+        choice(
+          alias($._named_variadic_declarator, $.variadic_declarator),
+          alias($._annotatable_variadic_array_declarator, $.array_declarator),
+          alias($._annotatable_variadic_pointer_declarator, $.pointer_declarator),
+          alias($._annotatable_variadic_reference_declarator, $.reference_declarator)
+        ),
 
-    variadic_array_declarator: ($) => withDeclarator(C.grammar.rules.array_declarator, $._variadic_declarator),
+      _named_variadic_declarator: ($) => seq('...', $._contextual_identifier),
 
-    variadic_pointer_declarator: ($) => withPointerDeclarator($, $._variadic_declarator),
+      _annotatable_variadic_array_declarator: ($) =>
+        withDeclarator(C.grammar.rules.array_declarator, $._annotatable_variadic_declarator),
 
-    variadic_reference_declarator: ($) => withReferenceDeclarator($, $._variadic_declarator),
+      _annotatable_variadic_pointer_declarator: ($) => withPointerDeclarator($, $._annotatable_variadic_declarator),
 
-    init_declarator: ($, original = missingOriginalRule()) =>
-      choice(
-        withDeclarator(replaceRuleField(original, 'value', $._initializer_value), $._declarator),
-        seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
-        // A pointer or reference declarator takes the parameter list that follows its name, so `Foo* p(nullptr);`
-        // would otherwise read only as a function taking a parameter of type `nullptr`. These alternatives reduce the
-        // declarator before the argument list instead: outranking the function and expression readings when no
-        // parameter list holds the argument, and as a last resort otherwise, as in `const T& r(*p);`.
-        // `&&` takes only the last-resort alternative, since `ok && check(this->x);` is a common expression statement.
+      _annotatable_variadic_reference_declarator: ($) => withReferenceDeclarator($, $._annotatable_variadic_declarator),
+
+      _variadic_declarator: ($) =>
+        choice(
+          $.variadic_declarator,
+          alias($.variadic_array_declarator, $.array_declarator),
+          alias($.variadic_pointer_declarator, $.pointer_declarator),
+          alias($.variadic_reference_declarator, $.reference_declarator)
+        ),
+
+      variadic_array_declarator: ($) => withDeclarator(C.grammar.rules.array_declarator, $._variadic_declarator),
+
+      variadic_pointer_declarator: ($) => withPointerDeclarator($, $._variadic_declarator),
+
+      variadic_reference_declarator: ($) => withReferenceDeclarator($, $._variadic_declarator),
+
+      init_declarator: ($, original = missingOriginalRule()) =>
+        choice(
+          withDeclarator(replaceRuleField(original, 'value', $._initializer_value), $._declarator),
+          seq(field('declarator', $._declarator), field('value', choice($.argument_list, $.initializer_list))),
+          // A pointer or reference declarator takes the parameter list that follows its name, so `Foo* p(nullptr);`
+          // would otherwise read only as a function taking a parameter of type `nullptr`. These alternatives reduce the
+          // declarator before the argument list instead: outranking the function and expression readings when no
+          // parameter list holds the argument, and as a last resort otherwise, as in `const T& r(*p);`.
+          // `&&` takes only the last-resort alternative, since `ok && check(this->x);` is a common expression statement.
+          prec.dynamic(
+            PREC.KEYWORD_ARGUMENT_INITIALIZATION,
+            seq(
+              field(
+                'declarator',
+                choice(
+                  alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
+                  alias($.argument_initialized_reference_declarator, $.reference_declarator)
+                )
+              ),
+              field('value', alias($.keyword_argument_list, $.argument_list))
+            )
+          ),
+          prec.dynamic(
+            PREC.POINTER_ARGUMENT_INITIALIZATION,
+            seq(field('declarator', $._argument_initialized_declarator), field('value', $.argument_list))
+          )
+        ),
+
+      _initializer_value: ($) => choice($.expression, $.initializer_list, $._conditional_initializer),
+
+      _conditional_initializer: () =>
+        choice(
+          alias(sym('preproc_if_in_initializer'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_initializer'), sym('preproc_ifdef'))
+        ),
+
+      preproc_if_in_initializer: () => initializerIf(sym('_initializer_conditional_body')),
+
+      preproc_ifdef_in_initializer: () => initializerIfdef(sym('_initializer_conditional_body')),
+
+      preproc_else_in_initializer: () => initializerElse(optional(sym('_initializer_branch_content'))),
+
+      preproc_elif_in_initializer: () => initializerElif(optional(sym('_initializer_branch_content'))),
+
+      preproc_elifdef_in_initializer: () => initializerElifdef(optional(sym('_initializer_branch_content'))),
+
+      preproc_if_without_initializer: () => initializerIf(emptyInitializerBody()),
+
+      preproc_ifdef_without_initializer: () => initializerIfdef(emptyInitializerBody()),
+
+      preproc_else_without_initializer: () => initializerElse(repeat(sym('_nested_empty_initializer_content'))),
+
+      preproc_elif_without_initializer: () => initializerElif(repeat(sym('_nested_empty_initializer_content'))),
+
+      preproc_elifdef_without_initializer: () => initializerElifdef(repeat(sym('_nested_empty_initializer_content'))),
+
+      _empty_initializer_conditional: ($) =>
+        seq(sym('_empty_initializer_start'), $._nested_empty_initializer_conditional),
+
+      _nested_empty_initializer_conditional: () =>
+        choice(
+          alias(sym('preproc_if_without_initializer'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_without_initializer'), sym('preproc_ifdef'))
+        ),
+
+      _initializer_nonconditional_directive: ($) =>
+        choice(
+          $.preproc_include,
+          $.preproc_def,
+          $.preproc_function_def,
+          alias(sym('preproc_call_in_initializer'), $.preproc_call)
+        ),
+
+      preproc_call_in_initializer: () =>
+        replaceRuleField(
+          C.grammar.rules.preproc_call,
+          'directive',
+          alias(sym('_initializer_directive_name'), sym('preproc_directive'))
+        ),
+
+      _empty_initializer_content: ($) =>
+        choice($._empty_initializer_conditional, $._initializer_nonconditional_directive),
+
+      _nested_empty_initializer_content: ($) =>
+        choice($._nested_empty_initializer_conditional, $._initializer_nonconditional_directive),
+
+      _initializer_branch_content: ($) => choice($._initializer_branch_value, repeat1($._empty_initializer_content)),
+
+      _initializer_branch_value: ($) =>
+        seq(repeat($._empty_initializer_content), $._initializer_value, repeat($._empty_initializer_content)),
+
+      _initializer_conditional_body: ($) =>
+        choice(
+          seq($._initializer_branch_value, initializerFollowingArms()),
+          seq(
+            repeat($._empty_initializer_content),
+            repeat(field('alternative', $._initializer_empty_elif)),
+            choice(
+              seq(field('alternative', $._initializer_value_elif), initializerFollowingArms()),
+              field('alternative', alias($.preproc_else_with_initializer, sym('preproc_else')))
+            )
+          )
+        ),
+
+      _initializer_elif: () =>
+        choice(
+          alias(sym('preproc_elif_in_initializer'), sym('preproc_elif')),
+          alias(sym('preproc_elifdef_in_initializer'), sym('preproc_elifdef'))
+        ),
+
+      _initializer_empty_elif: () =>
+        choice(
+          alias(sym('preproc_elif_without_value'), sym('preproc_elif')),
+          alias(sym('preproc_elifdef_without_value'), sym('preproc_elifdef'))
+        ),
+
+      _initializer_value_elif: () =>
+        choice(
+          alias(sym('preproc_elif_with_initializer'), sym('preproc_elif')),
+          alias(sym('preproc_elifdef_with_initializer'), sym('preproc_elifdef'))
+        ),
+
+      _empty_initializer_elif: () =>
+        choice(
+          alias(sym('preproc_elif_without_initializer'), sym('preproc_elif')),
+          alias(sym('preproc_elifdef_without_initializer'), sym('preproc_elifdef'))
+        ),
+
+      preproc_else_with_initializer: () => initializerElse(sym('_initializer_branch_value')),
+
+      preproc_elif_with_initializer: () => initializerElif(sym('_initializer_branch_value')),
+
+      preproc_elifdef_with_initializer: () => initializerElifdef(sym('_initializer_branch_value')),
+
+      preproc_elif_without_value: () => initializerElif(repeat(sym('_empty_initializer_content'))),
+
+      preproc_elifdef_without_value: () => initializerElifdef(repeat(sym('_empty_initializer_content'))),
+
+      // After a comma, a declaration cannot be the call through a function pointer `x * (*fp)(this);`, so the forms that
+      // only take the fallback above take the keyword reading too, as in `Foo* k, *(*l)(nullptr);`.
+      later_keyword_argument_init_declarator: ($) =>
         prec.dynamic(
           PREC.KEYWORD_ARGUMENT_INITIALIZATION,
           seq(
             field(
               'declarator',
               choice(
-                alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
-                alias($.argument_initialized_reference_declarator, $.reference_declarator)
+                alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator),
+                alias($.parenthesized_argument_initialized_reference_declarator, $.reference_declarator),
+                alias($.argument_initialized_rvalue_reference_declarator, $.reference_declarator)
               )
             ),
             field('value', alias($.keyword_argument_list, $.argument_list))
           )
         ),
-        prec.dynamic(
-          PREC.POINTER_ARGUMENT_INITIALIZATION,
-          seq(field('declarator', $._argument_initialized_declarator), field('value', $.argument_list))
-        )
-      ),
 
-    _initializer_value: ($) => choice($.expression, $.initializer_list, $._conditional_initializer),
+      // The fallback also takes `&&` and declarators around a parenthesized one, which the keyword reading leaves out
+      // because `ok && check(this->x);` and `x * (*fp)(this);` are common expression statements.
+      _argument_initialized_declarator: ($) =>
+        choice(
+          alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
+          alias($.argument_initialized_reference_declarator, $.reference_declarator),
+          alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator),
+          alias($.parenthesized_argument_initialized_reference_declarator, $.reference_declarator),
+          alias($.argument_initialized_rvalue_reference_declarator, $.reference_declarator)
+        ),
 
-    _conditional_initializer: () =>
-      choice(
-        alias(sym('preproc_if_in_initializer'), sym('preproc_if')),
-        alias(sym('preproc_ifdef_in_initializer'), sym('preproc_ifdef'))
-      ),
-
-    preproc_if_in_initializer: () => initializerIf(sym('_initializer_conditional_body')),
-
-    preproc_ifdef_in_initializer: () => initializerIfdef(sym('_initializer_conditional_body')),
-
-    preproc_else_in_initializer: () => initializerElse(optional(sym('_initializer_branch_content'))),
-
-    preproc_elif_in_initializer: () => initializerElif(optional(sym('_initializer_branch_content'))),
-
-    preproc_elifdef_in_initializer: () => initializerElifdef(optional(sym('_initializer_branch_content'))),
-
-    preproc_if_without_initializer: () => initializerIf(emptyInitializerBody()),
-
-    preproc_ifdef_without_initializer: () => initializerIfdef(emptyInitializerBody()),
-
-    preproc_else_without_initializer: () => initializerElse(repeat(sym('_nested_empty_initializer_content'))),
-
-    preproc_elif_without_initializer: () => initializerElif(repeat(sym('_nested_empty_initializer_content'))),
-
-    preproc_elifdef_without_initializer: () => initializerElifdef(repeat(sym('_nested_empty_initializer_content'))),
-
-    _empty_initializer_conditional: ($) =>
-      seq(sym('_empty_initializer_start'), $._nested_empty_initializer_conditional),
-
-    _nested_empty_initializer_conditional: () =>
-      choice(
-        alias(sym('preproc_if_without_initializer'), sym('preproc_if')),
-        alias(sym('preproc_ifdef_without_initializer'), sym('preproc_ifdef'))
-      ),
-
-    _initializer_nonconditional_directive: ($) =>
-      choice(
-        $.preproc_include,
-        $.preproc_def,
-        $.preproc_function_def,
-        alias(sym('preproc_call_in_initializer'), $.preproc_call)
-      ),
-
-    preproc_call_in_initializer: () =>
-      replaceRuleField(
-        C.grammar.rules.preproc_call,
-        'directive',
-        alias(sym('_initializer_directive_name'), sym('preproc_directive'))
-      ),
-
-    _empty_initializer_content: ($) =>
-      choice($._empty_initializer_conditional, $._initializer_nonconditional_directive),
-
-    _nested_empty_initializer_content: ($) =>
-      choice($._nested_empty_initializer_conditional, $._initializer_nonconditional_directive),
-
-    _initializer_branch_content: ($) => choice($._initializer_branch_value, repeat1($._empty_initializer_content)),
-
-    _initializer_branch_value: ($) =>
-      seq(repeat($._empty_initializer_content), $._initializer_value, repeat($._empty_initializer_content)),
-
-    _initializer_conditional_body: ($) =>
-      choice(
-        seq($._initializer_branch_value, initializerFollowingArms()),
-        seq(
-          repeat($._empty_initializer_content),
-          repeat(field('alternative', $._initializer_empty_elif)),
+      argument_initialized_pointer_declarator: ($) =>
+        withPointerDeclarator(
+          $,
           choice(
-            seq(field('alternative', $._initializer_value_elif), initializerFollowingArms()),
-            field('alternative', alias($.preproc_else_with_initializer, sym('preproc_else')))
+            $._argument_initialized_name,
+            alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
+            alias($.argument_initialized_reference_declarator, $.reference_declarator)
           )
-        )
-      ),
+        ),
+      argument_initialized_reference_declarator: ($) =>
+        prec.dynamic(
+          1,
+          prec.right(withReferenceDeclarator($, $._argument_initialized_name, choice(...LVALUE_REFERENCE_OPERATORS)))
+        ),
+      _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
+      parenthesized_argument_initialized_pointer_declarator: ($) =>
+        withPointerDeclarator(
+          $,
+          choice(
+            $.parenthesized_declarator,
+            alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator)
+          )
+        ),
+      parenthesized_argument_initialized_reference_declarator: ($) =>
+        prec.dynamic(
+          1,
+          prec.right(withReferenceDeclarator($, $.parenthesized_declarator, choice(...LVALUE_REFERENCE_OPERATORS)))
+        ),
+      argument_initialized_rvalue_reference_declarator: ($) =>
+        prec.dynamic(
+          1,
+          prec.right(
+            withReferenceDeclarator(
+              $,
+              choice($._argument_initialized_name, $.parenthesized_declarator),
+              choice('&&', 'and')
+            )
+          )
+        ),
 
-    _initializer_elif: () =>
-      choice(
-        alias(sym('preproc_elif_in_initializer'), sym('preproc_elif')),
-        alias(sym('preproc_elifdef_in_initializer'), sym('preproc_elifdef'))
-      ),
+      // A single argument that starts with a keyword that no parameter starts with (see
+      // test/unit/expressionKeywordParameter.test.ts): an expression that starts with one, possibly followed by calls,
+      // subscripts, and member accesses, as in `this->next`.
+      keyword_argument_list: ($) => seq('(', $._keyword_led_expression, ')'),
 
-    _initializer_empty_elif: () =>
-      choice(
-        alias(sym('preproc_elif_without_value'), sym('preproc_elif')),
-        alias(sym('preproc_elifdef_without_value'), sym('preproc_elifdef'))
-      ),
+      _keyword_led_expression: ($) =>
+        choice(
+          $._keyword_led_postfix_expression,
+          alias($.keyword_delete_expression, $.delete_expression),
+          alias($.keyword_co_await_expression, $.co_await_expression),
+          alias($.keyword_unary_expression, $.unary_expression),
+          alias($.keyword_sizeof_expression, $.sizeof_expression)
+        ),
 
-    _initializer_value_elif: () =>
-      choice(
-        alias(sym('preproc_elif_with_initializer'), sym('preproc_elif')),
-        alias(sym('preproc_elifdef_with_initializer'), sym('preproc_elifdef'))
-      ),
+      // Calls, subscripts, and member accesses attach only to these, not to a prefix keyword's expression, so that
+      // `not check()` reads as `not (check())`.
+      _keyword_led_postfix_expression: ($) =>
+        choice(
+          $._keyword_primary_expression,
+          alias($.keyword_led_call_expression, $.call_expression),
+          alias($.keyword_led_subscript_expression, $.subscript_expression),
+          alias($.keyword_led_field_expression, $.field_expression)
+        ),
 
-    _empty_initializer_elif: () =>
-      choice(
-        alias(sym('preproc_elif_without_initializer'), sym('preproc_elif')),
-        alias(sym('preproc_elifdef_without_initializer'), sym('preproc_elifdef'))
-      ),
+      _keyword_primary_expression: ($) =>
+        choice(
+          $.null,
+          $.true,
+          $.false,
+          $.this,
+          $.alignof_expression,
+          $.offsetof_expression,
+          $.generic_expression,
+          $.new_expression,
+          $.requires_expression,
+          $.builtin_available_expression,
+          $.named_cast_expression,
+          $.typeid_expression
+        ),
 
-    preproc_else_with_initializer: () => initializerElse(sym('_initializer_branch_value')),
+      keyword_led_call_expression: ($) =>
+        prec.dynamic(
+          1,
+          prec(
+            PREC.CALL,
+            seq(field('function', $._keyword_led_postfix_expression), field('arguments', $.argument_list))
+          )
+        ),
+      keyword_led_subscript_expression: ($) =>
+        prec(
+          PREC.SUBSCRIPT,
+          seq(field('argument', $._keyword_led_postfix_expression), field('indices', $.subscript_argument_list))
+        ),
+      keyword_led_field_expression: ($) =>
+        seq(
+          prec(
+            PREC.FIELD,
+            seq(field('argument', $._keyword_led_postfix_expression), field('operator', choice('.', '->')))
+          ),
+          field('field', fieldExpressionMember($))
+        ),
+      // A prefix keyword takes only a postfix or primary operand here, so that `not x + 1` ends the keyword reading and
+      // keeps the precedence it has elsewhere instead of reading as `not (x + 1)`.
+      keyword_unary_expression: ($) =>
+        prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $._keyword_operand))),
+      keyword_co_await_expression: ($) =>
+        prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $._keyword_operand))),
+      keyword_sizeof_expression: ($) =>
+        prec.left(PREC.SIZEOF, seq('sizeof', choice(field('value', $._keyword_operand), sizeofTypeOperand($)))),
+      keyword_delete_expression: ($) =>
+        seq(choice(seq(optional('::'), 'delete'), $._array_delete_operator), $._keyword_operand),
+      // Every primary and postfix expression form, plus `++`/`--` and `new`, so that which operand follows the keyword
+      // does not decide between the variable and expression readings.
+      _keyword_operand: ($) =>
+        choice(
+          $._contextual_identifier,
+          $.qualified_identifier,
+          $.template_function,
+          $.number_literal,
+          $.user_defined_literal,
+          $.string_literal,
+          $.raw_string_literal,
+          $.concatenated_string,
+          $.char_literal,
+          $._keyword_primary_expression,
+          $.parenthesized_expression,
+          $.fold_expression,
+          $.compound_literal_expression,
+          $.va_arg_expression,
+          $.lambda_expression,
+          $.splice_expression,
+          $.call_expression,
+          $.field_expression,
+          $.subscript_expression,
+          $.update_expression
+        ),
 
-    preproc_elif_with_initializer: () => initializerElif(sym('_initializer_branch_value')),
+      operator_cast: ($) =>
+        prec.dynamic(
+          3,
+          prec.right(1, seq('operator', $._declaration_specifiers, field('declarator', $._abstract_declarator)))
+        ),
 
-    preproc_elifdef_with_initializer: () => initializerElifdef(sym('_initializer_branch_value')),
+      // Avoid ambiguity between compound statement and initializer list in a construct like:
+      //   A b {};
+      compound_statement: (_, original = missingOriginalRule()) => prec(-1, original),
 
-    preproc_elif_without_value: () => initializerElif(repeat(sym('_empty_initializer_content'))),
-
-    preproc_elifdef_without_value: () => initializerElifdef(repeat(sym('_empty_initializer_content'))),
-
-    // After a comma, a declaration cannot be the call through a function pointer `x * (*fp)(this);`, so the forms that
-    // only take the fallback above take the keyword reading too, as in `Foo* k, *(*l)(nullptr);`.
-    later_keyword_argument_init_declarator: ($) =>
-      prec.dynamic(
-        PREC.KEYWORD_ARGUMENT_INITIALIZATION,
+      enumerator: ($) =>
         seq(
           field(
-            'declarator',
-            choice(
-              alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator),
-              alias($.parenthesized_argument_initialized_reference_declarator, $.reference_declarator),
-              alias($.argument_initialized_rvalue_reference_declarator, $.reference_declarator)
-            )
+            'name',
+            choice($.identifier, alias(choice('va_arg', '__builtin_va_arg', 'typeof', 'typeof_unqual'), $.identifier))
           ),
-          field('value', alias($.keyword_argument_list, $.argument_list))
-        )
-      ),
+          repeat($.attribute_specifier),
+          repeat($.attribute_declaration),
+          optional(seq('=', field('value', $.expression)))
+        ),
+      _initializer_element: ($, original = missingOriginalRule()) => choice(original, $.parameter_pack_expansion),
 
-    // The fallback also takes `&&` and declarators around a parenthesized one, which the keyword reading leaves out
-    // because `ok && check(this->x);` and `x * (*fp)(this);` are common expression statements.
-    _argument_initialized_declarator: ($) =>
-      choice(
-        alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
-        alias($.argument_initialized_reference_declarator, $.reference_declarator),
-        alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator),
-        alias($.parenthesized_argument_initialized_reference_declarator, $.reference_declarator),
-        alias($.argument_initialized_rvalue_reference_declarator, $.reference_declarator)
-      ),
-
-    argument_initialized_pointer_declarator: ($) =>
-      withPointerDeclarator(
-        $,
+      initializer_pair: ($, original = missingOriginalRule()) =>
         choice(
-          $._argument_initialized_name,
-          alias($.argument_initialized_pointer_declarator, $.pointer_declarator),
-          alias($.argument_initialized_reference_declarator, $.reference_declarator)
-        )
-      ),
-    argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(
-        1,
-        prec.right(withReferenceDeclarator($, $._argument_initialized_name, choice(...LVALUE_REFERENCE_OPERATORS)))
-      ),
-    _argument_initialized_name: ($) => choice($._contextual_identifier, $.qualified_identifier),
-    parenthesized_argument_initialized_pointer_declarator: ($) =>
-      withPointerDeclarator(
-        $,
-        choice(
-          $.parenthesized_declarator,
-          alias($.parenthesized_argument_initialized_pointer_declarator, $.pointer_declarator)
-        )
-      ),
-    parenthesized_argument_initialized_reference_declarator: ($) =>
-      prec.dynamic(
-        1,
-        prec.right(withReferenceDeclarator($, $.parenthesized_declarator, choice(...LVALUE_REFERENCE_OPERATORS)))
-      ),
-    argument_initialized_rvalue_reference_declarator: ($) =>
-      prec.dynamic(
-        1,
-        prec.right(
-          withReferenceDeclarator(
-            $,
-            choice($._argument_initialized_name, $.parenthesized_declarator),
-            choice('&&', 'and')
-          )
-        )
-      ),
-
-    // A single argument that starts with a keyword that no parameter starts with (see
-    // test/unit/expressionKeywordParameter.test.ts): an expression that starts with one, possibly followed by calls,
-    // subscripts, and member accesses, as in `this->next`.
-    keyword_argument_list: ($) => seq('(', $._keyword_led_expression, ')'),
-
-    _keyword_led_expression: ($) =>
-      choice(
-        $._keyword_led_postfix_expression,
-        alias($.keyword_delete_expression, $.delete_expression),
-        alias($.keyword_co_await_expression, $.co_await_expression),
-        alias($.keyword_unary_expression, $.unary_expression),
-        alias($.keyword_sizeof_expression, $.sizeof_expression)
-      ),
-
-    // Calls, subscripts, and member accesses attach only to these, not to a prefix keyword's expression, so that
-    // `not check()` reads as `not (check())`.
-    _keyword_led_postfix_expression: ($) =>
-      choice(
-        $._keyword_primary_expression,
-        alias($.keyword_led_call_expression, $.call_expression),
-        alias($.keyword_led_subscript_expression, $.subscript_expression),
-        alias($.keyword_led_field_expression, $.field_expression)
-      ),
-
-    _keyword_primary_expression: ($) =>
-      choice(
-        $.null,
-        $.true,
-        $.false,
-        $.this,
-        $.alignof_expression,
-        $.offsetof_expression,
-        $.generic_expression,
-        $.new_expression,
-        $.requires_expression,
-        $.builtin_available_expression,
-        $.named_cast_expression,
-        $.typeid_expression
-      ),
-
-    keyword_led_call_expression: ($) =>
-      prec.dynamic(
-        1,
-        prec(PREC.CALL, seq(field('function', $._keyword_led_postfix_expression), field('arguments', $.argument_list)))
-      ),
-    keyword_led_subscript_expression: ($) =>
-      prec(
-        PREC.SUBSCRIPT,
-        seq(field('argument', $._keyword_led_postfix_expression), field('indices', $.subscript_argument_list))
-      ),
-    keyword_led_field_expression: ($) =>
-      seq(
-        prec(
-          PREC.FIELD,
-          seq(field('argument', $._keyword_led_postfix_expression), field('operator', choice('.', '->')))
-        ),
-        field('field', fieldExpressionMember($))
-      ),
-    // A prefix keyword takes only a postfix or primary operand here, so that `not x + 1` ends the keyword reading and
-    // keeps the precedence it has elsewhere instead of reading as `not (x + 1)`.
-    keyword_unary_expression: ($) =>
-      prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $._keyword_operand))),
-    keyword_co_await_expression: ($) =>
-      prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $._keyword_operand))),
-    keyword_sizeof_expression: ($) =>
-      prec.left(PREC.SIZEOF, seq('sizeof', choice(field('value', $._keyword_operand), sizeofTypeOperand($)))),
-    keyword_delete_expression: ($) =>
-      seq(choice(seq(optional('::'), 'delete'), $._array_delete_operator), $._keyword_operand),
-    // Every primary and postfix expression form, plus `++`/`--` and `new`, so that which operand follows the keyword
-    // does not decide between the variable and expression readings.
-    _keyword_operand: ($) =>
-      choice(
-        $._contextual_identifier,
-        $.qualified_identifier,
-        $.template_function,
-        $.number_literal,
-        $.user_defined_literal,
-        $.string_literal,
-        $.raw_string_literal,
-        $.concatenated_string,
-        $.char_literal,
-        $._keyword_primary_expression,
-        $.parenthesized_expression,
-        $.fold_expression,
-        $.compound_literal_expression,
-        $.va_arg_expression,
-        $.lambda_expression,
-        $.splice_expression,
-        $.call_expression,
-        $.field_expression,
-        $.subscript_expression,
-        $.update_expression
-      ),
-
-    operator_cast: ($) =>
-      prec.dynamic(
-        3,
-        prec.right(1, seq('operator', $._declaration_specifiers, field('declarator', $._abstract_declarator)))
-      ),
-
-    // Avoid ambiguity between compound statement and initializer list in a construct like:
-    //   A b {};
-    compound_statement: (_, original = missingOriginalRule()) => prec(-1, original),
-
-    enumerator: ($) =>
-      seq(
-        field(
-          'name',
-          choice($.identifier, alias(choice('va_arg', '__builtin_va_arg', 'typeof', 'typeof_unqual'), $.identifier))
-        ),
-        repeat($.attribute_specifier),
-        repeat($.attribute_declaration),
-        optional(seq('=', field('value', $.expression)))
-      ),
-    _initializer_element: ($, original = missingOriginalRule()) => choice(original, $.parameter_pack_expansion),
-
-    initializer_pair: ($, original = missingOriginalRule()) =>
-      choice(
-        ...ruleMembers(original, 'CHOICE').map((alternative) =>
-          seq(
-            ...ruleMembers(alternative, 'SEQ').map((member) =>
-              member.type === 'FIELD' && member.name === 'value'
-                ? field('value', choice(member.content, $._conditional_initializer, $.parameter_pack_expansion))
-                : member
-            )
-          )
-        ),
-        seq(field('designator', $.field_designator), field('value', $.initializer_list))
-      ),
-
-    field_initializer_list: ($) => seq(':', $._field_initializer_sequence),
-
-    _field_initializer_sequence: ($) =>
-      choice(
-        seq(
-          $.field_initializer,
-          optional(choice(seq(',', $._field_initializer_sequence), $._field_initializer_conditionals))
-        ),
-        $._field_initializer_conditionals
-      ),
-
-    _field_initializer_conditionals: ($) =>
-      seq(
-        $._field_initializer_conditional,
-        optional(choice($._field_initializer_sequence, seq(',', $._field_initializer_sequence)))
-      ),
-
-    _field_initializer_conditional: () =>
-      choice(
-        alias(sym('preproc_if_in_field_initializer_list'), sym('preproc_if')),
-        alias(sym('preproc_ifdef_in_field_initializer_list'), sym('preproc_ifdef'))
-      ),
-
-    _field_initializer_branch: ($) =>
-      choice(
-        seq($._field_initializer_sequence, optional(',')),
-        seq(',', optional(seq($._field_initializer_sequence, optional(','))))
-      ),
-
-    ...preprocIf('_in_field_initializer_list', () => sym('_field_initializer_branch'), 0, false),
-
-    field_initializer: ($) =>
-      prec(
-        1,
-        seq(
-          choice(
-            $._field_identifier,
-            $.pack_index_type,
-            $.template_method,
-            alias($.qualified_field_identifier, $.qualified_identifier)
-          ),
-          choice($.initializer_list, $.argument_list),
-          optional('...')
-        )
-      ),
-
-    _field_declaration_list_item: ($, original = missingOriginalRule()) => choice(original, ...cppClassMembers($)),
-
-    field_declaration: ($) =>
-      seq(
-        $._declaration_specifiers,
-        commaSep(
-          seq(
-            field('declarator', $._field_declarator),
-            optional(
-              choice(
-                $.bitfield_clause,
-                field('default_value', $.initializer_list),
-                seq('=', field('default_value', $._initializer_value))
+          ...ruleMembers(original, 'CHOICE').map((alternative) =>
+            seq(
+              ...ruleMembers(alternative, 'SEQ').map((member) =>
+                member.type === 'FIELD' && member.name === 'value'
+                  ? field('value', choice(member.content, $._conditional_initializer, $.parameter_pack_expansion))
+                  : member
               )
             )
+          ),
+          seq(field('designator', $.field_designator), field('value', $.initializer_list))
+        ),
+
+      field_initializer_list: ($) => seq(':', $._field_initializer_sequence),
+
+      _field_initializer_sequence: ($) =>
+        choice(
+          seq(
+            $.field_initializer,
+            optional(choice(seq(',', $._field_initializer_sequence), $._field_initializer_conditionals))
+          ),
+          $._field_initializer_conditionals
+        ),
+
+      _field_initializer_conditionals: ($) =>
+        seq(
+          $._field_initializer_conditional,
+          optional(choice($._field_initializer_sequence, seq(',', $._field_initializer_sequence)))
+        ),
+
+      _field_initializer_conditional: () =>
+        choice(
+          alias(sym('preproc_if_in_field_initializer_list'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_field_initializer_list'), sym('preproc_ifdef'))
+        ),
+
+      _field_initializer_branch: ($) =>
+        choice(
+          seq($._field_initializer_sequence, optional(',')),
+          seq(',', optional(seq($._field_initializer_sequence, optional(','))))
+        ),
+
+      ...preprocIf('_in_field_initializer_list', () => sym('_field_initializer_branch'), 0, false),
+
+      field_initializer: ($) =>
+        prec(
+          1,
+          seq(
+            choice(
+              $._field_identifier,
+              $.pack_index_type,
+              $.template_method,
+              alias($.qualified_field_identifier, $.qualified_identifier)
+            ),
+            choice($.initializer_list, $.argument_list),
+            optional('...')
           )
         ),
-        optional($.attribute_specifier),
-        ';'
-      ),
 
-    inline_method_definition: ($) =>
-      seq(
-        $._declaration_specifiers,
-        field('declarator', $._field_declarator),
-        choice(
-          field('body', choice($.compound_statement, $.try_statement)),
-          $.default_method_clause,
-          $.delete_method_clause,
-          $.pure_virtual_clause
-        )
-      ),
+      _field_declaration_list_item: ($, original = missingOriginalRule()) => choice(original, ...cppClassMembers($)),
 
-    _constructor_specifiers: ($) => choice($._declaration_modifiers, $.explicit_function_specifier),
-
-    operator_cast_definition: ($) =>
-      seq(
-        repeat($._constructor_specifiers),
-        field(
-          'declarator',
-          choice($.operator_cast, alias($.qualified_operator_cast_identifier, $.qualified_identifier))
+      field_declaration: ($) =>
+        seq(
+          $._declaration_specifiers,
+          commaSep(
+            seq(
+              field('declarator', $._field_declarator),
+              optional(
+                choice(
+                  $.bitfield_clause,
+                  field('default_value', $.initializer_list),
+                  seq('=', field('default_value', $._initializer_value))
+                )
+              )
+            )
+          ),
+          optional($.attribute_specifier),
+          ';'
         ),
-        choice(field('body', choice($.compound_statement, $.try_statement)), $.delete_method_clause)
-      ),
 
-    operator_cast_declaration: ($) =>
-      prec(
-        1,
+      inline_method_definition: ($) =>
+        seq(
+          $._declaration_specifiers,
+          field('declarator', $._field_declarator),
+          choice(
+            field('body', choice($.compound_statement, $.try_statement)),
+            $.default_method_clause,
+            $.delete_method_clause,
+            $.pure_virtual_clause
+          )
+        ),
+
+      _constructor_specifiers: ($) => choice($._declaration_modifiers, $.explicit_function_specifier),
+
+      operator_cast_definition: ($) =>
         seq(
           repeat($._constructor_specifiers),
           field(
             'declarator',
             choice($.operator_cast, alias($.qualified_operator_cast_identifier, $.qualified_identifier))
           ),
-          optional(seq('=', field('default_value', $.expression))),
-          ';'
-        )
-      ),
+          choice(field('body', choice($.compound_statement, $.try_statement)), $.delete_method_clause)
+        ),
 
-    constructor_try_statement: ($) =>
-      seq('try', optional($.field_initializer_list), field('body', $.compound_statement), repeat1($.catch_clause)),
-
-    constructor_or_destructor_definition: ($) =>
-      seq(
-        repeat($._constructor_specifiers),
-        field('declarator', $.function_declarator),
-        choice(
-          seq(optional($.field_initializer_list), field('body', $.compound_statement)),
-          alias($.constructor_try_statement, $.try_statement),
-          $.default_method_clause,
-          $.delete_method_clause,
-          $.pure_virtual_clause
-        )
-      ),
-
-    constructor_or_destructor_declaration: ($) =>
-      seq(repeat($._constructor_specifiers), field('declarator', $.function_declarator), ';'),
-
-    // Outranks the call expression in `X::~X() = default;`, whose assignment reading lexes `default` as an identifier.
-    default_method_clause: () => prec.dynamic(1, seq('=', 'default', ';')),
-    // The precedences read `= delete("reason")` as the clause rather than as a delete-expression of a string, both within
-    // a parse state and against the assignment reading of `A::A() = delete("reason");`.
-    delete_method_clause: ($) =>
-      prec.dynamic(1, prec(1, seq('=', 'delete', optional(seq('(', field('message', $._string), ')')), ';'))),
-    pure_virtual_clause: () => seq('=', /0/, ';'),
-
-    friend_declaration: ($) =>
-      seq(
-        repeat(choice($.attribute_declaration, $.attribute_specifier)),
-        optional(seq('constexpr', repeat($.attribute_specifier))),
-        'friend',
-        choice(
-          $.declaration,
-          $.function_definition,
-          alias($.operator_cast_declaration, $.declaration),
-          seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
-        )
-      ),
-
-    access_specifier: () => choice('public', 'private', 'protected'),
-
-    _unattributed_declarator: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
-        $.reference_declarator,
-        alias($.qualified_pointer_declarator, $.qualified_identifier),
-        $.qualified_identifier,
-        $.template_function,
-        $.operator_name,
-        $.destructor_name,
-        $.structured_binding_declarator
-      ),
-
-    _unattributed_field_declarator: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        alias($.reference_field_declarator, $.reference_declarator),
-        alias($.qualified_pointer_field_declarator, $.qualified_identifier),
-        $.template_method,
-        $.operator_name
-      ),
-
-    _unattributed_type_declarator: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        alias($.reference_type_declarator, $.reference_declarator),
-        alias($.qualified_pointer_type_declarator, $.qualified_identifier)
-      ),
-
-    _abstract_declarator: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        $.abstract_reference_declarator,
-        alias($.abstract_qualified_pointer_declarator, $.qualified_identifier)
-      ),
-
-    reference_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._declarator))),
-    pointer_declarator: ($, original = missingOriginalRule()) =>
-      prec.dynamic(1, withPointerDeclarator($, undefined, original)),
-    pointer_field_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
-    pointer_type_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
-    abstract_pointer_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
-
-    qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
-    qualified_pointer_field_declarator: ($) =>
-      pointerToMember($, $.qualified_pointer_field_declarator, alias($.pointer_field_declarator, $.pointer_declarator)),
-    qualified_pointer_type_declarator: ($) =>
-      pointerToMember($, $.qualified_pointer_type_declarator, alias($.pointer_type_declarator, $.pointer_declarator)),
-    abstract_qualified_pointer_declarator: ($) =>
-      pointerToMember($, $.abstract_qualified_pointer_declarator, $.abstract_pointer_declarator),
-    reference_field_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._field_declarator))),
-    reference_type_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._type_declarator))),
-
-    abstract_reference_declarator: ($) => prec.right(withReferenceDeclarator($, optional($._abstract_declarator))),
-
-    structured_binding_declarator: ($) =>
-      prec.dynamic(
-        PREC.STRUCTURED_BINDING,
-        seq('[', commaSep1(seq(optional('...'), $._contextual_identifier, repeat($.attribute_declaration))), ']')
-      ),
-
-    ref_qualifier: () => choice(...REFERENCE_OPERATORS),
-
-    _function_declarator_seq: ($) =>
-      seq($._function_declarator_core, optional($._function_postfix), repeat($.contract_specifier)),
-
-    _function_declarator_core: ($) =>
-      seq(
-        field('parameters', $.parameter_list),
-        optional($._function_attributes_start),
-        optional($.ref_qualifier),
-        optional($._function_exception_specification),
-        optional($._function_attributes_end),
-        optional($.trailing_return_type)
-      ),
-
-    // A parameter that starts with an expression keyword, which lexes as a type name where no keyword is expected, so
-    // `int (*p)(nullptr);` and `long(n)(sizeof(b));` would otherwise read as functions taking parameters of those types;
-    // as a parameter the keyword is expected, and the parameter it starts weighs so little that the function reading
-    // loses, or dies at the tokens that follow it.
-    expression_keyword_parameter: ($) =>
-      prec.dynamic(
-        PREC.EXPRESSION_KEYWORD_PARAMETER,
-        seq(
-          optional('::'),
-          field(
-            'type',
-            alias(
-              choice(
-                'nullptr',
-                'NULL',
-                $.true,
-                $.false,
-                'sizeof',
-                'alignof',
-                '_Alignof',
-                '__alignof__',
-                '__alignof',
-                '_alignof',
-                'offsetof',
-                '_Generic',
-                '__builtin_available',
-                'asm',
-                '__asm__',
-                '__asm',
-                'new',
-                'delete',
-                'co_await',
-                'requires',
-                'static_cast',
-                'dynamic_cast',
-                'const_cast',
-                'reinterpret_cast',
-                'typeid',
-                'noexcept',
-                'not',
-                'compl'
-              ),
-              sym('type_identifier')
-            )
-          )
-        )
-      ),
-
-    _function_attributes_start: ($) =>
-      prec(
-        1,
-        choice(
-          seq(repeat1($.attribute_specifier), repeat($.type_qualifier)),
-          seq(repeat($.attribute_specifier), repeat1($.type_qualifier))
-        )
-      ),
-
-    _function_exception_specification: ($) => choice($.noexcept, $.throw_specifier),
-
-    _function_attributes_end: ($) =>
-      prec.right(
-        seq(
-          optional($.gnu_asm_expression),
-          choice(
-            seq(repeat1($.attribute_specifier), repeat($.attribute_declaration)),
-            seq(repeat($.attribute_specifier), repeat1($.attribute_declaration))
-          )
-        )
-      ),
-
-    _function_postfix: ($) => prec.right(choice(repeat1($.virtual_specifier), $.requires_clause)),
-
-    contract_specifier: ($) =>
-      choice(
-        seq('pre', repeat($.attribute_declaration), '(', field('condition', $.expression), ')'),
-        seq(
-          'post',
-          repeat($.attribute_declaration),
-          '(',
-          optional(seq(field('result', $._contextual_identifier), repeat($.attribute_declaration), ':')),
-          field('condition', $.expression),
-          ')'
-        )
-      ),
-
-    parenthesized_declarator: ($) => prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._declarator)),
-    parenthesized_field_declarator: ($) =>
-      prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._field_declarator)),
-    parenthesized_type_declarator: ($) =>
-      prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._type_declarator)),
-    abstract_parenthesized_declarator: ($) => prec(1, parenthesizedDeclarator($, $._abstract_declarator)),
-    _initialized_parenthesized_declarator: ($) =>
-      parenthesizedDeclarator($, alias($._initialized_parenthesized_content, $._declarator)),
-
-    function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
-
-    // Parentheses around a pointer before a parameter list or an array bound, as in `int (*pf)()` and `int (*a)[3]`,
-    // are required, so unlike other parenthesized declarators this one carries no PREC.PAREN_DECLARATOR penalty. It is
-    // used only where the declaration reading is certain (see `parameter_declaration` and `declaration`).
-    parenthesized_pointer_declarator: ($) =>
-      seq(
-        '(',
-        choice(
-          field('declarator', $.pointer_declarator),
-          field('declarator', alias($.required_parentheses_pointer_declarator, $.pointer_declarator)),
-          field('declarator', alias($.qualified_pointer_declarator, $.qualified_identifier)),
+      operator_cast_declaration: ($) =>
+        prec(
+          1,
           seq(
-            optional($.ms_call_modifier),
+            repeat($._constructor_specifiers),
             field(
               'declarator',
-              choice(
-                $.reference_declarator,
-                alias($.required_parentheses_reference_declarator, $.reference_declarator),
-                alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
+              choice($.operator_cast, alias($.qualified_operator_cast_identifier, $.qualified_identifier))
+            ),
+            optional(seq('=', field('default_value', $.expression))),
+            ';'
+          )
+        ),
+
+      constructor_try_statement: ($) =>
+        seq('try', optional($.field_initializer_list), field('body', $.compound_statement), repeat1($.catch_clause)),
+
+      constructor_or_destructor_definition: ($) =>
+        seq(
+          repeat($._constructor_specifiers),
+          field('declarator', $.function_declarator),
+          choice(
+            seq(optional($.field_initializer_list), field('body', $.compound_statement)),
+            alias($.constructor_try_statement, $.try_statement),
+            $.default_method_clause,
+            $.delete_method_clause,
+            $.pure_virtual_clause
+          )
+        ),
+
+      constructor_or_destructor_declaration: ($) =>
+        seq(repeat($._constructor_specifiers), field('declarator', $.function_declarator), ';'),
+
+      // Outranks the call expression in `X::~X() = default;`, whose assignment reading lexes `default` as an identifier.
+      default_method_clause: () => prec.dynamic(1, seq('=', 'default', ';')),
+      // The precedences read `= delete("reason")` as the clause rather than as a delete-expression of a string, both within
+      // a parse state and against the assignment reading of `A::A() = delete("reason");`.
+      delete_method_clause: ($) =>
+        prec.dynamic(1, prec(1, seq('=', 'delete', optional(seq('(', field('message', $._string), ')')), ';'))),
+      pure_virtual_clause: () => seq('=', /0/, ';'),
+
+      friend_declaration: ($) =>
+        seq(
+          repeat(choice($.attribute_declaration, $.attribute_specifier)),
+          optional(seq('constexpr', repeat($.attribute_specifier))),
+          'friend',
+          choice(
+            $.declaration,
+            $.function_definition,
+            alias($.operator_cast_declaration, $.declaration),
+            seq(choice(seq(optional(choice('class', 'struct', 'union')), $._class_name), $.pack_index_type), ';')
+          )
+        ),
+
+      access_specifier: () => choice('public', 'private', 'protected'),
+
+      _unattributed_declarator: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), $.identifier),
+          $.reference_declarator,
+          alias($.qualified_pointer_declarator, $.qualified_identifier),
+          $.qualified_identifier,
+          $.template_function,
+          $.operator_name,
+          $.destructor_name,
+          $.structured_binding_declarator
+        ),
+
+      _unattributed_field_declarator: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          alias($.reference_field_declarator, $.reference_declarator),
+          alias($.qualified_pointer_field_declarator, $.qualified_identifier),
+          $.template_method,
+          $.operator_name
+        ),
+
+      _unattributed_type_declarator: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          alias($.reference_type_declarator, $.reference_declarator),
+          alias($.qualified_pointer_type_declarator, $.qualified_identifier)
+        ),
+
+      _abstract_declarator: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          $.abstract_reference_declarator,
+          alias($.abstract_qualified_pointer_declarator, $.qualified_identifier)
+        ),
+
+      reference_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._declarator))),
+      pointer_declarator: ($, original = missingOriginalRule()) =>
+        prec.dynamic(1, withPointerDeclarator($, undefined, original)),
+      pointer_field_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+      pointer_type_declarator: ($, original = missingOriginalRule()) => withPointerDeclarator($, undefined, original),
+      abstract_pointer_declarator: ($, original = missingOriginalRule()) =>
+        withPointerDeclarator($, undefined, original),
+
+      qualified_pointer_declarator: ($) => pointerToMember($, $.qualified_pointer_declarator, $.pointer_declarator),
+      qualified_pointer_field_declarator: ($) =>
+        pointerToMember(
+          $,
+          $.qualified_pointer_field_declarator,
+          alias($.pointer_field_declarator, $.pointer_declarator)
+        ),
+      qualified_pointer_type_declarator: ($) =>
+        pointerToMember($, $.qualified_pointer_type_declarator, alias($.pointer_type_declarator, $.pointer_declarator)),
+      abstract_qualified_pointer_declarator: ($) =>
+        pointerToMember($, $.abstract_qualified_pointer_declarator, $.abstract_pointer_declarator),
+      reference_field_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._field_declarator))),
+      reference_type_declarator: ($) => prec.dynamic(1, prec.right(withReferenceDeclarator($, $._type_declarator))),
+
+      abstract_reference_declarator: ($) => prec.right(withReferenceDeclarator($, optional($._abstract_declarator))),
+
+      structured_binding_declarator: ($) =>
+        prec.dynamic(
+          PREC.STRUCTURED_BINDING,
+          seq('[', commaSep1(seq(optional('...'), $._contextual_identifier, repeat($.attribute_declaration))), ']')
+        ),
+
+      ref_qualifier: () => choice(...REFERENCE_OPERATORS),
+
+      _function_declarator_seq: ($) =>
+        seq($._function_declarator_core, optional($._function_postfix), repeat($.contract_specifier)),
+
+      _function_declarator_core: ($) =>
+        seq(
+          field('parameters', $.parameter_list),
+          optional($._function_attributes_start),
+          optional($.ref_qualifier),
+          optional($._function_exception_specification),
+          optional($._function_attributes_end),
+          optional($.trailing_return_type)
+        ),
+
+      // A parameter that starts with an expression keyword, which lexes as a type name where no keyword is expected, so
+      // `int (*p)(nullptr);` and `long(n)(sizeof(b));` would otherwise read as functions taking parameters of those types;
+      // as a parameter the keyword is expected, and the parameter it starts weighs so little that the function reading
+      // loses, or dies at the tokens that follow it.
+      expression_keyword_parameter: ($) =>
+        prec.dynamic(
+          PREC.EXPRESSION_KEYWORD_PARAMETER,
+          seq(
+            optional('::'),
+            field(
+              'type',
+              alias(
+                choice(
+                  'nullptr',
+                  'NULL',
+                  $.true,
+                  $.false,
+                  'sizeof',
+                  'alignof',
+                  '_Alignof',
+                  '__alignof__',
+                  '__alignof',
+                  '_alignof',
+                  'offsetof',
+                  '_Generic',
+                  '__builtin_available',
+                  'asm',
+                  '__asm__',
+                  '__asm',
+                  'new',
+                  'delete',
+                  'co_await',
+                  'requires',
+                  'static_cast',
+                  'dynamic_cast',
+                  'const_cast',
+                  'reinterpret_cast',
+                  'typeid',
+                  'noexcept',
+                  'not',
+                  'compl'
+                ),
+                sym('type_identifier')
               )
             )
           )
         ),
-        ')'
-      ),
 
-    // A declarator that needs parentheses, possibly behind pointers and references, as in `Foo *(*f)(Bar)`,
-    // `int (*(*fpa)[3])();`, and `int (&(*rg)())[3];`.
-    _required_parentheses_declarator: ($) =>
-      choice(
-        alias($.required_parentheses_function_declarator, $.function_declarator),
-        alias($.required_parentheses_array_declarator, $.array_declarator),
-        alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
-        alias($.required_parentheses_reference_declarator, $.reference_declarator)
-      ),
-
-    required_parentheses_pointer_declarator: ($) => withPointerDeclarator($, $._required_parentheses_declarator),
-    required_parentheses_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._required_parentheses_declarator))),
-
-    required_parentheses_function_declarator: ($) =>
-      prec.dynamic(
-        PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
-        seq(
-          field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
-          $._function_declarator_seq
-        )
-      ),
-
-    // Nested for further dimensions, as in `int (*a)[3][5]`.
-    required_parentheses_array_declarator: ($) =>
-      withDeclarator(
-        C.grammar.rules.array_declarator,
-        choice(
-          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
-          alias($.required_parentheses_array_declarator, $.array_declarator)
-        )
-      ),
-
-    required_parentheses_init_declarator: ($) =>
-      choice(
-        seq(
-          field('declarator', $._built_in_parenthesized_declarator),
-          choice(seq('=', field('value', $._initializer_value)), field('value', $.initializer_list))
+      _function_attributes_start: ($) =>
+        prec(
+          1,
+          choice(
+            seq(repeat1($.attribute_specifier), repeat($.type_qualifier)),
+            seq(repeat($.attribute_specifier), repeat1($.type_qualifier))
+          )
         ),
-        seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list))
-      ),
 
-    // Each shape here has a function form of the same tokens: a parenthesized name only bare
-    // (`built_in_parenthesized_function_declarator`), the others also behind pointers and references.
-    _direct_initialized_declarator: ($) =>
-      choice(
-        $._direct_initialized_parenthesized_declarator,
-        alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
-      ),
+      _function_exception_specification: ($) => choice($.noexcept, $.throw_specifier),
 
-    // The direct initialization competing with a required-parentheses function declarator of the same tokens, behind
-    // the same pointers and references, so that `int *(*p)(nullptr);` stays a direct initialization like
-    // `int (*p)(nullptr);`.
-    _direct_initialized_parenthesized_declarator: ($) =>
-      choice(
-        alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
-        alias($.direct_initialized_pointer_declarator, $.pointer_declarator),
-        alias($.direct_initialized_reference_declarator, $.reference_declarator)
-      ),
+      _function_attributes_end: ($) =>
+        prec.right(
+          seq(
+            optional($.gnu_asm_expression),
+            choice(
+              seq(repeat1($.attribute_specifier), repeat($.attribute_declaration)),
+              seq(repeat($.attribute_specifier), repeat1($.attribute_declaration))
+            )
+          )
+        ),
 
-    direct_initialized_pointer_declarator: ($) =>
-      withPointerDeclarator($, $._direct_initialized_parenthesized_declarator),
-    direct_initialized_reference_declarator: ($) =>
-      prec.dynamic(1, prec.right(withReferenceDeclarator($, $._direct_initialized_parenthesized_declarator))),
+      _function_postfix: ($) => prec.right(choice(repeat1($.virtual_specifier), $.requires_clause)),
 
-    function_field_declarator: ($) =>
-      prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
+      contract_specifier: ($) =>
+        choice(
+          seq('pre', repeat($.attribute_declaration), '(', field('condition', $.expression), ')'),
+          seq(
+            'post',
+            repeat($.attribute_declaration),
+            '(',
+            optional(seq(field('result', $._contextual_identifier), repeat($.attribute_declaration), ':')),
+            field('condition', $.expression),
+            ')'
+          )
+        ),
 
-    function_type_declarator: ($) => prec(1, seq(field('declarator', $._type_declarator), $._function_declarator_seq)),
+      parenthesized_declarator: ($) => prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._declarator)),
+      parenthesized_field_declarator: ($) =>
+        prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._field_declarator)),
+      parenthesized_type_declarator: ($) =>
+        prec.dynamic(PREC.PAREN_DECLARATOR, parenthesizedDeclarator($, $._type_declarator)),
+      abstract_parenthesized_declarator: ($) => prec(1, parenthesizedDeclarator($, $._abstract_declarator)),
+      _initialized_parenthesized_declarator: ($) =>
+        parenthesizedDeclarator($, alias($._initialized_parenthesized_content, $._declarator)),
 
-    abstract_function_declarator: ($) =>
-      prec(1, seq(field('declarator', optional($._abstract_declarator)), $._function_declarator_seq)),
+      function_declarator: ($) => prec.dynamic(1, seq(field('declarator', $._declarator), $._function_declarator_seq)),
 
-    trailing_return_type: ($) => seq('->', alias($._trailing_return_type_descriptor, $.type_descriptor)),
-    _trailing_return_type_descriptor: ($) =>
-      prec(
-        1,
-        withDeclarator(C.grammar.rules.type_descriptor, optional(prec.right(1, $._trailing_abstract_declarator)))
-      ),
-
-    _trailing_abstract_declarator: ($) =>
-      choice(
-        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
-        alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
-        alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
-        alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
-        alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator),
-        alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)
-      ),
-    _trailing_abstract_pointer_declarator: ($) => {
-      const prefix = seq(
-        optional(prec.dynamic(3, $.ms_call_modifier)),
-        '*',
-        repeat($.attribute_declaration),
-        repeat($.ms_pointer_modifier),
-        repeat($.type_qualifier)
-      );
-      return choice(
-        prec.dynamic(2, seq(prefix, field('declarator', prec.right(1, $._trailing_abstract_declarator)))),
-        prec.dynamic(1, seq(prefix, prec(1, blank())))
-      );
-    },
-    _trailing_abstract_function_declarator: ($) =>
-      prec(1, seq(field('declarator', optional($._trailing_abstract_declarator)), $._function_declarator_core)),
-    _trailing_abstract_array_declarator: ($) =>
-      prec.dynamic(
-        1,
-        withDeclarator(
-          C.grammar.rules.abstract_array_declarator,
-          optional(prec.right(1, $._trailing_abstract_declarator))
-        )
-      ),
-    _trailing_abstract_parenthesized_declarator: ($) =>
-      prec(
-        1,
+      // Parentheses around a pointer before a parameter list or an array bound, as in `int (*pf)()` and `int (*a)[3]`,
+      // are required, so unlike other parenthesized declarators this one carries no PREC.PAREN_DECLARATOR penalty. It is
+      // used only where the declaration reading is certain (see `parameter_declaration` and `declaration`).
+      parenthesized_pointer_declarator: ($) =>
         seq(
           '(',
           choice(
-            field('declarator', alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator)),
-            field('declarator', alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)),
+            field('declarator', $.pointer_declarator),
+            field('declarator', alias($.required_parentheses_pointer_declarator, $.pointer_declarator)),
+            field('declarator', alias($.qualified_pointer_declarator, $.qualified_identifier)),
             seq(
-              optional(prec.dynamic(3, $.ms_call_modifier)),
+              optional($.ms_call_modifier),
               field(
                 'declarator',
                 choice(
-                  alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
-                  alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
-                  alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
-                  alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator)
+                  $.reference_declarator,
+                  alias($.required_parentheses_reference_declarator, $.reference_declarator),
+                  alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)
                 )
               )
             )
           ),
           ')'
-        )
-      ),
-    _trailing_abstract_reference_declarator: ($) =>
-      seq(choice(...REFERENCE_OPERATORS), choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank()))),
-    _trailing_abstract_qualified_pointer_declarator: ($) =>
-      pointerToMember(
-        $,
-        $._trailing_abstract_qualified_pointer_declarator,
-        alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
-        3
-      ),
+        ),
 
-    noexcept: ($) => prec.right(seq('noexcept', optional(seq('(', optional($.expression), ')')))),
+      // A declarator that needs parentheses, possibly behind pointers and references, as in `Foo *(*f)(Bar)`,
+      // `int (*(*fpa)[3])();`, and `int (&(*rg)())[3];`.
+      _required_parentheses_declarator: ($) =>
+        choice(
+          alias($.required_parentheses_function_declarator, $.function_declarator),
+          alias($.required_parentheses_array_declarator, $.array_declarator),
+          alias($.required_parentheses_pointer_declarator, $.pointer_declarator),
+          alias($.required_parentheses_reference_declarator, $.reference_declarator)
+        ),
 
-    throw_specifier: ($) => seq('throw', seq('(', commaSep($.type_descriptor), ')')),
+      required_parentheses_pointer_declarator: ($) => withPointerDeclarator($, $._required_parentheses_declarator),
+      required_parentheses_reference_declarator: ($) =>
+        prec.dynamic(1, prec.right(withReferenceDeclarator($, $._required_parentheses_declarator))),
 
-    template_type: ($) => seq(field('name', $._type_identifier), field('arguments', $.template_argument_list)),
-
-    template_method: ($) =>
-      seq(field('name', choice($._field_identifier, $.operator_name)), field('arguments', $.template_argument_list)),
-
-    template_function: ($) =>
-      seq(field('name', $._contextual_identifier), field('arguments', $.template_argument_list)),
-
-    template_argument_list: ($) =>
-      seq(
-        '<',
-        commaSep(
-          choice(
-            prec.dynamic(3, alias($._template_argument_type_identifier, $.type_descriptor)),
-            prec.dynamic(3, $.type_descriptor),
-            prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
-            prec.dynamic(1, choice($.expression, $.parameter_pack_expansion))
+      required_parentheses_function_declarator: ($) =>
+        prec.dynamic(
+          PREC.FUNCTION_OVER_DIRECT_INITIALIZATION,
+          seq(
+            field('declarator', alias($.parenthesized_pointer_declarator, $.parenthesized_declarator)),
+            $._function_declarator_seq
           )
         ),
-        alias(sym('_template_close'), '>')
-      ),
 
-    // An unqualified or scoped identifier as a template argument is resolved to a type statically instead of by GLR with
-    // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
-    // an earlier error recovery, tree-sitter's version limit could drop the type interpretation.
-    _template_argument_type_identifier: ($) =>
-      prec(
-        1,
-        field(
-          'type',
-          choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
-        )
-      ),
+      // Nested for further dimensions, as in `int (*a)[3][5]`.
+      required_parentheses_array_declarator: ($) =>
+        withDeclarator(
+          C.grammar.rules.array_declarator,
+          choice(
+            alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+            alias($.required_parentheses_array_declarator, $.array_declarator)
+          )
+        ),
 
-    _template_argument_qualified_type_identifier: ($) =>
-      prec(
-        1,
+      required_parentheses_init_declarator: ($) =>
+        choice(
+          seq(
+            field('declarator', $._built_in_parenthesized_declarator),
+            choice(seq('=', field('value', $._initializer_value)), field('value', $.initializer_list))
+          ),
+          seq(field('declarator', $._direct_initialized_declarator), field('value', $.argument_list))
+        ),
+
+      // Each shape here has a function form of the same tokens: a parenthesized name only bare
+      // (`built_in_parenthesized_function_declarator`), the others also behind pointers and references.
+      _direct_initialized_declarator: ($) =>
+        choice(
+          $._direct_initialized_parenthesized_declarator,
+          alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)
+        ),
+
+      // The direct initialization competing with a required-parentheses function declarator of the same tokens, behind
+      // the same pointers and references, so that `int *(*p)(nullptr);` stays a direct initialization like
+      // `int (*p)(nullptr);`.
+      _direct_initialized_parenthesized_declarator: ($) =>
+        choice(
+          alias($.parenthesized_pointer_declarator, $.parenthesized_declarator),
+          alias($.direct_initialized_pointer_declarator, $.pointer_declarator),
+          alias($.direct_initialized_reference_declarator, $.reference_declarator)
+        ),
+
+      direct_initialized_pointer_declarator: ($) =>
+        withPointerDeclarator($, $._direct_initialized_parenthesized_declarator),
+      direct_initialized_reference_declarator: ($) =>
+        prec.dynamic(1, prec.right(withReferenceDeclarator($, $._direct_initialized_parenthesized_declarator))),
+
+      function_field_declarator: ($) =>
+        prec.dynamic(1, seq(field('declarator', $._field_declarator), $._function_declarator_seq)),
+
+      function_type_declarator: ($) =>
+        prec(1, seq(field('declarator', $._type_declarator), $._function_declarator_seq)),
+
+      abstract_function_declarator: ($) =>
+        prec(1, seq(field('declarator', optional($._abstract_declarator)), $._function_declarator_seq)),
+
+      trailing_return_type: ($) => seq('->', alias($._trailing_return_type_descriptor, $.type_descriptor)),
+      _trailing_return_type_descriptor: ($) =>
+        prec(
+          1,
+          withDeclarator(C.grammar.rules.type_descriptor, optional(prec.right(1, $._trailing_abstract_declarator)))
+        ),
+
+      _trailing_abstract_declarator: ($) =>
+        choice(
+          alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
+          alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
+          alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
+          alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
+          alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator),
+          alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)
+        ),
+      _trailing_abstract_pointer_declarator: ($) => {
+        const prefix = seq(
+          optional(prec.dynamic(3, $.ms_call_modifier)),
+          '*',
+          repeat($.attribute_declaration),
+          repeat($.ms_pointer_modifier),
+          repeat($.type_qualifier)
+        );
+        return choice(
+          prec.dynamic(2, seq(prefix, field('declarator', prec.right(1, $._trailing_abstract_declarator)))),
+          prec.dynamic(1, seq(prefix, prec(1, blank())))
+        );
+      },
+      _trailing_abstract_function_declarator: ($) =>
+        prec(1, seq(field('declarator', optional($._trailing_abstract_declarator)), $._function_declarator_core)),
+      _trailing_abstract_array_declarator: ($) =>
+        prec.dynamic(
+          1,
+          withDeclarator(
+            C.grammar.rules.abstract_array_declarator,
+            optional(prec.right(1, $._trailing_abstract_declarator))
+          )
+        ),
+      _trailing_abstract_parenthesized_declarator: ($) =>
+        prec(
+          1,
+          seq(
+            '(',
+            choice(
+              field('declarator', alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator)),
+              field('declarator', alias($._trailing_abstract_qualified_pointer_declarator, $.qualified_identifier)),
+              seq(
+                optional(prec.dynamic(3, $.ms_call_modifier)),
+                field(
+                  'declarator',
+                  choice(
+                    alias($._trailing_abstract_function_declarator, $.abstract_function_declarator),
+                    alias($._trailing_abstract_array_declarator, $.abstract_array_declarator),
+                    alias($._trailing_abstract_parenthesized_declarator, $.abstract_parenthesized_declarator),
+                    alias($._trailing_abstract_reference_declarator, $.abstract_reference_declarator)
+                  )
+                )
+              )
+            ),
+            ')'
+          )
+        ),
+      _trailing_abstract_reference_declarator: ($) =>
+        seq(choice(...REFERENCE_OPERATORS), choice(prec.right(1, $._trailing_abstract_declarator), prec(1, blank()))),
+      _trailing_abstract_qualified_pointer_declarator: ($) =>
+        pointerToMember(
+          $,
+          $._trailing_abstract_qualified_pointer_declarator,
+          alias($._trailing_abstract_pointer_declarator, $.abstract_pointer_declarator),
+          3
+        ),
+
+      noexcept: ($) => prec.right(seq('noexcept', optional(seq('(', optional($.expression), ')')))),
+
+      throw_specifier: ($) => seq('throw', seq('(', commaSep($.type_descriptor), ')')),
+
+      template_type: ($) => seq(field('name', $._type_identifier), field('arguments', $.template_argument_list)),
+
+      template_method: ($) =>
+        seq(field('name', choice($._field_identifier, $.operator_name)), field('arguments', $.template_argument_list)),
+
+      template_function: ($) =>
+        seq(field('name', $._contextual_identifier), field('arguments', $.template_argument_list)),
+
+      template_argument_list: ($) =>
+        seq(
+          '<',
+          commaSep(
+            choice(
+              prec.dynamic(3, alias($._template_argument_type_identifier, $.type_descriptor)),
+              prec.dynamic(3, $.type_descriptor),
+              prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
+              prec.dynamic(1, choice($.expression, $.parameter_pack_expansion))
+            )
+          ),
+          alias(sym('_template_close'), '>')
+        ),
+
+      // An unqualified or scoped identifier as a template argument is resolved to a type statically instead of by GLR with
+      // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
+      // an earlier error recovery, tree-sitter's version limit could drop the type interpretation.
+      _template_argument_type_identifier: ($) =>
+        prec(
+          1,
+          field(
+            'type',
+            choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
+          )
+        ),
+
+      _template_argument_qualified_type_identifier: ($) =>
+        prec(
+          1,
+          seq(
+            $._scope_resolution,
+            field(
+              'name',
+              choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
+            )
+          )
+        ),
+
+      namespace_definition: ($) =>
+        seq(
+          optional('inline'),
+          'namespace',
+          repeat(choice($.attribute_declaration, $.attribute_specifier)),
+          optional(
+            seq(
+              field('name', choice($._namespace_identifier, $.nested_namespace_specifier)),
+              repeat($.attribute_specifier)
+            )
+          ),
+          field('body', $.declaration_list)
+        ),
+
+      namespace_alias_definition: ($) =>
+        seq(
+          'namespace',
+          field('name', $._namespace_identifier),
+          '=',
+          choice($._namespace_identifier, $.nested_namespace_specifier, $.splice_specifier),
+          ';'
+        ),
+
+      _namespace_specifier: ($) => seq(optional('inline'), $._namespace_identifier),
+
+      nested_namespace_specifier: ($) =>
+        prec(
+          1,
+          seq(optional($._namespace_specifier), '::', choice($.nested_namespace_specifier, $._namespace_specifier))
+        ),
+
+      using_declaration: ($) =>
+        seq(
+          repeat($.attribute_declaration),
+          'using',
+          choice(
+            seq(
+              choice('namespace', 'enum'),
+              choice($._contextual_identifier, $.qualified_identifier, $.splice_type_specifier)
+            ),
+            commaSep1(
+              choice(
+                $._contextual_identifier,
+                $.splice_type_specifier,
+                seq(optional('typename'), $.qualified_identifier, optional('...'))
+              )
+            )
+          ),
+          ';'
+        ),
+
+      linkage_specification: ($) =>
+        seq(
+          'extern',
+          field('value', $.string_literal),
+          field('body', choice($.function_definition, $.declaration, $.alias_declaration, $.declaration_list))
+        ),
+
+      alias_declaration: ($) =>
+        seq(
+          'using',
+          field('name', $._type_identifier),
+          repeat($.attribute_declaration),
+          '=',
+          field('type', $.type_descriptor),
+          ';'
+        ),
+
+      static_assert_declaration: ($) =>
+        seq(
+          'static_assert',
+          '(',
+          field('condition', $.expression),
+          optional(seq(',', field('message', $._string))),
+          ')',
+          ';'
+        ),
+
+      consteval_block_declaration: ($) => seq('consteval', field('body', $.compound_statement)),
+
+      concept_definition: ($) => seq('concept', field('name', $._contextual_identifier), '=', $.expression, ';'),
+
+      _top_level_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
+
+      _unlabeled_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
+
+      _single_unattributed_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
+
+      switch_statement: ($) =>
+        seq('switch', field('condition', $.condition_clause), field('body', $.compound_statement)),
+
+      while_statement: ($) => seq('while', field('condition', $.condition_clause), field('body', $._single_statement)),
+
+      if_statement: ($) =>
+        prec.right(
+          seq(
+            'if',
+            choice(
+              seq(
+                optional('constexpr'),
+                field('condition', $.condition_clause),
+                field('consequence', $._single_statement),
+                optional(field('alternative', $.else_clause))
+              ),
+              seq(
+                optional(choice('!', 'not')),
+                'consteval',
+                field('consequence', $.compound_statement),
+                optional(field('alternative', alias($._consteval_else_clause, $.else_clause)))
+              )
+            )
+          )
+        ),
+
+      _consteval_else_clause: ($) => seq('else', $.compound_statement),
+
+      // Using prec(1) instead of prec.dynamic(1) causes issues with the
+      // range loop's declaration specifiers if `int` is passed in, it'll
+      // always prefer the standard for loop and give us a parse error.
+      _for_statement_body: ($, original = missingOriginalRule()) => prec.dynamic(1, original),
+      for_range_loop: ($) => seq('for', '(', $._for_range_loop_body, ')', field('body', $._single_statement)),
+      _for_range_loop_body: ($) =>
+        seq(
+          field('initializer', optional($.init_statement)),
+          $._declaration_specifiers,
+          field('declarator', $._declarator),
+          ':',
+          field('right', choice($.expression, $.initializer_list))
+        ),
+
+      init_statement: ($) => choice($.alias_declaration, $.type_definition, $.declaration, $.expression_statement),
+
+      condition_clause: ($) =>
+        seq(
+          '(',
+          field('initializer', optional($.init_statement)),
+          field('value', choice($.expression, $.comma_expression, alias($.condition_declaration, $.declaration))),
+          ')'
+        ),
+
+      condition_declaration: ($) =>
+        choice(
+          seq(
+            $._declaration_specifiers,
+            field('declarator', $._declarator),
+            choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+          ),
+          // See the built-in alternative of `declaration`: `if (int (*p)() = f())` declares `p`.
+          prec.dynamic(
+            PREC.CERTAIN_DECLARATION,
+            seq(
+              $._built_in_declaration_specifiers,
+              field('declarator', $._built_in_parenthesized_declarator),
+              choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+            )
+          )
+        ),
+
+      return_statement: ($, original = missingOriginalRule()) =>
+        seq(choice(original, seq('return', $.initializer_list, ';'))),
+
+      co_return_statement: ($) => seq('co_return', optional($.expression), ';'),
+
+      co_yield_statement: ($) => prec.dynamic(1, seq('co_yield', $.expression, ';')),
+
+      throw_statement: ($) => prec.dynamic(1, seq('throw', optional($.expression), ';')),
+
+      try_statement: ($) => seq('try', field('body', $.compound_statement), repeat1($.catch_clause)),
+
+      catch_clause: ($) =>
+        seq(
+          'catch',
+          field('parameters', alias($._catch_parameter_list, $.parameter_list)),
+          field('body', $.compound_statement)
+        ),
+
+      _catch_parameter_list: ($) => seq('(', choice($.parameter_declaration, $.variadic_parameter), ')'),
+
+      _expression_not_binary: ($, original = missingOriginalRule()) => choice(...nonBinaryExpressions($, original)),
+
+      _string: ($) => choice($.string_literal, $.raw_string_literal, $.concatenated_string),
+
+      raw_string_literal: () =>
+        seq(
+          choice('R"', 'LR"', 'uR"', 'UR"', 'u8R"'),
+          choice(
+            seq(
+              field('delimiter', sym('raw_string_delimiter')),
+              '(',
+              sym('raw_string_content'),
+              ')',
+              sym('raw_string_delimiter')
+            ),
+            seq('(', sym('raw_string_content'), ')')
+          ),
+          '"'
+        ),
+
+      subscript_expression: ($) =>
+        prec(PREC.SUBSCRIPT, seq(field('argument', $.expression), field('indices', $.subscript_argument_list))),
+
+      subscript_argument_list: ($) =>
+        seq('[', commaSep(choice($.expression, $.parameter_pack_expansion, $.initializer_list)), ']'),
+
+      call_expression: ($, original = missingOriginalRule()) =>
+        choice(
+          prec.dynamic(
+            1,
+            choice(
+              original,
+              seq(
+                field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
+                field('arguments', $.argument_list)
+              )
+            )
+          ),
+          seq(
+            field('function', alias(choice('unsigned', 'signed', 'long', 'short'), $.sized_type_specifier)),
+            field('arguments', $.argument_list)
+          )
+        ),
+
+      co_await_expression: ($) =>
+        prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $.expression))),
+
+      new_expression: ($) =>
+        prec.right(
+          PREC.NEW,
+          seq(
+            optional('::'),
+            'new',
+            field('placement', optional($.argument_list)),
+            field('type', $.type_specifier),
+            field('declarator', optional($._new_declarator)),
+            field('arguments', optional(choice($.argument_list, $.initializer_list)))
+          )
+        ),
+
+      // new-declarator: ptr-operator new-declarator? | noptr-new-declarator ([expr.new]). The `&` and `&&` operators
+      // are left out, since a new-type-id must denote an object type.
+      _new_declarator: ($) => choice(alias($.new_pointer_declarator, $.abstract_pointer_declarator), $.new_declarator),
+      new_pointer_declarator: ($) =>
+        prec.right(
+          seq(
+            optional(prec.dynamic(2, $.ms_call_modifier)),
+            '*',
+            repeat($.attribute_declaration),
+            repeat($.ms_pointer_modifier),
+            repeat($.type_qualifier),
+            field('declarator', optional($._new_declarator))
+          )
+        ),
+      new_declarator: ($) => prec.right(seq('[', field('length', $.expression), ']', optional($.new_declarator))),
+
+      _array_delete_operator: () => prec(PREC.LAMBDA + 1, seq(optional('::'), 'delete', '[', ']')),
+
+      delete_expression: ($) => seq(choice(seq(optional('::'), 'delete'), $._array_delete_operator), $.expression),
+
+      field_expression: ($) =>
+        seq(
+          prec(PREC.FIELD, seq(field('argument', $.expression), field('operator', choice('.', '->')))),
+          field('field', fieldExpressionMember($))
+        ),
+
+      type_requirement: ($) => seq('typename', $._class_name),
+
+      compound_requirement: ($) =>
+        seq('{', $.expression, '}', optional('noexcept'), optional($.trailing_return_type), ';'),
+
+      _requirement: ($) =>
+        choice(alias($.expression_statement, sym('simple_requirement')), $.type_requirement, $.compound_requirement),
+
+      requirement_seq: ($) => seq('{', repeat($._requirement), '}'),
+
+      constraint_conjunction: ($) =>
+        prec.left(
+          PREC.LOGICAL_AND,
+          seq(
+            field('left', $._requirement_clause_constraint),
+            field('operator', choice('&&', 'and')),
+            field('right', $._requirement_clause_constraint)
+          )
+        ),
+
+      constraint_disjunction: ($) =>
+        prec.left(
+          PREC.LOGICAL_OR,
+          seq(
+            field('left', $._requirement_clause_constraint),
+            field('operator', choice('||', 'or')),
+            field('right', $._requirement_clause_constraint)
+          )
+        ),
+
+      _requirement_clause_constraint: ($) =>
+        choice(
+          $.true,
+          $.false,
+          $._class_name,
+          $.fold_expression,
+          $.pack_index_expression,
+          $.lambda_expression,
+          $.requires_expression,
+
+          seq('(', $.expression, ')'),
+
+          $.constraint_conjunction,
+          $.constraint_disjunction
+        ),
+
+      requires_clause: ($) => seq('requires', field('constraint', $._requirement_clause_constraint)),
+
+      requires_parameter_list: ($) =>
+        seq(
+          '(',
+          commaSep(choice($.parameter_declaration, $.optional_parameter_declaration, $.variadic_parameter_declaration)),
+          ')'
+        ),
+
+      requires_expression: ($) =>
+        seq(
+          'requires',
+          field('parameters', optional(alias($.requires_parameter_list, $.parameter_list))),
+          field('requirements', $.requirement_seq)
+        ),
+
+      lambda_specifier: () => choice('static', 'constexpr', 'consteval', 'mutable'),
+
+      lambda_declarator: ($) =>
+        choice(
+          seq(
+            repeat($.attribute_declaration),
+            field('parameters', $.parameter_list),
+            repeat($.lambda_specifier),
+            optional($._function_exception_specification),
+            repeat($.attribute_declaration),
+            optional($.trailing_return_type),
+            optional($.requires_clause),
+            repeat($.contract_specifier)
+          ),
+
+          seq(repeat1($.attribute_declaration), repeat($.contract_specifier)),
+          repeat1($.contract_specifier),
+          seq(repeat($.attribute_declaration), $.trailing_return_type, repeat($.contract_specifier)),
+          seq(
+            repeat($.attribute_declaration),
+            $._function_exception_specification,
+            repeat($.attribute_declaration),
+            optional($.trailing_return_type),
+            repeat($.contract_specifier)
+          ),
+          seq(
+            repeat($.attribute_declaration),
+            repeat1($.lambda_specifier),
+            optional($._function_exception_specification),
+            repeat($.attribute_declaration),
+            optional($.trailing_return_type),
+            repeat($.contract_specifier)
+          )
+        ),
+
+      lambda_expression: ($) =>
+        seq(
+          field('captures', $.lambda_capture_specifier),
+          optional(
+            seq(
+              field('template_parameters', $.template_parameter_list),
+              optional(field('constraint', $.requires_clause))
+            )
+          ),
+          optional(field('declarator', $.lambda_declarator)),
+          field('body', $.compound_statement)
+        ),
+
+      lambda_capture_specifier: ($) =>
+        prec(
+          PREC.LAMBDA,
+          seq(
+            '[',
+            choice(
+              $.lambda_default_capture,
+              commaSep($._lambda_capture),
+              seq($.lambda_default_capture, ',', commaSep1($._lambda_capture))
+            ),
+            ']'
+          )
+        ),
+
+      lambda_default_capture: () => choice('=', ...LVALUE_REFERENCE_OPERATORS),
+
+      _lambda_capture_identifier: ($) =>
+        seq(
+          optional(choice(...LVALUE_REFERENCE_OPERATORS)),
+          choice(
+            $._contextual_identifier,
+            $.qualified_identifier,
+            alias($.identifier_parameter_pack_expansion, $.parameter_pack_expansion)
+          )
+        ),
+
+      lambda_capture_initializer: ($) =>
+        seq(
+          optional(choice(...LVALUE_REFERENCE_OPERATORS)),
+          optional('...'),
+          field('left', $._contextual_identifier),
+          '=',
+          field('right', $.expression)
+        ),
+
+      _lambda_capture: ($) =>
+        choice(seq(optional('*'), $.this), $._lambda_capture_identifier, $.lambda_capture_initializer),
+
+      _fold_operator: () => choice(...FOLD_OPERATORS),
+      _binary_fold_operator: () =>
+        choice(...FOLD_OPERATORS.map((operator) => seq(field('operator', operator), '...', operator))),
+
+      _unary_left_fold: ($) =>
+        seq(field('left', '...'), field('operator', $._fold_operator), field('right', $.expression)),
+      _unary_right_fold: ($) =>
+        seq(field('left', $.expression), field('operator', $._fold_operator), field('right', '...')),
+      _binary_fold: ($) => seq(field('left', $.expression), $._binary_fold_operator, field('right', $.expression)),
+
+      fold_expression: ($) => seq('(', choice($._unary_right_fold, $._unary_left_fold, $._binary_fold), ')'),
+
+      parameter_pack_expansion: ($) => prec(-1, seq(field('pattern', $.expression), '...')),
+
+      expression_statement: ($, original = missingOriginalRule()) =>
+        choice(prec(1, prec.dynamic(1, seq($.pack_index_expression, ';'))), original),
+
+      pack_index_expression: ($) => packIndex($, $._contextual_identifier),
+
+      pack_index_type: ($) => packIndex($, $._type_identifier),
+
+      type_parameter_pack_expansion: ($) => seq(field('pattern', $.type_descriptor), '...'),
+
+      identifier_parameter_pack_expansion: ($) => seq(field('pattern', $._contextual_identifier), '...'),
+
+      sizeof_expression: ($) =>
+        prec.right(
+          PREC.SIZEOF,
+          choice(
+            seq('sizeof', choice(field('value', $.expression), sizeofTypeOperand($))),
+            seq('sizeof', '...', '(', field('value', $._contextual_identifier), ')'),
+            // A size cannot take a postfix operator, so one after `sizeof(ns::x)` makes `ns::x` an expression. This
+            // outweighs the type reading of the qualified name together with the postfix expression applied to it.
+            prec.dynamic(2, seq('sizeof', field('value', $._sizeof_qualified_postfix_expression)))
+          )
+        ),
+
+      _sizeof_reference_type_descriptor: ($) =>
+        withDeclarator(C.grammar.rules.type_descriptor, $._sizeof_reference_declarator),
+      _sizeof_reference_declarator: ($) =>
+        prec(
+          1,
+          choice(
+            $.abstract_reference_declarator,
+            alias($._sizeof_reference_pointer_declarator, $.abstract_pointer_declarator),
+            alias($._sizeof_reference_function_declarator, $.abstract_function_declarator),
+            alias($._sizeof_reference_array_declarator, $.abstract_array_declarator),
+            alias($._sizeof_reference_parenthesized_declarator, $.abstract_parenthesized_declarator),
+            alias($._sizeof_reference_qualified_pointer_declarator, $.qualified_identifier)
+          )
+        ),
+      _sizeof_reference_pointer_declarator: ($) =>
+        withPointerDeclarator($, $._sizeof_reference_declarator, C.grammar.rules.abstract_pointer_declarator),
+      _sizeof_reference_function_declarator: ($) =>
+        prec(1, seq(field('declarator', $._sizeof_reference_declarator), $._function_declarator_seq)),
+      _sizeof_reference_array_declarator: ($) =>
+        withDeclarator(C.grammar.rules.abstract_array_declarator, $._sizeof_reference_declarator),
+      _sizeof_reference_parenthesized_declarator: ($) =>
+        prec(1, seq('(', optional($.ms_call_modifier), field('declarator', $._sizeof_reference_declarator), ')')),
+      _sizeof_reference_qualified_pointer_declarator: ($) =>
+        pointerToMember(
+          $,
+          $._sizeof_reference_qualified_pointer_declarator,
+          alias($._sizeof_reference_pointer_declarator, $.abstract_pointer_declarator)
+        ),
+
+      _sizeof_qualified_postfix_expression: ($) =>
+        choice(
+          alias($.sizeof_operand_call_expression, $.call_expression),
+          alias($.sizeof_operand_subscript_expression, $.subscript_expression),
+          alias($.sizeof_operand_field_expression, $.field_expression),
+          alias($.sizeof_operand_update_expression, $.update_expression)
+        ),
+      // Outranking `sizeof` itself continues the operand through a following postfix operator instead of ending it there.
+      _sizeof_qualified_postfix_base: ($) =>
+        prec(
+          PREC.CALL,
+          choice(
+            alias($.parenthesized_qualified_identifier, $.parenthesized_expression),
+            $._sizeof_qualified_postfix_expression
+          )
+        ),
+      parenthesized_qualified_identifier: ($) => seq('(', $.qualified_identifier, ')'),
+      // Each postfix operator weighs 1 more here than in the generic rule, so that a reading that ends the operand early
+      // and applies the remaining operators to the size loses.
+      sizeof_operand_call_expression: ($) =>
+        prec.dynamic(
+          2,
+          prec(PREC.CALL, seq(field('function', $._sizeof_qualified_postfix_base), field('arguments', $.argument_list)))
+        ),
+      sizeof_operand_subscript_expression: ($) =>
+        prec.dynamic(
+          1,
+          prec(
+            PREC.SUBSCRIPT,
+            seq(field('argument', $._sizeof_qualified_postfix_base), field('indices', $.subscript_argument_list))
+          )
+        ),
+      sizeof_operand_field_expression: ($) =>
+        prec.dynamic(
+          1,
+          seq(
+            prec(
+              PREC.FIELD,
+              seq(field('argument', $._sizeof_qualified_postfix_base), field('operator', choice('.', '->')))
+            ),
+            field('field', fieldExpressionMember($))
+          )
+        ),
+      sizeof_operand_update_expression: ($) =>
+        prec.dynamic(
+          1,
+          prec.left(
+            PREC.UNARY,
+            seq(field('argument', $._sizeof_qualified_postfix_base), field('operator', choice('++', '--')))
+          )
+        ),
+
+      qualified_type_descriptor: ($) =>
+        prec(1, field('type', alias($.qualified_type_identifier, $.qualified_identifier))),
+
+      unary_expression: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $.expression)))
+        ),
+
+      binary_expression: ($, original = missingOriginalRule()) => {
+        /** @type {[string, number][]} */
+        const table = [['<=>', PREC.THREE_WAY], ...ALTERNATIVE_BINARY_OPERATORS];
+
+        const inherited = ruleMembers(original, 'CHOICE').map((rule) => {
+          if (rule.type !== 'PREC_LEFT') return rule;
+          const body = rule.content.type === 'PREC_DYNAMIC' ? rule.content.content : rule.content;
+          if (body.type !== 'SEQ') return { ...rule, content: body };
+          return {
+            ...rule,
+            content: seq(
+              ...body.members.map((member) =>
+                member.type === 'FIELD' &&
+                member.name === 'operator' &&
+                member.content.type === 'STRING' &&
+                member.content.value === '>'
+                  ? field('operator', choice('>', alias(sym('_split_template_close'), '>')))
+                  : member
+              )
+            ),
+          };
+        });
+        return choice(
+          ...inherited,
+          ...table.map(([operator, precedence]) => {
+            return prec.left(
+              precedence,
+              seq(field('left', $.expression), field('operator', operator), field('right', $.expression))
+            );
+          })
+        );
+      },
+
+      cast_expression: (_, original = missingOriginalRule()) => prec.left(PREC.CAST, original),
+
+      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
+      // The operator arguments are added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
+      argument_list: ($) => callArgumentList($),
+
+      operator_argument: () =>
+        choice(
+          'not',
+          'compl',
+          'or',
+          'bitor',
+          'xor',
+          'not_eq',
+          'and_eq',
+          'or_eq',
+          'xor_eq',
+          '+',
+          '-',
+          '/',
+          '%',
+          '^',
+          '|',
+          '~',
+          '!',
+          '=',
+          '<',
+          '>',
+          '+=',
+          '-=',
+          '*=',
+          '/=',
+          '%=',
+          '^=',
+          '&=',
+          '|=',
+          '<<',
+          '>>',
+          '>>=',
+          '<<=',
+          '==',
+          '!=',
+          '<=',
+          '>=',
+          '<=>',
+          '||',
+          '++',
+          '--',
+          '.',
+          '.*',
+          '->',
+          '->*',
+          '::'
+        ),
+
+      // Accepted only among several arguments: alone in parentheses, these are abstract declarators, as in `T (&)[3]`.
+      _declarator_operator_argument: () =>
+        choice(
+          '*',
+          '&',
+          'bitand',
+          'and',
+          // Not the `&&` token: accepting it here would make `&&label` in `f(1, &&label)` lex as one token.
+          seq('&', '&')
+        ),
+
+      destructor_name: ($) => prec(1, seq('~', choice($._contextual_identifier, $.pack_index_type))),
+
+      _template_destructor_name: ($) => prec(1, seq('~', $._contextual_identifier, $.template_argument_list)),
+
+      compound_literal_expression: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          seq(
+            field(
+              'type',
+              choice(
+                $._class_name,
+                $.pack_index_type,
+                $.primitive_type,
+                seq(optional('typename'), $.splice_type_specifier)
+              )
+            ),
+            field('value', $.initializer_list)
+          )
+        ),
+
+      dependent_identifier: ($) => seq('template', $.template_function),
+      dependent_field_identifier: ($) => seq('template', $.template_method),
+      dependent_type_identifier: ($) => seq('template', $.template_type),
+
+      _scope_resolution: ($) =>
+        prec(
+          1,
+          seq(
+            field(
+              'scope',
+              optional(
+                choice(
+                  $._namespace_identifier,
+                  $.template_type,
+                  $.decltype,
+                  $.pack_index_type,
+                  $.splice_expression,
+                  $.splice_type_specifier,
+                  alias($.dependent_type_identifier, sym('dependent_name'))
+                )
+              )
+            ),
+            '::'
+          )
+        ),
+
+      qualified_field_identifier: ($) =>
         seq(
           $._scope_resolution,
           field(
             'name',
-            choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
-          )
-        )
-      ),
-
-    namespace_definition: ($) =>
-      seq(
-        optional('inline'),
-        'namespace',
-        repeat(choice($.attribute_declaration, $.attribute_specifier)),
-        optional(
-          seq(
-            field('name', choice($._namespace_identifier, $.nested_namespace_specifier)),
-            repeat($.attribute_specifier)
-          )
-        ),
-        field('body', $.declaration_list)
-      ),
-
-    namespace_alias_definition: ($) =>
-      seq(
-        'namespace',
-        field('name', $._namespace_identifier),
-        '=',
-        choice($._namespace_identifier, $.nested_namespace_specifier, $.splice_specifier),
-        ';'
-      ),
-
-    _namespace_specifier: ($) => seq(optional('inline'), $._namespace_identifier),
-
-    nested_namespace_specifier: ($) =>
-      prec(
-        1,
-        seq(optional($._namespace_specifier), '::', choice($.nested_namespace_specifier, $._namespace_specifier))
-      ),
-
-    using_declaration: ($) =>
-      seq(
-        repeat($.attribute_declaration),
-        'using',
-        choice(
-          seq(
-            choice('namespace', 'enum'),
-            choice($._contextual_identifier, $.qualified_identifier, $.splice_type_specifier)
-          ),
-          commaSep1(
             choice(
-              $._contextual_identifier,
-              $.splice_type_specifier,
-              seq(optional('typename'), $.qualified_identifier, optional('...'))
+              alias($.dependent_field_identifier, sym('dependent_name')),
+              alias($.qualified_field_identifier, $.qualified_identifier),
+              $.template_method,
+              $.destructor_name,
+              alias($._template_destructor_name, $.destructor_name),
+              prec.dynamic(2, $._field_identifier)
             )
           )
         ),
-        ';'
-      ),
 
-    linkage_specification: ($) =>
-      seq(
-        'extern',
-        field('value', $.string_literal),
-        field('body', choice($.function_definition, $.declaration, $.alias_declaration, $.declaration_list))
-      ),
-
-    alias_declaration: ($) =>
-      seq(
-        'using',
-        field('name', $._type_identifier),
-        repeat($.attribute_declaration),
-        '=',
-        field('type', $.type_descriptor),
-        ';'
-      ),
-
-    static_assert_declaration: ($) =>
-      seq(
-        'static_assert',
-        '(',
-        field('condition', $.expression),
-        optional(seq(',', field('message', $._string))),
-        ')',
-        ';'
-      ),
-
-    consteval_block_declaration: ($) => seq('consteval', field('body', $.compound_statement)),
-
-    concept_definition: ($) => seq('concept', field('name', $._contextual_identifier), '=', $.expression, ';'),
-
-    _top_level_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
-
-    _unlabeled_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
-
-    _single_unattributed_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
-
-    switch_statement: ($) => seq('switch', field('condition', $.condition_clause), field('body', $.compound_statement)),
-
-    while_statement: ($) => seq('while', field('condition', $.condition_clause), field('body', $._single_statement)),
-
-    if_statement: ($) =>
-      prec.right(
+      qualified_identifier: ($) =>
         seq(
-          'if',
-          choice(
-            seq(
-              optional('constexpr'),
-              field('condition', $.condition_clause),
-              field('consequence', $._single_statement),
-              optional(field('alternative', $.else_clause))
-            ),
-            seq(
-              optional(choice('!', 'not')),
-              'consteval',
-              field('consequence', $.compound_statement),
-              optional(field('alternative', alias($._consteval_else_clause, $.else_clause)))
+          $._scope_resolution,
+          field(
+            'name',
+            choice(
+              alias($.dependent_identifier, sym('dependent_name')),
+              $.qualified_identifier,
+              $.template_function,
+              prec.dynamic(1, seq(optional('template'), $._contextual_identifier)),
+              $.operator_name,
+              $.destructor_name,
+              alias($._template_destructor_name, $.destructor_name)
             )
           )
-        )
-      ),
-
-    _consteval_else_clause: ($) => seq('else', $.compound_statement),
-
-    // Using prec(1) instead of prec.dynamic(1) causes issues with the
-    // range loop's declaration specifiers if `int` is passed in, it'll
-    // always prefer the standard for loop and give us a parse error.
-    _for_statement_body: ($, original = missingOriginalRule()) => prec.dynamic(1, original),
-    for_range_loop: ($) => seq('for', '(', $._for_range_loop_body, ')', field('body', $._single_statement)),
-    _for_range_loop_body: ($) =>
-      seq(
-        field('initializer', optional($.init_statement)),
-        $._declaration_specifiers,
-        field('declarator', $._declarator),
-        ':',
-        field('right', choice($.expression, $.initializer_list))
-      ),
-
-    init_statement: ($) => choice($.alias_declaration, $.type_definition, $.declaration, $.expression_statement),
-
-    condition_clause: ($) =>
-      seq(
-        '(',
-        field('initializer', optional($.init_statement)),
-        field('value', choice($.expression, $.comma_expression, alias($.condition_declaration, $.declaration))),
-        ')'
-      ),
-
-    condition_declaration: ($) =>
-      choice(
-        seq(
-          $._declaration_specifiers,
-          field('declarator', $._declarator),
-          choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
         ),
-        // See the built-in alternative of `declaration`: `if (int (*p)() = f())` declares `p`.
-        prec.dynamic(
-          PREC.CERTAIN_DECLARATION,
-          seq(
-            $._built_in_declaration_specifiers,
-            field('declarator', $._built_in_parenthesized_declarator),
-            choice(seq('=', field('value', $.expression)), field('value', $.initializer_list))
+
+      qualified_type_identifier: ($) =>
+        seq(
+          $._scope_resolution,
+          field(
+            'name',
+            choice(
+              alias($.dependent_type_identifier, sym('dependent_name')),
+              alias($.qualified_type_identifier, $.qualified_identifier),
+              $.template_type,
+              prec.dynamic(1, $._type_identifier)
+            )
           )
-        )
-      ),
+        ),
 
-    return_statement: ($, original = missingOriginalRule()) =>
-      seq(choice(original, seq('return', $.initializer_list, ';'))),
+      qualified_operator_cast_identifier: ($) =>
+        seq(
+          $._scope_resolution,
+          field('name', choice(alias($.qualified_operator_cast_identifier, $.qualified_identifier), $.operator_cast))
+        ),
 
-    co_return_statement: ($) => seq('co_return', optional($.expression), ';'),
-
-    co_yield_statement: ($) => prec.dynamic(1, seq('co_yield', $.expression, ';')),
-
-    throw_statement: ($) => prec.dynamic(1, seq('throw', optional($.expression), ';')),
-
-    try_statement: ($) => seq('try', field('body', $.compound_statement), repeat1($.catch_clause)),
-
-    catch_clause: ($) =>
-      seq(
-        'catch',
-        field('parameters', alias($._catch_parameter_list, $.parameter_list)),
-        field('body', $.compound_statement)
-      ),
-
-    _catch_parameter_list: ($) => seq('(', choice($.parameter_declaration, $.variadic_parameter), ')'),
-
-    _expression_not_binary: ($, original = missingOriginalRule()) => choice(...nonBinaryExpressions($, original)),
-
-    _string: ($) => choice($.string_literal, $.raw_string_literal, $.concatenated_string),
-
-    raw_string_literal: () =>
-      seq(
-        choice('R"', 'LR"', 'uR"', 'UR"', 'u8R"'),
+      _assignment_left_expression: ($) =>
         choice(
-          seq(
-            field('delimiter', sym('raw_string_delimiter')),
-            '(',
-            sym('raw_string_content'),
-            ')',
-            sym('raw_string_delimiter')
+          ...nonBinaryExpressions($, C.grammar.rules._expression_not_binary).filter(
+            (rule) => rule.type !== 'SYMBOL' || !['conditional_expression', 'assignment_expression'].includes(rule.name)
           ),
-          seq('(', sym('raw_string_content'), ')')
+          $.binary_expression,
+          alias($.pointer_to_member_expression, $.binary_expression),
+          $.named_cast_expression,
+          $.typeid_expression
         ),
-        '"'
-      ),
 
-    subscript_expression: ($) =>
-      prec(PREC.SUBSCRIPT, seq(field('argument', $.expression), field('indices', $.subscript_argument_list))),
+      expression: ($, original = missingOriginalRule()) =>
+        choice(
+          original,
+          alias($.pointer_to_member_expression, $.binary_expression),
+          $.named_cast_expression,
+          $.typeid_expression
+        ),
 
-    subscript_argument_list: ($) =>
-      seq('[', commaSep(choice($.expression, $.parameter_pack_expansion, $.initializer_list)), ']'),
-
-    call_expression: ($, original = missingOriginalRule()) =>
-      choice(
+      named_cast_expression: ($) =>
         prec.dynamic(
           1,
-          choice(
-            original,
-            seq(
-              field('function', choice($.primitive_type, seq(optional('typename'), $.splice_type_specifier))),
-              field('arguments', $.argument_list)
-            )
-          )
-        ),
-        seq(
-          field('function', alias(choice('unsigned', 'signed', 'long', 'short'), $.sized_type_specifier)),
-          field('arguments', $.argument_list)
-        )
-      ),
-
-    co_await_expression: ($) =>
-      prec.left(PREC.UNARY, seq(field('operator', 'co_await'), field('argument', $.expression))),
-
-    new_expression: ($) =>
-      prec.right(
-        PREC.NEW,
-        seq(
-          optional('::'),
-          'new',
-          field('placement', optional($.argument_list)),
-          field('type', $.type_specifier),
-          field('declarator', optional($._new_declarator)),
-          field('arguments', optional(choice($.argument_list, $.initializer_list)))
-        )
-      ),
-
-    // new-declarator: ptr-operator new-declarator? | noptr-new-declarator ([expr.new]). The `&` and `&&` operators
-    // are left out, since a new-type-id must denote an object type.
-    _new_declarator: ($) => choice(alias($.new_pointer_declarator, $.abstract_pointer_declarator), $.new_declarator),
-    new_pointer_declarator: ($) =>
-      prec.right(
-        seq(
-          optional(prec.dynamic(2, $.ms_call_modifier)),
-          '*',
-          repeat($.attribute_declaration),
-          repeat($.ms_pointer_modifier),
-          repeat($.type_qualifier),
-          field('declarator', optional($._new_declarator))
-        )
-      ),
-    new_declarator: ($) => prec.right(seq('[', field('length', $.expression), ']', optional($.new_declarator))),
-
-    _array_delete_operator: () => prec(PREC.LAMBDA + 1, seq(optional('::'), 'delete', '[', ']')),
-
-    delete_expression: ($) => seq(choice(seq(optional('::'), 'delete'), $._array_delete_operator), $.expression),
-
-    field_expression: ($) =>
-      seq(
-        prec(PREC.FIELD, seq(field('argument', $.expression), field('operator', choice('.', '->')))),
-        field('field', fieldExpressionMember($))
-      ),
-
-    type_requirement: ($) => seq('typename', $._class_name),
-
-    compound_requirement: ($) =>
-      seq('{', $.expression, '}', optional('noexcept'), optional($.trailing_return_type), ';'),
-
-    _requirement: ($) =>
-      choice(alias($.expression_statement, sym('simple_requirement')), $.type_requirement, $.compound_requirement),
-
-    requirement_seq: ($) => seq('{', repeat($._requirement), '}'),
-
-    constraint_conjunction: ($) =>
-      prec.left(
-        PREC.LOGICAL_AND,
-        seq(
-          field('left', $._requirement_clause_constraint),
-          field('operator', choice('&&', 'and')),
-          field('right', $._requirement_clause_constraint)
-        )
-      ),
-
-    constraint_disjunction: ($) =>
-      prec.left(
-        PREC.LOGICAL_OR,
-        seq(
-          field('left', $._requirement_clause_constraint),
-          field('operator', choice('||', 'or')),
-          field('right', $._requirement_clause_constraint)
-        )
-      ),
-
-    _requirement_clause_constraint: ($) =>
-      choice(
-        $.true,
-        $.false,
-        $._class_name,
-        $.fold_expression,
-        $.pack_index_expression,
-        $.lambda_expression,
-        $.requires_expression,
-
-        seq('(', $.expression, ')'),
-
-        $.constraint_conjunction,
-        $.constraint_disjunction
-      ),
-
-    requires_clause: ($) => seq('requires', field('constraint', $._requirement_clause_constraint)),
-
-    requires_parameter_list: ($) =>
-      seq(
-        '(',
-        commaSep(choice($.parameter_declaration, $.optional_parameter_declaration, $.variadic_parameter_declaration)),
-        ')'
-      ),
-
-    requires_expression: ($) =>
-      seq(
-        'requires',
-        field('parameters', optional(alias($.requires_parameter_list, $.parameter_list))),
-        field('requirements', $.requirement_seq)
-      ),
-
-    lambda_specifier: () => choice('static', 'constexpr', 'consteval', 'mutable'),
-
-    lambda_declarator: ($) =>
-      choice(
-        seq(
-          repeat($.attribute_declaration),
-          field('parameters', $.parameter_list),
-          repeat($.lambda_specifier),
-          optional($._function_exception_specification),
-          repeat($.attribute_declaration),
-          optional($.trailing_return_type),
-          optional($.requires_clause),
-          repeat($.contract_specifier)
-        ),
-
-        seq(repeat1($.attribute_declaration), repeat($.contract_specifier)),
-        repeat1($.contract_specifier),
-        seq(repeat($.attribute_declaration), $.trailing_return_type, repeat($.contract_specifier)),
-        seq(
-          repeat($.attribute_declaration),
-          $._function_exception_specification,
-          repeat($.attribute_declaration),
-          optional($.trailing_return_type),
-          repeat($.contract_specifier)
-        ),
-        seq(
-          repeat($.attribute_declaration),
-          repeat1($.lambda_specifier),
-          optional($._function_exception_specification),
-          repeat($.attribute_declaration),
-          optional($.trailing_return_type),
-          repeat($.contract_specifier)
-        )
-      ),
-
-    lambda_expression: ($) =>
-      seq(
-        field('captures', $.lambda_capture_specifier),
-        optional(
-          seq(field('template_parameters', $.template_parameter_list), optional(field('constraint', $.requires_clause)))
-        ),
-        optional(field('declarator', $.lambda_declarator)),
-        field('body', $.compound_statement)
-      ),
-
-    lambda_capture_specifier: ($) =>
-      prec(
-        PREC.LAMBDA,
-        seq(
-          '[',
-          choice(
-            $.lambda_default_capture,
-            commaSep($._lambda_capture),
-            seq($.lambda_default_capture, ',', commaSep1($._lambda_capture))
-          ),
-          ']'
-        )
-      ),
-
-    lambda_default_capture: () => choice('=', ...LVALUE_REFERENCE_OPERATORS),
-
-    _lambda_capture_identifier: ($) =>
-      seq(
-        optional(choice(...LVALUE_REFERENCE_OPERATORS)),
-        choice(
-          $._contextual_identifier,
-          $.qualified_identifier,
-          alias($.identifier_parameter_pack_expansion, $.parameter_pack_expansion)
-        )
-      ),
-
-    lambda_capture_initializer: ($) =>
-      seq(
-        optional(choice(...LVALUE_REFERENCE_OPERATORS)),
-        optional('...'),
-        field('left', $._contextual_identifier),
-        '=',
-        field('right', $.expression)
-      ),
-
-    _lambda_capture: ($) =>
-      choice(seq(optional('*'), $.this), $._lambda_capture_identifier, $.lambda_capture_initializer),
-
-    _fold_operator: () => choice(...FOLD_OPERATORS),
-    _binary_fold_operator: () =>
-      choice(...FOLD_OPERATORS.map((operator) => seq(field('operator', operator), '...', operator))),
-
-    _unary_left_fold: ($) =>
-      seq(field('left', '...'), field('operator', $._fold_operator), field('right', $.expression)),
-    _unary_right_fold: ($) =>
-      seq(field('left', $.expression), field('operator', $._fold_operator), field('right', '...')),
-    _binary_fold: ($) => seq(field('left', $.expression), $._binary_fold_operator, field('right', $.expression)),
-
-    fold_expression: ($) => seq('(', choice($._unary_right_fold, $._unary_left_fold, $._binary_fold), ')'),
-
-    parameter_pack_expansion: ($) => prec(-1, seq(field('pattern', $.expression), '...')),
-
-    expression_statement: ($, original = missingOriginalRule()) =>
-      choice(prec(1, prec.dynamic(1, seq($.pack_index_expression, ';'))), original),
-
-    pack_index_expression: ($) => packIndex($, $._contextual_identifier),
-
-    pack_index_type: ($) => packIndex($, $._type_identifier),
-
-    type_parameter_pack_expansion: ($) => seq(field('pattern', $.type_descriptor), '...'),
-
-    identifier_parameter_pack_expansion: ($) => seq(field('pattern', $._contextual_identifier), '...'),
-
-    sizeof_expression: ($) =>
-      prec.right(
-        PREC.SIZEOF,
-        choice(
-          seq('sizeof', choice(field('value', $.expression), sizeofTypeOperand($))),
-          seq('sizeof', '...', '(', field('value', $._contextual_identifier), ')'),
-          // A size cannot take a postfix operator, so one after `sizeof(ns::x)` makes `ns::x` an expression. This
-          // outweighs the type reading of the qualified name together with the postfix expression applied to it.
-          prec.dynamic(2, seq('sizeof', field('value', $._sizeof_qualified_postfix_expression)))
-        )
-      ),
-
-    _sizeof_reference_type_descriptor: ($) =>
-      withDeclarator(C.grammar.rules.type_descriptor, $._sizeof_reference_declarator),
-    _sizeof_reference_declarator: ($) =>
-      prec(
-        1,
-        choice(
-          $.abstract_reference_declarator,
-          alias($._sizeof_reference_pointer_declarator, $.abstract_pointer_declarator),
-          alias($._sizeof_reference_function_declarator, $.abstract_function_declarator),
-          alias($._sizeof_reference_array_declarator, $.abstract_array_declarator),
-          alias($._sizeof_reference_parenthesized_declarator, $.abstract_parenthesized_declarator),
-          alias($._sizeof_reference_qualified_pointer_declarator, $.qualified_identifier)
-        )
-      ),
-    _sizeof_reference_pointer_declarator: ($) =>
-      withPointerDeclarator($, $._sizeof_reference_declarator, C.grammar.rules.abstract_pointer_declarator),
-    _sizeof_reference_function_declarator: ($) =>
-      prec(1, seq(field('declarator', $._sizeof_reference_declarator), $._function_declarator_seq)),
-    _sizeof_reference_array_declarator: ($) =>
-      withDeclarator(C.grammar.rules.abstract_array_declarator, $._sizeof_reference_declarator),
-    _sizeof_reference_parenthesized_declarator: ($) =>
-      prec(1, seq('(', optional($.ms_call_modifier), field('declarator', $._sizeof_reference_declarator), ')')),
-    _sizeof_reference_qualified_pointer_declarator: ($) =>
-      pointerToMember(
-        $,
-        $._sizeof_reference_qualified_pointer_declarator,
-        alias($._sizeof_reference_pointer_declarator, $.abstract_pointer_declarator)
-      ),
-
-    _sizeof_qualified_postfix_expression: ($) =>
-      choice(
-        alias($.sizeof_operand_call_expression, $.call_expression),
-        alias($.sizeof_operand_subscript_expression, $.subscript_expression),
-        alias($.sizeof_operand_field_expression, $.field_expression),
-        alias($.sizeof_operand_update_expression, $.update_expression)
-      ),
-    // Outranking `sizeof` itself continues the operand through a following postfix operator instead of ending it there.
-    _sizeof_qualified_postfix_base: ($) =>
-      prec(
-        PREC.CALL,
-        choice(
-          alias($.parenthesized_qualified_identifier, $.parenthesized_expression),
-          $._sizeof_qualified_postfix_expression
-        )
-      ),
-    parenthesized_qualified_identifier: ($) => seq('(', $.qualified_identifier, ')'),
-    // Each postfix operator weighs 1 more here than in the generic rule, so that a reading that ends the operand early
-    // and applies the remaining operators to the size loses.
-    sizeof_operand_call_expression: ($) =>
-      prec.dynamic(
-        2,
-        prec(PREC.CALL, seq(field('function', $._sizeof_qualified_postfix_base), field('arguments', $.argument_list)))
-      ),
-    sizeof_operand_subscript_expression: ($) =>
-      prec.dynamic(
-        1,
-        prec(
-          PREC.SUBSCRIPT,
-          seq(field('argument', $._sizeof_qualified_postfix_base), field('indices', $.subscript_argument_list))
-        )
-      ),
-    sizeof_operand_field_expression: ($) =>
-      prec.dynamic(
-        1,
-        seq(
           prec(
-            PREC.FIELD,
-            seq(field('argument', $._sizeof_qualified_postfix_base), field('operator', choice('.', '->')))
-          ),
-          field('field', fieldExpressionMember($))
-        )
-      ),
-    sizeof_operand_update_expression: ($) =>
-      prec.dynamic(
-        1,
+            PREC.CALL,
+            seq(
+              field('operator', choice('static_cast', 'dynamic_cast', 'const_cast', 'reinterpret_cast')),
+              '<',
+              field('type', $.type_descriptor),
+              '>',
+              '(',
+              field('value', choice($.expression, $.comma_expression)),
+              ')'
+            )
+          )
+        ),
+
+      typeid_expression: ($) =>
+        prec.dynamic(
+          1,
+          prec(
+            PREC.CALL,
+            seq(
+              'typeid',
+              choice(seq('(', field('value', choice($.expression, $.comma_expression)), ')'), $._typeid_type_operand)
+            )
+          )
+        ),
+
+      _typeid_type_operand: ($) => prec.dynamic(-1, seq('(', field('type', $.type_descriptor), ')')),
+
+      pointer_to_member_expression: ($) =>
         prec.left(
-          PREC.UNARY,
-          seq(field('argument', $._sizeof_qualified_postfix_base), field('operator', choice('++', '--')))
-        )
-      ),
+          PREC.POINTER_TO_MEMBER,
+          seq(field('left', $.expression), field('operator', choice('.*', '->*')), field('right', $.expression))
+        ),
 
-    qualified_type_descriptor: ($) =>
-      prec(1, field('type', alias($.qualified_type_identifier, $.qualified_identifier))),
-
-    unary_expression: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        prec.left(PREC.UNARY, seq(field('operator', choice('not', 'compl')), field('argument', $.expression)))
-      ),
-
-    binary_expression: ($, original = missingOriginalRule()) => {
-      /** @type {[string, number][]} */
-      const table = [['<=>', PREC.THREE_WAY], ...ALTERNATIVE_BINARY_OPERATORS];
-
-      const inherited = ruleMembers(original, 'CHOICE').map((rule) => {
-        if (rule.type !== 'PREC_LEFT') return rule;
-        const body = rule.content.type === 'PREC_DYNAMIC' ? rule.content.content : rule.content;
-        if (body.type !== 'SEQ') return { ...rule, content: body };
-        return {
-          ...rule,
-          content: seq(
-            ...body.members.map((member) =>
-              member.type === 'FIELD' &&
-              member.name === 'operator' &&
-              member.content.type === 'STRING' &&
-              member.content.value === '>'
-                ? field('operator', choice('>', alias(sym('_split_template_close'), '>')))
-                : member
-            )
-          ),
-        };
-      });
-      return choice(
-        ...inherited,
-        ...table.map(([operator, precedence]) => {
-          return prec.left(
-            precedence,
-            seq(field('left', $.expression), field('operator', operator), field('right', $.expression))
-          );
-        })
-      );
-    },
-
-    cast_expression: (_, original = missingOriginalRule()) => prec.left(PREC.CAST, original),
-
-    // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
-    // The operator arguments are added to parse macros taking operators as arguments, e.g. DEFINE_COMPARISON(NE, !=)
-    argument_list: ($) => {
-      const argument = choice(
-        $.expression,
-        $.parameter_pack_expansion,
-        $.initializer_list,
-        $.compound_statement,
-        $.operator_argument
-      );
-      const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
-      return seq(
-        '(',
-        optional(
-          choice(
-            argument,
-            alias(choice('and', 'bitand'), $.identifier),
-            seq(anyArgument, repeat1(seq(',', anyArgument)))
+      assignment_expression: ($) =>
+        prec.right(
+          PREC.ASSIGNMENT,
+          seq(
+            field('left', $._assignment_left_expression),
+            field('operator', choice(...ASSIGNMENT_OPERATORS)),
+            field('right', choice($.expression, $.initializer_list))
           )
         ),
-        ')'
-      );
-    },
 
-    operator_argument: () =>
-      choice(
-        'not',
-        'compl',
-        'or',
-        'bitor',
-        'xor',
-        'not_eq',
-        'and_eq',
-        'or_eq',
-        'xor_eq',
-        '+',
-        '-',
-        '/',
-        '%',
-        '^',
-        '|',
-        '~',
-        '!',
-        '=',
-        '<',
-        '>',
-        '+=',
-        '-=',
-        '*=',
-        '/=',
-        '%=',
-        '^=',
-        '&=',
-        '|=',
-        '<<',
-        '>>',
-        '>>=',
-        '<<=',
-        '==',
-        '!=',
-        '<=',
-        '>=',
-        '<=>',
-        '||',
-        '++',
-        '--',
-        '.',
-        '.*',
-        '->',
-        '->*',
-        '::'
-      ),
-
-    // Accepted only among several arguments: alone in parentheses, these are abstract declarators, as in `T (&)[3]`.
-    _declarator_operator_argument: () =>
-      choice(
-        '*',
-        '&',
-        'bitand',
-        'and',
-        // Not the `&&` token: accepting it here would make `&&label` in `f(1, &&label)` lex as one token.
-        seq('&', '&')
-      ),
-
-    destructor_name: ($) => prec(1, seq('~', choice($._contextual_identifier, $.pack_index_type))),
-
-    _template_destructor_name: ($) => prec(1, seq('~', $._contextual_identifier, $.template_argument_list)),
-
-    compound_literal_expression: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
+      _assignment_expression_lhs: ($) =>
         seq(
-          field(
-            'type',
-            choice(
-              $._class_name,
-              $.pack_index_type,
-              $.primitive_type,
-              seq(optional('typename'), $.splice_type_specifier)
-            )
-          ),
-          field('value', $.initializer_list)
-        )
-      ),
-
-    dependent_identifier: ($) => seq('template', $.template_function),
-    dependent_field_identifier: ($) => seq('template', $.template_method),
-    dependent_type_identifier: ($) => seq('template', $.template_type),
-
-    _scope_resolution: ($) =>
-      prec(
-        1,
-        seq(
-          field(
-            'scope',
-            optional(
-              choice(
-                $._namespace_identifier,
-                $.template_type,
-                $.decltype,
-                $.pack_index_type,
-                $.splice_expression,
-                $.splice_type_specifier,
-                alias($.dependent_type_identifier, sym('dependent_name'))
-              )
-            )
-          ),
-          '::'
-        )
-      ),
-
-    qualified_field_identifier: ($) =>
-      seq(
-        $._scope_resolution,
-        field(
-          'name',
-          choice(
-            alias($.dependent_field_identifier, sym('dependent_name')),
-            alias($.qualified_field_identifier, $.qualified_identifier),
-            $.template_method,
-            $.destructor_name,
-            alias($._template_destructor_name, $.destructor_name),
-            prec.dynamic(2, $._field_identifier)
-          )
-        )
-      ),
-
-    qualified_identifier: ($) =>
-      seq(
-        $._scope_resolution,
-        field(
-          'name',
-          choice(
-            alias($.dependent_identifier, sym('dependent_name')),
-            $.qualified_identifier,
-            $.template_function,
-            prec.dynamic(1, seq(optional('template'), $._contextual_identifier)),
-            $.operator_name,
-            $.destructor_name,
-            alias($._template_destructor_name, $.destructor_name)
-          )
-        )
-      ),
-
-    qualified_type_identifier: ($) =>
-      seq(
-        $._scope_resolution,
-        field(
-          'name',
-          choice(
-            alias($.dependent_type_identifier, sym('dependent_name')),
-            alias($.qualified_type_identifier, $.qualified_identifier),
-            $.template_type,
-            prec.dynamic(1, $._type_identifier)
-          )
-        )
-      ),
-
-    qualified_operator_cast_identifier: ($) =>
-      seq(
-        $._scope_resolution,
-        field('name', choice(alias($.qualified_operator_cast_identifier, $.qualified_identifier), $.operator_cast))
-      ),
-
-    _assignment_left_expression: ($) =>
-      choice(
-        ...nonBinaryExpressions($, C.grammar.rules._expression_not_binary).filter(
-          (rule) => rule.type !== 'SYMBOL' || !['conditional_expression', 'assignment_expression'].includes(rule.name)
-        ),
-        $.binary_expression,
-        alias($.pointer_to_member_expression, $.binary_expression),
-        $.named_cast_expression,
-        $.typeid_expression
-      ),
-
-    expression: ($, original = missingOriginalRule()) =>
-      choice(
-        original,
-        alias($.pointer_to_member_expression, $.binary_expression),
-        $.named_cast_expression,
-        $.typeid_expression
-      ),
-
-    named_cast_expression: ($) =>
-      prec.dynamic(
-        1,
-        prec(
-          PREC.CALL,
-          seq(
-            field('operator', choice('static_cast', 'dynamic_cast', 'const_cast', 'reinterpret_cast')),
-            '<',
-            field('type', $.type_descriptor),
-            '>',
-            '(',
-            field('value', choice($.expression, $.comma_expression)),
-            ')'
-          )
-        )
-      ),
-
-    typeid_expression: ($) =>
-      prec.dynamic(
-        1,
-        prec(
-          PREC.CALL,
-          seq(
-            'typeid',
-            choice(seq('(', field('value', choice($.expression, $.comma_expression)), ')'), $._typeid_type_operand)
-          )
-        )
-      ),
-
-    _typeid_type_operand: ($) => prec.dynamic(-1, seq('(', field('type', $.type_descriptor), ')')),
-
-    pointer_to_member_expression: ($) =>
-      prec.left(
-        PREC.POINTER_TO_MEMBER,
-        seq(field('left', $.expression), field('operator', choice('.*', '->*')), field('right', $.expression))
-      ),
-
-    assignment_expression: ($) =>
-      prec.right(
-        PREC.ASSIGNMENT,
-        seq(
-          field('left', $._assignment_left_expression),
+          field('left', $.expression),
           field('operator', choice(...ASSIGNMENT_OPERATORS)),
           field('right', choice($.expression, $.initializer_list))
-        )
-      ),
+        ),
 
-    _assignment_expression_lhs: ($) =>
-      seq(
-        field('left', $.expression),
-        field('operator', choice(...ASSIGNMENT_OPERATORS)),
-        field('right', choice($.expression, $.initializer_list))
-      ),
+      // This prevents an ambiguity between fold expressions
+      // and assignment expressions within parentheses.
+      parenthesized_expression: ($, original = missingOriginalRule()) =>
+        choice(original, seq('(', alias($._assignment_expression_lhs, $.assignment_expression), ')')),
 
-    // This prevents an ambiguity between fold expressions
-    // and assignment expressions within parentheses.
-    parenthesized_expression: ($, original = missingOriginalRule()) =>
-      choice(original, seq('(', alias($._assignment_expression_lhs, $.assignment_expression), ')')),
-
-    reflect_expression: ($) =>
-      prec.right(
-        seq(
-          '^^',
-          choice(
-            '::',
-            $.expression,
-            $.type_descriptor,
-            prec.dynamic(PREC.CERTAIN_DECLARATION, alias($.built_in_function_type_descriptor, $.type_descriptor))
-          )
-        )
-      ),
-
-    // The operand of `^^` is a type-id, a name, or `::`, never a call, so `^^int()` reflects a function type although
-    // the call `int()` covers the same tokens.
-    built_in_function_type_descriptor: ($) =>
-      seq(
-        field('type', $.primitive_type),
-        field('declarator', alias($.built_in_function_type_declarator, $.abstract_function_declarator))
-      ),
-    built_in_function_type_declarator: ($) => $._function_declarator_seq,
-
-    splice_specifier: ($) => seq('[:', $.expression, ':]'),
-    _splice_specialization_specifier: ($) => seq($.splice_specifier, $.template_argument_list),
-
-    splice_type_specifier: ($) => prec.right(choice($.splice_specifier, $._splice_specialization_specifier)),
-
-    splice_expression: ($) =>
-      prec.right(choice($.splice_specifier, seq('template', $._splice_specialization_specifier))),
-
-    expansion_statement: ($) =>
-      seq('template', 'for', '(', $._for_range_loop_body, ')', field('body', $._single_statement)),
-
-    operator_name: ($) =>
-      prec(
-        1,
-        seq(
-          'operator',
-          choice(
-            'co_await',
-            '+',
-            '-',
-            '*',
-            '/',
-            '%',
-            '^',
-            '&',
-            '|',
-            '~',
-            '!',
-            '=',
-            '<',
-            '>',
-            '+=',
-            '-=',
-            '*=',
-            '/=',
-            '%=',
-            '^=',
-            '&=',
-            '|=',
-            '<<',
-            '>>',
-            '>>=',
-            '<<=',
-            '==',
-            '!=',
-            '<=',
-            '>=',
-            '<=>',
-            '&&',
-            '||',
-            '++',
-            '--',
-            ',',
-            '->*',
-            '->',
-            '()',
-            '[]',
-            'xor',
-            'bitand',
-            'bitor',
-            'compl',
-            'not',
-            'xor_eq',
-            'and_eq',
-            'or_eq',
-            'not_eq',
-            'and',
-            'or',
-            seq(choice('new', 'delete'), optional('[]')),
-            seq('""', $._contextual_identifier)
-          )
-        )
-      ),
-
-    this: () => 'this',
-
-    concatenated_string: ($) => {
-      const literal = choice($.string_literal, $.raw_string_literal);
-      const part = choice($._contextual_identifier, literal);
-      return prec.right(seq(choice(seq($._contextual_identifier, literal), seq(literal, part)), repeat(part)));
-    },
-
-    number_literal: () => {
-      const sign = /[-+]/;
-      const separator = "'";
-      const binary = /[01]/;
-      const binaryDigits = seq(repeat1(binary), repeat(seq(separator, repeat1(binary))));
-      const decimal = /[0-9]/;
-      const firstDecimal = /[1-9]/;
-      const intDecimalDigits = seq(firstDecimal, repeat(decimal), repeat(seq(separator, repeat1(decimal))));
-      const floatDecimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
-      const hex = /[0-9a-fA-F]/;
-      const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
-      const octal = /[0-7]/;
-      const octalDigits = seq('0', repeat(octal), repeat(seq(separator, repeat1(octal))));
-      const hexExponent = seq(/[pP]/, optional(sign), floatDecimalDigits);
-      const decimalExponent = seq(/[eE]/, optional(sign), floatDecimalDigits);
-      const intSuffix = /(ll|LL)[uU]?|[uU](ll|LL)?|[uU][lL]?|[uU][zZ]?|[lL][uU]?|[zZ][uU]?/;
-      const floatSuffix = /([fF](16|32|64|128)?)|[lL]|(bf16|BF16)/;
-
-      return token(
-        seq(
-          optional(sign),
-          choice(
-            seq(
-              choice(
-                seq(choice('0b', '0B'), binaryDigits),
-                intDecimalDigits,
-                seq(choice('0x', '0X'), hexDigits),
-                octalDigits
-              ),
-              optional(intSuffix)
-            ),
-            seq(
-              choice(
-                seq(floatDecimalDigits, decimalExponent),
-                seq(floatDecimalDigits, '.', optional(floatDecimalDigits), optional(decimalExponent)),
-                seq('.', floatDecimalDigits, optional(decimalExponent)),
-                seq(
-                  choice('0x', '0X'),
-                  choice(hexDigits, seq(hexDigits, '.', optional(hexDigits)), seq('.', hexDigits)),
-                  hexExponent
-                )
-              ),
-              optional(floatSuffix)
+      reflect_expression: ($) =>
+        prec.right(
+          seq(
+            '^^',
+            choice(
+              '::',
+              $.expression,
+              $.type_descriptor,
+              prec.dynamic(PREC.CERTAIN_DECLARATION, alias($.built_in_function_type_descriptor, $.type_descriptor))
             )
           )
-        )
-      );
+        ),
+
+      // The operand of `^^` is a type-id, a name, or `::`, never a call, so `^^int()` reflects a function type although
+      // the call `int()` covers the same tokens.
+      built_in_function_type_descriptor: ($) =>
+        seq(
+          field('type', $.primitive_type),
+          field('declarator', alias($.built_in_function_type_declarator, $.abstract_function_declarator))
+        ),
+      built_in_function_type_declarator: ($) => $._function_declarator_seq,
+
+      splice_specifier: ($) => seq('[:', $.expression, ':]'),
+      _splice_specialization_specifier: ($) => seq($.splice_specifier, $.template_argument_list),
+
+      splice_type_specifier: ($) => prec.right(choice($.splice_specifier, $._splice_specialization_specifier)),
+
+      splice_expression: ($) =>
+        prec.right(choice($.splice_specifier, seq('template', $._splice_specialization_specifier))),
+
+      expansion_statement: ($) =>
+        seq('template', 'for', '(', $._for_range_loop_body, ')', field('body', $._single_statement)),
+
+      operator_name: ($) =>
+        prec(
+          1,
+          seq(
+            'operator',
+            choice(
+              'co_await',
+              '+',
+              '-',
+              '*',
+              '/',
+              '%',
+              '^',
+              '&',
+              '|',
+              '~',
+              '!',
+              '=',
+              '<',
+              '>',
+              '+=',
+              '-=',
+              '*=',
+              '/=',
+              '%=',
+              '^=',
+              '&=',
+              '|=',
+              '<<',
+              '>>',
+              '>>=',
+              '<<=',
+              '==',
+              '!=',
+              '<=',
+              '>=',
+              '<=>',
+              '&&',
+              '||',
+              '++',
+              '--',
+              ',',
+              '->*',
+              '->',
+              '()',
+              '[]',
+              'xor',
+              'bitand',
+              'bitor',
+              'compl',
+              'not',
+              'xor_eq',
+              'and_eq',
+              'or_eq',
+              'not_eq',
+              'and',
+              'or',
+              seq(choice('new', 'delete'), optional('[]')),
+              seq('""', $._contextual_identifier)
+            )
+          )
+        ),
+
+      this: () => 'this',
+
+      concatenated_string: ($) => {
+        const literal = choice($.string_literal, $.raw_string_literal);
+        const part = choice($._contextual_identifier, literal);
+        return prec.right(seq(choice(seq($._contextual_identifier, literal), seq(literal, part)), repeat(part)));
+      },
+
+      number_literal: () => {
+        const sign = /[-+]/;
+        const separator = "'";
+        const binary = /[01]/;
+        const binaryDigits = seq(repeat1(binary), repeat(seq(separator, repeat1(binary))));
+        const decimal = /[0-9]/;
+        const firstDecimal = /[1-9]/;
+        const intDecimalDigits = seq(firstDecimal, repeat(decimal), repeat(seq(separator, repeat1(decimal))));
+        const floatDecimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
+        const hex = /[0-9a-fA-F]/;
+        const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
+        const octal = /[0-7]/;
+        const octalDigits = seq('0', repeat(octal), repeat(seq(separator, repeat1(octal))));
+        const hexExponent = seq(/[pP]/, optional(sign), floatDecimalDigits);
+        const decimalExponent = seq(/[eE]/, optional(sign), floatDecimalDigits);
+        const intSuffix = /(ll|LL)[uU]?|[uU](ll|LL)?|[uU][lL]?|[uU][zZ]?|[lL][uU]?|[zZ][uU]?/;
+        const floatSuffix = /([fF](16|32|64|128)?)|[lL]|(bf16|BF16)/;
+
+        return token(
+          seq(
+            optional(sign),
+            choice(
+              seq(
+                choice(
+                  seq(choice('0b', '0B'), binaryDigits),
+                  intDecimalDigits,
+                  seq(choice('0x', '0X'), hexDigits),
+                  octalDigits
+                ),
+                optional(intSuffix)
+              ),
+              seq(
+                choice(
+                  seq(floatDecimalDigits, decimalExponent),
+                  seq(floatDecimalDigits, '.', optional(floatDecimalDigits), optional(decimalExponent)),
+                  seq('.', floatDecimalDigits, optional(decimalExponent)),
+                  seq(
+                    choice('0x', '0X'),
+                    choice(hexDigits, seq(hexDigits, '.', optional(hexDigits)), seq('.', hexDigits)),
+                    hexExponent
+                  )
+                ),
+                optional(floatSuffix)
+              )
+            )
+          )
+        );
+      },
+
+      literal_suffix: () => token.immediate(/[a-zA-Z_]\w*/),
+
+      user_defined_literal: ($) => seq(choice($.number_literal, $.char_literal, $._string), $.literal_suffix),
+
+      _type_identifier: ($, original = missingOriginalRule()) =>
+        choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('type_identifier'))),
+
+      _contextual_identifier: ($) =>
+        choice($.identifier, alias(choice(...VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES), $.identifier)),
+
+      _field_identifier: ($, original = missingOriginalRule()) =>
+        choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('field_identifier'))),
+
+      _statement_identifier: ($, original = missingOriginalRule()) =>
+        choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('statement_identifier'))),
+
+      _namespace_identifier: ($) =>
+        choice(
+          alias($.identifier, sym('namespace_identifier')),
+          alias(choice(...VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES), sym('namespace_identifier'))
+        ),
+
+      _trailing_macro_specifier: ($) => trailingAnnotationRule($, (name) => field('name', name)),
+
+      _trailing_macro_call_expression: ($) =>
+        trailingAnnotationRule($, (name) =>
+          seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
+        ),
+
+      // A macro takes the arguments of a call and also types, as in `ATTR(int)`, an expression where both read.
+      _trailing_macro_argument_list: ($) => callArgumentList($, prec.dynamic(-1, $.type_descriptor)),
     },
+  })
+);
 
-    literal_suffix: () => token.immediate(/[a-zA-Z_]\w*/),
+/**
+ * A leading marker with arguments in a parameter's pointer declarator.
+ * @param {NoInfer<GrammarSymbols<'_trailing_macro_argument_list' | 'argument_list'>>} $
+ * @param {number} precedence
+ * @param {Rule} name
+ */
+function leadingMacroCallRule($, precedence, name) {
+  return prec.dynamic(
+    precedence,
+    seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
+  );
+}
 
-    user_defined_literal: ($) => seq(choice($.number_literal, $.char_literal, $._string), $.literal_suffix),
+/**
+ * The arguments of a call, and `extra` as a further argument form.
+ * @param {NoInfer<GrammarSymbols<'expression' | 'parameter_pack_expansion' | 'initializer_list' | 'compound_statement' | 'operator_argument' | '_declarator_operator_argument' | 'identifier'>>} $
+ * @param {Rule} [extra]
+ */
+function callArgumentList($, extra) {
+  const argument = choice(
+    $.expression,
+    $.parameter_pack_expansion,
+    $.initializer_list,
+    $.compound_statement,
+    $.operator_argument,
+    ...(extra ? [extra] : [])
+  );
+  const anyArgument = choice(argument, alias($._declarator_operator_argument, $.operator_argument));
+  return seq(
+    '(',
+    optional(
+      choice(argument, alias(choice('and', 'bitand'), $.identifier), seq(anyArgument, repeat1(seq(',', anyArgument))))
+    ),
+    ')'
+  );
+}
 
-    _type_identifier: ($, original = missingOriginalRule()) =>
-      choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('type_identifier'))),
+/**
+ * Returns a regular expression source that matches every string of a character in `first` followed by characters in
+ * `rest`, the empty string included, except the given words.
+ * @param {string[]} words
+ * @param {string} first
+ * @param {string} rest
+ * @returns {string}
+ */
+function identifierExcept(words, first, rest) {
+  /** @type {Map<string, string[]>} */
+  const byFirst = new Map();
+  let excludesEmpty = false;
+  for (const word of words) {
+    if (word === '') {
+      excludesEmpty = true;
+      continue;
+    }
+    const character = word.charAt(0);
+    byFirst.set(character, [...(byFirst.get(character) ?? []), word.slice(1)]);
+  }
+  const others = first
+    .split('')
+    .filter((character) => !byFirst.has(character))
+    .join('');
+  const alternatives = [`[${others}][${rest}]*`];
+  for (const [character, rests] of byFirst) alternatives.push(`${character}${identifierExcept(rests, rest, rest)}`);
+  return `(?:${alternatives.join('|')})${excludesEmpty ? '' : '?'}`;
+}
 
-    _contextual_identifier: ($) =>
-      choice($.identifier, alias(choice(...VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES), $.identifier)),
+/**
+ * Throws when `_macro_case_identifier` matches a keyword of the grammar in full, since it would take the keyword's place
+ * wherever both are valid. Returns the grammar unchanged.
+ * @template T
+ * @param {T} grammar
+ * @returns {T}
+ */
+function assertMacroCaseIdentifierSpellsNoKeyword(grammar) {
+  const whole = new RegExp(`^(?:${MACRO_CASE_IDENTIFIER.source})$`);
+  for (const keyword of keywordStrings(grammar)) {
+    if (whole.test(keyword)) {
+      throw new Error(`_macro_case_identifier spells the keyword ${keyword}; add it to MACRO_CASE_KEYWORDS`);
+    }
+  }
+  return grammar;
+}
 
-    _field_identifier: ($, original = missingOriginalRule()) =>
-      choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('field_identifier'))),
+/**
+ * Yields the string literals of a grammar outside `token(...)`, which are the candidates for keywords.
+ * @param {unknown} node
+ * @returns {Generator<string>}
+ */
+function* keywordStrings(node) {
+  if (!node || typeof node !== 'object') return;
+  const record = /** @type {Record<string, unknown>} */ (node);
+  if (record.type === 'TOKEN' || record.type === 'IMMEDIATE_TOKEN') return;
+  if (record.type === 'STRING' && typeof record.value === 'string') yield record.value;
+  for (const child of Object.values(record)) yield* keywordStrings(child);
+}
 
-    _statement_identifier: ($, original = missingOriginalRule()) =>
-      choice(original, alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES), sym('statement_identifier'))),
-
-    _namespace_identifier: ($) =>
-      choice(
-        alias($.identifier, sym('namespace_identifier')),
-        alias(choice(...VA_ARG_CONTEXTUAL_IDENTIFIER_NAMES), sym('namespace_identifier'))
-      ),
-  },
-});
+/**
+ * Makes a trailing parameter annotation, whose name must be spelled like a macro since any other name after a
+ * declarator is more likely misread, as in `const void *__sized_by(n) s1`. It outranks a leading marker (-2) that reads
+ * `int *A B` the other way (`char **argv UNUSED`), since macro definitions are unknown.
+ * @param {NoInfer<GrammarSymbols<'identifier'>>} $
+ * @param {(name: Rule) => Rule} annotation
+ */
+function trailingAnnotationRule($, annotation) {
+  return prec.dynamic(-1, annotation(alias(sym('_macro_case_identifier'), $.identifier)));
+}
 
 /**
  * @param {NoInfer<GrammarSymbols<'template_declaration' | 'inline_method_definition' | 'function_definition' | 'constructor_or_destructor_definition' | 'constructor_or_destructor_declaration' | 'declaration' | 'operator_cast_definition' | 'operator_cast_declaration' | 'friend_declaration' | 'access_specifier' | 'alias_declaration' | 'using_declaration' | 'type_definition' | 'static_assert_declaration' | 'consteval_block_declaration'>>} $
