@@ -26521,16 +26521,7 @@
                             "type": "ALIAS",
                             "content": {
                               "type": "SYMBOL",
-                              "name": "_leading_macro_call_expression"
-                            },
-                            "named": true,
-                            "value": "call_expression"
-                          },
-                          {
-                            "type": "ALIAS",
-                            "content": {
-                              "type": "SYMBOL",
-                              "name": "_macro_case_leading_macro_call_expression"
+                              "name": "_later_macro_call_expression"
                             },
                             "named": true,
                             "value": "call_expression"
@@ -26565,7 +26556,7 @@
     },
     "_leading_macro_call_expression": {
       "type": "PREC_DYNAMIC",
-      "value": 1,
+      "value": 2,
       "content": {
         "type": "SEQ",
         "members": [
@@ -26593,9 +26584,9 @@
         ]
       }
     },
-    "_macro_case_leading_macro_call_expression": {
+    "_later_macro_call_expression": {
       "type": "PREC_DYNAMIC",
-      "value": 1,
+      "value": -2,
       "content": {
         "type": "SEQ",
         "members": [
@@ -26603,13 +26594,22 @@
             "type": "FIELD",
             "name": "function",
             "content": {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "_macro_case_identifier"
-              },
-              "named": true,
-              "value": "identifier"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_case_identifier"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              ]
             }
           },
           {
@@ -40559,14 +40559,19 @@
   "conflicts": [
     [
       "macro_specifier",
-      "_leading_macro_call_expression"
+      "_later_macro_call_expression"
     ],
     [
-      "_macro_case_leading_macro_call_expression",
+      "_later_macro_call_expression",
       "_macro_case_macro_specifier"
     ],
     [
-      "_macro_case_leading_macro_call_expression",
+      "_declarator",
+      "macro_specifier",
+      "_later_macro_call_expression"
+    ],
+    [
+      "_later_macro_call_expression",
       "_macro_case_macro_specifier",
       "_macro_case_unattributed_declarator"
     ],

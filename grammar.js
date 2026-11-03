@@ -230,13 +230,10 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
-      [$.macro_specifier, $._leading_macro_call_expression],
-      [$._macro_case_leading_macro_call_expression, $._macro_case_macro_specifier],
-      [
-        $._macro_case_leading_macro_call_expression,
-        $._macro_case_macro_specifier,
-        $._macro_case_unattributed_declarator,
-      ],
+      [$.macro_specifier, $._later_macro_call_expression],
+      [$._later_macro_call_expression, $._macro_case_macro_specifier],
+      [$._declarator, $.macro_specifier, $._later_macro_call_expression],
+      [$._later_macro_call_expression, $._macro_case_macro_specifier, $._macro_case_unattributed_declarator],
       [$._declarator, $.macro_specifier, $._leading_macro_call_expression],
       [$._macro_case_attributed_declarator],
       [$._macro_case_parameter_declarator, $._macro_case_attributed_declarator],
@@ -1254,8 +1251,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
                       modifier,
                       $.macro_specifier,
                       alias($._macro_case_macro_specifier, $.macro_specifier),
-                      alias($._leading_macro_call_expression, $.call_expression),
-                      alias($._macro_case_leading_macro_call_expression, $.call_expression)
+                      alias($._later_macro_call_expression, $.call_expression)
                     )
                   ),
                   field('declarator', choice($._parameter_declarator, $._macro_case_parameter_declarator))
@@ -1266,25 +1262,15 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         );
       },
 
-      // A leading marker with arguments, as in `const void *__sized_by(n) buffer`. It outranks the reading of its name
-      // and arguments as a function declarator, whose following name would be a trailing annotation.
-      _leading_macro_call_expression: ($) =>
-        prec.dynamic(
-          1,
-          seq(
-            field('function', $.identifier),
-            field('arguments', alias($._trailing_macro_argument_list, $.argument_list))
-          )
-        ),
+      // A first leading marker with arguments, as in `const void *__sized_by(n) buffer`, outranks the reading of its name
+      // and arguments as a function declarator (+1) whose following name is a trailing annotation (-1), whatever the
+      // arguments are; system headers write this marker, while a function-typed parameter returning a pointer and
+      // annotated after its parameter list is rare.
+      _leading_macro_call_expression: ($) => leadingMacroCallRule($, 2, $.identifier),
 
-      _macro_case_leading_macro_call_expression: ($) =>
-        prec.dynamic(
-          1,
-          seq(
-            field('function', alias(sym('_macro_case_identifier'), $.identifier)),
-            field('arguments', alias($._trailing_macro_argument_list, $.argument_list))
-          )
-        ),
+      // A later one, as `FOO(int)` in `int *CC FOO(int) UNUSED`, ranks below that reading.
+      _later_macro_call_expression: ($) =>
+        leadingMacroCallRule($, -2, choice($.identifier, alias(sym('_macro_case_identifier'), $.identifier))),
 
       _macro_case_macro_specifier: () =>
         prec.dynamic(-2, field('name', alias(sym('_macro_case_identifier'), sym('identifier')))),
@@ -3291,6 +3277,19 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     },
   })
 );
+
+/**
+ * A leading marker with arguments in a parameter's pointer declarator.
+ * @param {NoInfer<GrammarSymbols<'_trailing_macro_argument_list' | 'argument_list'>>} $
+ * @param {number} precedence
+ * @param {Rule} name
+ */
+function leadingMacroCallRule($, precedence, name) {
+  return prec.dynamic(
+    precedence,
+    seq(field('function', name), field('arguments', alias($._trailing_macro_argument_list, $.argument_list)))
+  );
+}
 
 /**
  * The arguments of a call, and `extra` as a further argument form.
