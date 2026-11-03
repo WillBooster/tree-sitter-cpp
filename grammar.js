@@ -1178,11 +1178,18 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           )
         ),
 
+      // A standard attribute right after the declarator belongs to an `attributed_declarator`, so only one after a macro
+      // annotation, as in `int x UNUSED [[maybe_unused]]`, is an annotation of its own.
       _parameter_annotation: ($) =>
         choice(
           $.attribute_specifier,
-          alias($._trailing_macro_specifier, $.macro_specifier),
-          alias($._trailing_macro_call_expression, $.call_expression)
+          seq(
+            choice(
+              alias($._trailing_macro_specifier, $.macro_specifier),
+              alias($._trailing_macro_call_expression, $.call_expression)
+            ),
+            repeat($.attribute_declaration)
+          )
         ),
 
       // Unlike in declarations, a parenthesized name such as `int (x)` competes here with the function type `int(x)`,
@@ -3161,9 +3168,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       _trailing_macro_specifier: ($) => trailingAnnotationRule($, (name) => field('name', name)),
 
       _trailing_macro_call_expression: ($) =>
-        trailingAnnotationRule($, (name) =>
-          seq(field('function', name), field('arguments', alias($.preproc_argument_list, $.argument_list)))
-        ),
+        trailingAnnotationRule($, (name) => seq(field('function', name), field('arguments', $.argument_list))),
     },
   })
 );

@@ -26257,22 +26257,39 @@
           "name": "attribute_specifier"
         },
         {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "_trailing_macro_specifier"
-          },
-          "named": true,
-          "value": "macro_specifier"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "_trailing_macro_call_expression"
-          },
-          "named": true,
-          "value": "call_expression"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_trailing_macro_specifier"
+                  },
+                  "named": true,
+                  "value": "macro_specifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_trailing_macro_call_expression"
+                  },
+                  "named": true,
+                  "value": "call_expression"
+                }
+              ]
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "attribute_declaration"
+              }
+            }
+          ]
         }
       ]
     },
@@ -39795,13 +39812,8 @@
                 "type": "FIELD",
                 "name": "arguments",
                 "content": {
-                  "type": "ALIAS",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "preproc_argument_list"
-                  },
-                  "named": true,
-                  "value": "argument_list"
+                  "type": "SYMBOL",
+                  "name": "argument_list"
                 }
               }
             ]
@@ -39825,13 +39837,8 @@
                 "type": "FIELD",
                 "name": "arguments",
                 "content": {
-                  "type": "ALIAS",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "preproc_argument_list"
-                  },
-                  "named": true,
-                  "value": "argument_list"
+                  "type": "SYMBOL",
+                  "name": "argument_list"
                 }
               }
             ]
