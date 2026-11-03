@@ -1299,7 +1299,8 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         withDeclarator(C.grammar.rules.array_declarator, $._macro_case_parameter_declarator),
 
       // Unlike other function declarators (+1), it does not outrank reading the marker before it as the declarator and it
-      // as a call annotation (-1), so `char *CC BUF(len)` keeps the annotation; a type argument ranks that reading lower.
+      // as a call annotation (-1), so `char *CC BUF(len)` keeps the annotation; a type argument other than a sized type
+      // alone ranks that reading lower; with only a sized type, as in `int *CC FOO(long)`, the two readings tie.
       _macro_case_function_declarator: ($) =>
         seq(field('declarator', $._macro_case_parameter_declarator), $._function_declarator_seq),
 
@@ -3281,7 +3282,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       // argument ranks two below an expression, which a function declarator reading of the same parentheses ties with
       // otherwise: `int *CC FOO(int)` declares a function, while `char *buf __counted_by(len)` is annotated. A sized type
       // alone, as `long` in `ATTR(int, long)`, ranks one below instead, since `long` also reads as an identifier at two
-      // below.
+      // below; so a sized type alone does not decide for the function declarator.
       _trailing_macro_argument_list: ($) =>
         callArgumentList(
           $,

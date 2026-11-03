@@ -13,6 +13,7 @@ int leading(int *CC pointer, char **CC strings, int *CC callback(int), int *CC _
 int upper(int *CC BUFFER[3], char *CC ARGS[], int *CC HANDLER(int), int *CC TAGGED[2] [[maybe_unused]], int *CC ANNOTATED(int) UNUSED);
 void bounded(const void *__sized_by(n) source, const void *_LIBC_SIZE(n) __dst, void *__unsafe_indexable *__counted_by(count) results, int operators ATTR(1, *));
 void bounds(char *buf __counted_by(len), int len, void *data GUARDED_BY(lock), char **names ATTR(), int *CC NAMED(int), int *CC UPPER(size));
+void ranked(const void *CC(int, long) TYPED);
 void references(std::string &text UNUSED, Foo &&moved UNUSED, int count UNUSED = 0);
 template <typename... Args> void pack(Args... args UNUSED, Args&&... forwarded UNUSED, Args *...pointers UNUSED, int sized ATTR(sizeof(Args)...));
 auto lambda = [](int argc UNUSED) { return argc; };
@@ -325,6 +326,23 @@ int following(void) { return 0; }
             function: (identifier)
             arguments: (argument_list
               (identifier)))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (type_descriptor
+                  type: (primitive_type))
+                (type_descriptor
+                  type: (sized_type_specifier))))
+            declarator: (identifier))))))
   (declaration
     type: (primitive_type)
     declarator: (function_declarator
