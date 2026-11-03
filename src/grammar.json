@@ -26556,7 +26556,7 @@
     },
     "_leading_macro_call_expression": {
       "type": "PREC_DYNAMIC",
-      "value": 2,
+      "value": 3,
       "content": {
         "type": "SEQ",
         "members": [
@@ -26778,25 +26778,21 @@
       }
     },
     "_macro_case_function_declarator": {
-      "type": "PREC_DYNAMIC",
-      "value": 1,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "FIELD",
-            "name": "declarator",
-            "content": {
-              "type": "SYMBOL",
-              "name": "_macro_case_parameter_declarator"
-            }
-          },
-          {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "declarator",
+          "content": {
             "type": "SYMBOL",
-            "name": "_function_declarator_seq"
+            "name": "_macro_case_parameter_declarator"
           }
-        ]
-      }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_function_declarator_seq"
+        }
+      ]
     },
     "_parameter_annotation": {
       "type": "CHOICE",
@@ -40354,15 +40350,15 @@
       }
     },
     "_trailing_macro_argument_list": {
-      "type": "SEQ",
+      "type": "CHOICE",
       "members": [
         {
-          "type": "STRING",
-          "value": "("
-        },
-        {
-          "type": "CHOICE",
+          "type": "SEQ",
           "members": [
+            {
+              "type": "STRING",
+              "value": "("
+            },
             {
               "type": "CHOICE",
               "members": [
@@ -40370,112 +40366,222 @@
                   "type": "CHOICE",
                   "members": [
                     {
-                      "type": "SYMBOL",
-                      "name": "expression"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "parameter_pack_expansion"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "initializer_list"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "compound_statement"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "operator_argument"
-                    },
-                    {
-                      "type": "PREC_DYNAMIC",
-                      "value": -1,
-                      "content": {
-                        "type": "SYMBOL",
-                        "name": "type_descriptor"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "ALIAS",
-                  "content": {
-                    "type": "CHOICE",
-                    "members": [
-                      {
-                        "type": "STRING",
-                        "value": "and"
-                      },
-                      {
-                        "type": "STRING",
-                        "value": "bitand"
-                      }
-                    ]
-                  },
-                  "named": true,
-                  "value": "identifier"
-                },
-                {
-                  "type": "SEQ",
-                  "members": [
-                    {
                       "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "expression"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "parameter_pack_expansion"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "initializer_list"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "compound_statement"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "operator_argument"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": "and"
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "bitand"
+                          }
+                        ]
+                      },
+                      "named": true,
+                      "value": "identifier"
+                    },
+                    {
+                      "type": "SEQ",
                       "members": [
                         {
                           "type": "CHOICE",
                           "members": [
                             {
-                              "type": "SYMBOL",
-                              "name": "expression"
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "expression"
+                                },
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "parameter_pack_expansion"
+                                },
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "initializer_list"
+                                },
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "compound_statement"
+                                },
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "operator_argument"
+                                }
+                              ]
                             },
                             {
-                              "type": "SYMBOL",
-                              "name": "parameter_pack_expansion"
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "initializer_list"
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "compound_statement"
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "operator_argument"
-                            },
-                            {
-                              "type": "PREC_DYNAMIC",
-                              "value": -1,
+                              "type": "ALIAS",
                               "content": {
                                 "type": "SYMBOL",
-                                "name": "type_descriptor"
-                              }
+                                "name": "_declarator_operator_argument"
+                              },
+                              "named": true,
+                              "value": "operator_argument"
                             }
                           ]
                         },
                         {
-                          "type": "ALIAS",
+                          "type": "REPEAT1",
                           "content": {
-                            "type": "SYMBOL",
-                            "name": "_declarator_operator_argument"
-                          },
-                          "named": true,
-                          "value": "operator_argument"
+                            "type": "SEQ",
+                            "members": [
+                              {
+                                "type": "STRING",
+                                "value": ","
+                              },
+                              {
+                                "type": "CHOICE",
+                                "members": [
+                                  {
+                                    "type": "CHOICE",
+                                    "members": [
+                                      {
+                                        "type": "SYMBOL",
+                                        "name": "expression"
+                                      },
+                                      {
+                                        "type": "SYMBOL",
+                                        "name": "parameter_pack_expansion"
+                                      },
+                                      {
+                                        "type": "SYMBOL",
+                                        "name": "initializer_list"
+                                      },
+                                      {
+                                        "type": "SYMBOL",
+                                        "name": "compound_statement"
+                                      },
+                                      {
+                                        "type": "SYMBOL",
+                                        "name": "operator_argument"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "ALIAS",
+                                    "content": {
+                                      "type": "SYMBOL",
+                                      "name": "_declarator_operator_argument"
+                                    },
+                                    "named": true,
+                                    "value": "operator_argument"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
                         }
                       ]
-                    },
-                    {
-                      "type": "REPEAT1",
-                      "content": {
-                        "type": "SEQ",
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
+        },
+        {
+          "type": "PREC_DYNAMIC",
+          "value": -2,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "("
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "CHOICE",
                         "members": [
                           {
-                            "type": "STRING",
-                            "value": ","
+                            "type": "SYMBOL",
+                            "name": "expression"
                           },
+                          {
+                            "type": "SYMBOL",
+                            "name": "parameter_pack_expansion"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "initializer_list"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "compound_statement"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "operator_argument"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "type_descriptor"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "STRING",
+                              "value": "and"
+                            },
+                            {
+                              "type": "STRING",
+                              "value": "bitand"
+                            }
+                          ]
+                        },
+                        "named": true,
+                        "value": "identifier"
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
                           {
                             "type": "CHOICE",
                             "members": [
@@ -40503,12 +40609,8 @@
                                     "name": "operator_argument"
                                   },
                                   {
-                                    "type": "PREC_DYNAMIC",
-                                    "value": -1,
-                                    "content": {
-                                      "type": "SYMBOL",
-                                      "name": "type_descriptor"
-                                    }
+                                    "type": "SYMBOL",
+                                    "name": "type_descriptor"
                                   }
                                 ]
                               },
@@ -40522,22 +40624,77 @@
                                 "value": "operator_argument"
                               }
                             ]
+                          },
+                          {
+                            "type": "REPEAT1",
+                            "content": {
+                              "type": "SEQ",
+                              "members": [
+                                {
+                                  "type": "STRING",
+                                  "value": ","
+                                },
+                                {
+                                  "type": "CHOICE",
+                                  "members": [
+                                    {
+                                      "type": "CHOICE",
+                                      "members": [
+                                        {
+                                          "type": "SYMBOL",
+                                          "name": "expression"
+                                        },
+                                        {
+                                          "type": "SYMBOL",
+                                          "name": "parameter_pack_expansion"
+                                        },
+                                        {
+                                          "type": "SYMBOL",
+                                          "name": "initializer_list"
+                                        },
+                                        {
+                                          "type": "SYMBOL",
+                                          "name": "compound_statement"
+                                        },
+                                        {
+                                          "type": "SYMBOL",
+                                          "name": "operator_argument"
+                                        },
+                                        {
+                                          "type": "SYMBOL",
+                                          "name": "type_descriptor"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "ALIAS",
+                                      "content": {
+                                        "type": "SYMBOL",
+                                        "name": "_declarator_operator_argument"
+                                      },
+                                      "named": true,
+                                      "value": "operator_argument"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
                           }
                         ]
                       }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "STRING",
-          "value": ")"
+                    ]
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              },
+              {
+                "type": "STRING",
+                "value": ")"
+              }
+            ]
+          }
         }
       ]
     }
@@ -40557,6 +40714,9 @@
     }
   ],
   "conflicts": [
+    [
+      "_trailing_macro_argument_list"
+    ],
     [
       "macro_specifier",
       "_later_macro_call_expression"
