@@ -1,6 +1,7 @@
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { childrenOfType, collectCaptures, fieldChild, pointAt, trailingReturnDeclarators } from '../helpers/ast.js';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 await Parser.init();
@@ -8,7 +9,6 @@ await Parser.init();
 test('parses calling conventions before pointers across C++ declarator contexts', async () => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, '(ms_call_modifier) @modifier');
   const tree = parser.parse(`typedef int __stdcall *NumberPointer;
 typedef int (__stdcall *CallbackPointer)(int);
 struct Holder { int __stdcall *field; };
@@ -22,12 +22,11 @@ int __stdcall *function(int __stdcall *input) { return input; }
       'struct_specifier',
       'function_definition',
     ]);
-    const modifiers = query.captures(tree.rootNode).map(({ node }) => node);
+    const modifiers = tree.rootNode.descendantsOfType('ms_call_modifier');
     expect(modifiers).toHaveLength(5);
     expect(modifiers.every((node) => node.parent?.type === 'pointer_declarator')).toBe(true);
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -35,7 +34,6 @@ int __stdcall *function(int __stdcall *input) { return input; }
 test('keeps calling-convention pointers inside trailing return types', async () => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, '(trailing_return_type (type_descriptor declarator: (_) @return))');
   const tree = parser.parse(`auto pointer() -> int __stdcall *;
 auto callback() -> int (__stdcall *)(int);
 auto cdecl_callback() -> int (__cdecl *)(int);
@@ -48,7 +46,7 @@ auto plain_callback() -> int (*)(int);
 `)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    const returns = query.captures(tree.rootNode).map(({ node }) => node);
+    const returns = trailingReturnDeclarators(tree.rootNode);
     expect(returns.map((node) => node.text)).toEqual([
       '__stdcall *',
       '(__stdcall *)(int)',
@@ -71,7 +69,6 @@ auto plain_callback() -> int (*)(int);
     ]);
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -79,14 +76,6 @@ auto plain_callback() -> int (*)(int);
 test('parses conventions on allocated pointers and pointers to C++ members', async () => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    `
-    (new_expression declarator: (_) @allocation)
-    (alias_declaration type: (type_descriptor declarator: (_) @member))
-    (trailing_return_type (type_descriptor declarator: (_) @callback))
-  `
-  );
   const tree = parser.parse(`struct Holder { int method(int); };
 using MemberPointer = int __stdcall Holder::*;
 using PlainMember = int Holder::*;
@@ -95,7 +84,18 @@ auto create() { return new int __stdcall *[2]; }
 `)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    expect(query.captures(tree.rootNode).map(({ name, node }) => [name, node.type, node.text])).toEqual([
+    const captures = collectCaptures(tree.rootNode, (node, emit) => {
+      if (node.type === 'new_expression') emit('allocation', fieldChild(node, 'declarator'));
+      if (node.type === 'alias_declaration') {
+        emit('member', fieldChild(fieldChild(node, 'type', 'type_descriptor'), 'declarator'));
+      }
+      if (node.type === 'trailing_return_type') {
+        for (const descriptor of childrenOfType(node, 'type_descriptor')) {
+          emit('callback', fieldChild(descriptor, 'declarator'));
+        }
+      }
+    });
+    expect(captures.map(({ name, node }) => [name, node.type, node.text])).toEqual([
       ['member', 'qualified_identifier', '__stdcall Holder::*'],
       ['member', 'qualified_identifier', 'Holder::*'],
       ['callback', 'abstract_function_declarator', '(__stdcall Holder::*)(int)'],
@@ -103,7 +103,6 @@ auto create() { return new int __stdcall *[2]; }
     ]);
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -111,14 +110,13 @@ auto create() { return new int __stdcall *[2]; }
 test('retains convention placement before nested pointers and references', async () => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, '(ms_call_modifier) @modifier');
   const tree = parser.parse(`int (__stdcall (*pointer))(int);
 int (__stdcall &reference)(int) = *pointer;
 int (__stdcall (&nested_reference))(int) = *pointer;
 `)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    const modifiers = query.captures(tree.rootNode).map(({ node }) => node);
+    const modifiers = tree.rootNode.descendantsOfType('ms_call_modifier');
     expect(modifiers.map((node) => node.parent?.type)).toEqual([
       'parenthesized_declarator',
       'parenthesized_declarator',
@@ -133,7 +131,6 @@ int (__stdcall (&nested_reference))(int) = *pointer;
     }
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -149,7 +146,6 @@ test.each([
 ])('retains functions and fields with %s', async (prefix, value, declaratorType) => {
   const language = await loadCurrentWasmBuild();
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, '(function_declarator declarator: (_) @name) (ms_call_modifier) @modifier');
   const original = `using Value = int;
 int storage;
 int ${prefix} defined() { return ${value}; }
@@ -164,15 +160,11 @@ int *after() { return nullptr; }
       const tree = parser.parse(source)!;
       try {
         expect(tree.rootNode.hasError).toBe(false);
-        const captures = query.captures(tree.rootNode);
-        expect(captures.filter(({ name }) => name === 'name').map(({ node }) => node.text)).toEqual([
-          'defined',
-          'declared',
-          'Alloc',
-          'method',
-          'after',
-        ]);
-        const modifiers = captures.filter(({ name }) => name === 'modifier').map(({ node }) => node);
+        const names = tree.rootNode
+          .descendantsOfType('function_declarator')
+          .flatMap((node) => fieldChild(node, 'declarator') ?? []);
+        expect(names.map((node) => node.text)).toEqual(['defined', 'declared', 'Alloc', 'method', 'after']);
+        const modifiers = tree.rootNode.descendantsOfType('ms_call_modifier');
         expect(modifiers).toHaveLength(4);
         expect(modifiers.every((node) => node.parent?.type === declaratorType)).toBe(true);
         const definitions = tree.rootNode.descendantsOfType('function_definition');
@@ -183,8 +175,8 @@ int *after() { return nullptr; }
         for (const node of [...definitions, ...modifiers]) {
           expect(source.slice(node.startIndex, node.endIndex)).toBe(node.text);
           expect([node.startPosition, node.endPosition]).toEqual([
-            point(source, node.startIndex),
-            point(source, node.endIndex),
+            pointAt(source, node.startIndex),
+            pointAt(source, node.endIndex),
           ]);
         }
       } finally {
@@ -192,12 +184,6 @@ int *after() { return nullptr; }
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });
-
-function point(source: string, index: number): { row: number; column: number } {
-  const prefix = source.slice(0, index);
-  return { row: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
-}

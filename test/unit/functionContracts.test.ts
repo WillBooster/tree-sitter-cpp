@@ -1,6 +1,14 @@
-import { type Language, Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { type Language, type Node, Parser, type Tree } from '@willbooster/web-tree-sitter';
 import { beforeAll, expect, test } from 'vitest';
 
+import {
+  type AstCapture,
+  captureNodes,
+  childrenOfType,
+  collectCaptures,
+  fieldChild,
+  trailingReturnDeclarators,
+} from '../helpers/ast.js';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 let language: Language;
@@ -13,10 +21,6 @@ beforeAll(async () => {
 test('exposes contract predicates and postcondition result bindings', () => {
   const parser = new Parser();
   parser.setLanguage(language);
-  const query = new Query(
-    language,
-    '(contract_specifier condition: (_) @predicate) (contract_specifier result: (identifier) @result)'
-  );
   const source = `int f(const int x)
     pre [[maybe_unused]] (x > 0)
     post [[maybe_unused]] (result [[maybe_unused]]: result > 0)
@@ -27,19 +31,17 @@ void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }`;
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    const captures = query.captures(tree.rootNode);
-    expect(captures.filter(({ name }) => name === 'predicate').map(({ node }) => node.text)).toEqual([
+    const contracts = tree.rootNode.descendantsOfType('contract_specifier');
+    expect(contracts.flatMap((node) => fieldChild(node, 'condition') ?? []).map((node) => node.text)).toEqual([
       'x > 0',
       'result > 0',
       'true',
       'pre > 0',
       'post > 0',
     ]);
-    expect(captures.filter(({ name }) => name === 'result').map(({ node }) => node.text)).toEqual([
-      'result',
-      'pre',
-      'post',
-    ]);
+    expect(
+      contracts.flatMap((node) => fieldChild(node, 'result', 'identifier') ?? []).map((node) => node.text)
+    ).toEqual(['result', 'pre', 'post']);
     expect(tree.rootNode.namedChildren.map((node) => node.type)).toEqual([
       'function_definition',
       'function_definition',
@@ -55,7 +57,6 @@ void destroy(int* pre, int* post) { delete[] pre; ::delete[] post; }`;
     ).toEqual([[['identifier', 'pre']], [['identifier', 'post']]]);
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -88,13 +89,6 @@ test('rejects malformed result bindings, empty predicates and misplaced contract
 test('preserves contextual type names and pointer-to-member trailing returns', () => {
   const parser = new Parser();
   parser.setLanguage(language);
-  const query = new Query(
-    language,
-    `(parameter_declaration type: (type_identifier) @parameter)
-    (trailing_return_type (type_descriptor declarator: (abstract_function_declarator) @return))
-    (trailing_return_type (type_descriptor declarator: (abstract_array_declarator) @array))
-    (assignment_expression left: (subscript_expression indices: (subscript_argument_list (identifier) @index))) @assignment`
-  );
   const tree = parser.parse(`struct pre { int f() const; }; using post = int;
     void accepts(pre, post);
     void use() { pre value; post count(1); }
@@ -103,7 +97,7 @@ test('preserves contextual type names and pointer-to-member trailing returns', (
     void indices(int* a, int pre, int post) { a[pre] = 1; a[post] += 2; }`)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    const captures = query.captures(tree.rootNode);
+    const captures = contextualContractCaptures(tree.rootNode);
     expect(
       captures
         .filter(({ name }) => ['parameter', 'return'].includes(name))
@@ -113,38 +107,27 @@ test('preserves contextual type names and pointer-to-member trailing returns', (
       ['parameter', 'type_identifier', 'post'],
       ['return', 'abstract_function_declarator', '(pre::*)() const'],
     ]);
-    expect(captures.filter(({ name }) => name === 'array').map(({ node }) => [node.type, node.text])).toEqual([
+    expect(captureNodes(captures, 'array').map((node) => [node.type, node.text])).toEqual([
       ['abstract_array_declarator', '(&)[3]'],
       ['abstract_array_declarator', '(*)[3][4]'],
     ]);
-    expect(captures.filter(({ name }) => name === 'assignment').map(({ node }) => node.text)).toEqual([
-      'a[pre] = 1',
-      'a[post] += 2',
-    ]);
-    expect(captures.filter(({ name }) => name === 'index').map(({ node }) => [node.type, node.text])).toEqual([
+    expect(captureNodes(captures, 'assignment').map((node) => node.text)).toEqual(['a[pre] = 1', 'a[post] += 2']);
+    expect(captureNodes(captures, 'index').map((node) => [node.type, node.text])).toEqual([
       ['identifier', 'pre'],
       ['identifier', 'post'],
     ]);
     expect(tree.rootNode.descendantsOfType('init_declarator').map((node) => node.text)).toEqual(['count(1)']);
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
 
 test('keeps contract fields outside pointer, reference and function trailing returns', () => {
   const parser = new Parser();
-  let query: Query | undefined;
   let tree: Tree | undefined;
   try {
     parser.setLanguage(language);
-    query = new Query(
-      language,
-      `(trailing_return_type (type_descriptor declarator: (_) @return))
-    (contract_specifier condition: (_) @condition)
-    (contract_specifier result: (identifier) @result)`
-    );
     tree = parser.parse(`struct Box { int value; };
     auto pointer(int* const p) -> int* pre(p != nullptr) post(result: result == p) { return p; }
     auto reference(int& r) -> int& pre(true) { return r; }
@@ -158,8 +141,7 @@ test('keeps contract fields outside pointer, reference and function trailing ret
     auto qualified() noexcept -> int(*)(int) noexcept pre(true) { return nullptr; };
     auto attributed() -> int(*)(int) [[nodiscard]] pre(true) { return nullptr; }`)!;
     expect(tree.rootNode.hasError).toBe(false);
-    const captures = query.captures(tree.rootNode);
-    expect(captures.filter(({ name }) => name === 'return').map(({ node }) => [node.type, node.text])).toEqual([
+    expect(trailingReturnDeclarators(tree.rootNode).map((node) => [node.type, node.text])).toEqual([
       ['abstract_pointer_declarator', '*'],
       ['abstract_reference_declarator', '&'],
       ['qualified_identifier', 'Box::*'],
@@ -173,7 +155,8 @@ test('keeps contract fields outside pointer, reference and function trailing ret
       ['abstract_function_declarator', '(*)(int) noexcept'],
       ['abstract_function_declarator', '(*)(int) [[nodiscard]]'],
     ]);
-    expect(captures.filter(({ name }) => name === 'condition').map(({ node }) => node.text)).toEqual([
+    const contracts = tree.rootNode.descendantsOfType('contract_specifier');
+    expect(contracts.flatMap((node) => fieldChild(node, 'condition') ?? []).map((node) => node.text)).toEqual([
       'p != nullptr',
       'result == p',
       'true',
@@ -189,13 +172,10 @@ test('keeps contract fields outside pointer, reference and function trailing ret
       'true',
       'true',
     ]);
-    expect(captures.filter(({ name }) => name === 'result').map(({ node }) => node.text)).toEqual([
-      'result',
-      'result',
-      'result',
-      'result',
-    ]);
-    expect(tree.rootNode.descendantsOfType('contract_specifier').map((node) => node.parent?.type)).toEqual([
+    expect(
+      contracts.flatMap((node) => fieldChild(node, 'result', 'identifier') ?? []).map((node) => node.text)
+    ).toEqual(['result', 'result', 'result', 'result']);
+    expect(contracts.map((node) => node.parent?.type)).toEqual([
       'function_declarator',
       'function_declarator',
       'function_declarator',
@@ -221,22 +201,15 @@ test('keeps contract fields outside pointer, reference and function trailing ret
     ]);
   } finally {
     tree?.delete();
-    query?.delete();
     parser.delete();
   }
 });
 
 test('keeps trailing array and pointer nesting in public return descriptors', () => {
   const parser = new Parser();
-  let returns: Query | undefined;
   let tree: Tree | undefined;
   try {
     parser.setLanguage(language);
-    returns = new Query(
-      language,
-      `(trailing_return_type (type_descriptor declarator: (_) @return))
-      (abstract_pointer_declarator declarator: (abstract_array_declarator) @pointee)`
-    );
     tree = parser.parse(`auto array() -> int[3];
       auto matrix() -> int[3][4];
       auto array_definition() -> int[3] { return {}; }
@@ -247,8 +220,7 @@ test('keeps trailing array and pointer nesting in public return descriptors', ()
       auto callback_matrix() -> int(*[3][4])(int);
       auto pointer_array_definition() -> int*[3] { return {}; }`)!;
     expect(tree.rootNode.hasError).toBe(false);
-    const captures = returns.captures(tree.rootNode);
-    expect(captures.filter(({ name }) => name === 'return').map(({ node }) => [node.type, node.text])).toEqual([
+    expect(trailingReturnDeclarators(tree.rootNode).map((node) => [node.type, node.text])).toEqual([
       ['abstract_array_declarator', '[3]'],
       ['abstract_array_declarator', '[3][4]'],
       ['abstract_array_declarator', '[3]'],
@@ -259,16 +231,35 @@ test('keeps trailing array and pointer nesting in public return descriptors', ()
       ['abstract_function_declarator', '(*[3][4])(int)'],
       ['abstract_pointer_declarator', '*[3]'],
     ]);
-    expect(captures.filter(({ name }) => name === 'pointee').map(({ node }) => node.text)).toEqual([
-      '[3]',
-      '[3]',
-      '[3]',
-      '[3][4]',
-      '[3]',
-    ]);
+    const pointees = tree.rootNode
+      .descendantsOfType('abstract_pointer_declarator')
+      .flatMap((node) => fieldChild(node, 'declarator', 'abstract_array_declarator') ?? []);
+    expect(pointees.map((node) => node.text)).toEqual(['[3]', '[3]', '[3]', '[3][4]', '[3]']);
   } finally {
     tree?.delete();
-    returns?.delete();
     parser.delete();
   }
 });
+
+function contextualContractCaptures(root: Node): AstCapture[] {
+  return collectCaptures(root, (node, emit) => {
+    if (node.type === 'parameter_declaration') emit('parameter', fieldChild(node, 'type', 'type_identifier'));
+    if (node.type === 'trailing_return_type') {
+      for (const descriptor of childrenOfType(node, 'type_descriptor')) {
+        emit('return', fieldChild(descriptor, 'declarator', 'abstract_function_declarator'));
+        emit('array', fieldChild(descriptor, 'declarator', 'abstract_array_declarator'));
+      }
+    }
+    if (node.type === 'assignment_expression') {
+      const indices = fieldChild(
+        fieldChild(node, 'left', 'subscript_expression'),
+        'indices',
+        'subscript_argument_list'
+      );
+      for (const index of childrenOfType(indices, 'identifier')) {
+        emit('assignment', node);
+        emit('index', index);
+      }
+    }
+  });
+}

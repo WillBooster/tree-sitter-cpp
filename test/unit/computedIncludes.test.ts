@@ -1,9 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import {
+  type AstCapture,
+  captureNodes,
+  childrenOfType,
+  collectCaptures,
+  fieldChild,
+  fieldChildren,
+} from '../helpers/ast.js';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -13,10 +21,6 @@ const language = await loadCurrentWasmBuild();
 
 test('retains computed include paths and enclosing C++ initializers across path spellings', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(preproc_include path: (_) @path) @include (function_definition) @function (declaration declarator: (identifier) @declaration) (declaration declarator: (init_declarator declarator: (identifier) @declaration))'
-  );
   const original = 'HEADER EMPTY';
   const start = source.indexOf(original, source.indexOf('#include'));
   try {
@@ -56,10 +60,7 @@ test('retains computed include paths and enclosing C++ initializers across path 
           ?.firstNamedChild?.type
       ).toBe('initializer_list');
       expect(
-        query
-          .captures(tree.rootNode)
-          .filter(({ name }) => name === 'declaration')
-          .map(({ node }) => node.text)
+        captureNodes(includeAndDeclarationCaptures(tree.rootNode), 'declaration').map((node) => node.text)
       ).toEqual(['local', 'after']);
     } finally {
       tree.delete();
@@ -69,19 +70,17 @@ test('retains computed include paths and enclosing C++ initializers across path 
       const next = parser.parse(nextSource)!;
       try {
         expect(next.rootNode.hasError).toBe(false);
-        expect(
-          query.captures(next.rootNode).find(({ name, node }) => name === 'path' && node.startIndex === start)?.node
-            .text
-        ).toBe(replacement);
-        for (const { node } of query.captures(next.rootNode))
-          expect(nextSource.slice(node.startIndex, node.endIndex)).toBe(node.text);
+        const captures = includeAndDeclarationCaptures(next.rootNode);
+        expect(captures.find(({ name, node }) => name === 'path' && node.startIndex === start)?.node.text).toBe(
+          replacement
+        );
+        for (const { node } of captures) expect(nextSource.slice(node.startIndex, node.endIndex)).toBe(node.text);
         expect(next.rootNode.lastNamedChild?.text).toBe('int following() { return 1; }');
       } finally {
         next.delete();
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });
@@ -114,18 +113,14 @@ int following() { return 1; }
 });
 
 test('preserves raw strings and following initializer elements across raw-token spellings', () => {
-  const source = fs.readFileSync(path.join(root, 'test/fixtures/rawIncludes.cpp'), 'utf8');
+  const rawSource = fs.readFileSync(path.join(root, 'test/fixtures/rawIncludes.cpp'), 'utf8');
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(preproc_include path: (preproc_include_argument (raw_string_literal) @raw) @path)'
-  );
   const original = 'R"(a"b)"';
   const multiline = 'R"tag(a"b\nc)tag"';
-  const start = source.indexOf(original);
+  const start = rawSource.indexOf(original);
   try {
     for (const replacement of [original, multiline]) {
-      const nextSource = source.slice(0, start) + replacement + source.slice(start + original.length);
+      const nextSource = rawSource.slice(0, start) + replacement + rawSource.slice(start + original.length);
       const tree = parser.parse(nextSource)!;
       try {
         expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
@@ -136,27 +131,46 @@ test('preserves raw strings and following initializer elements across raw-token 
               node.namedChildren.filter((child) => child.type === 'number_literal').map((child) => child.text)
             )
         ).toEqual([['1'], ['2']]);
-        expect(
-          query
-            .captures(tree.rootNode)
-            .filter(({ name }) => name === 'raw')
-            .map(({ node }) => node.text)
-        ).toEqual([replacement, multiline]);
-        expect(
-          query
-            .captures(tree.rootNode)
-            .filter(({ name }) => name === 'path')
-            .map(({ node }) => node.text)
-        ).toEqual([`H(/*inside*/ ${replacement}) EMPTY`, `H(${multiline}) EMPTY`]);
-        for (const { node } of query.captures(tree.rootNode))
-          expect(nextSource.slice(node.startIndex, node.endIndex)).toBe(node.text);
+        const captures = collectCaptures(tree.rootNode, (node, emit) => {
+          if (node.type !== 'preproc_include') return;
+          const pathNode = fieldChild(node, 'path', 'preproc_include_argument');
+          for (const raw of childrenOfType(pathNode, 'raw_string_literal')) {
+            emit('path', pathNode);
+            emit('raw', raw);
+          }
+        });
+        expect(captureNodes(captures, 'raw').map((node) => node.text)).toEqual([replacement, multiline]);
+        expect(captureNodes(captures, 'path').map((node) => node.text)).toEqual([
+          `H(/*inside*/ ${replacement}) EMPTY`,
+          `H(${multiline}) EMPTY`,
+        ]);
+        for (const { node } of captures) expect(nextSource.slice(node.startIndex, node.endIndex)).toBe(node.text);
         expect(tree.rootNode.lastNamedChild?.text).toBe('int following() { return 3; }');
       } finally {
         tree.delete();
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });
+
+function includeAndDeclarationCaptures(rootNode: Node): AstCapture[] {
+  return collectCaptures(rootNode, (node, emit) => {
+    if (node.type === 'preproc_include') {
+      const pathNode = fieldChild(node, 'path');
+      if (pathNode) {
+        emit('include', node);
+        emit('path', pathNode);
+      }
+    } else if (node.type === 'function_definition') {
+      emit('function', node);
+    } else if (node.type === 'declaration') {
+      for (const declarator of fieldChildren(node, 'declarator')) {
+        if (declarator.type === 'identifier') emit('declaration', declarator);
+        if (declarator.type === 'init_declarator')
+          emit('declaration', fieldChild(declarator, 'declarator', 'identifier'));
+      }
+    }
+  });
+}

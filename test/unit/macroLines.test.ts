@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 
-import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { Parser, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { captureNodes, childrenOfType, collectCaptures, fieldChild } from '../helpers/ast';
 import { testCommand } from './run';
 import { loadCurrentWasmBuild } from './wasmBuild';
 
@@ -12,15 +13,21 @@ const language = await loadCurrentWasmBuild();
 test('keeps standalone macro calls and their neighboring C++ declarations', () => {
   const source = fs.readFileSync(new URL('../fixtures/macroLines.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(expression_statement (call_expression function: (_) @macro arguments: (_) @arguments))'
-  );
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    const captures = query.captures(tree.rootNode);
-    expect(captures.filter(({ name }) => name === 'arguments').map(({ node }) => node.text)).toEqual([
+    const captures = collectCaptures(tree.rootNode, (node, emit) => {
+      if (node.type !== 'expression_statement') return;
+      for (const call of childrenOfType(node, 'call_expression')) {
+        const macro = fieldChild(call, 'function');
+        const args = fieldChild(call, 'arguments');
+        if (macro && args) {
+          emit('macro', macro);
+          emit('arguments', args);
+        }
+      }
+    });
+    expect(captureNodes(captures, 'arguments').map((node) => node.text)).toEqual([
       '(detail::Item)',
       '(detail::Item)',
       '(detail::Item)',
@@ -28,7 +35,7 @@ test('keeps standalone macro calls and their neighboring C++ declarations', () =
       '(tag)',
       '(\n  detail::Item,\n  (1 + 2)\n)',
     ]);
-    expect(captures.filter(({ name }) => name === 'macro').map(({ node }) => node.text)).toEqual([
+    expect(captureNodes(captures, 'macro').map((node) => node.text)).toEqual([
       'REGISTER',
       'REGISTER',
       'REGISTER',
@@ -62,7 +69,6 @@ test('keeps standalone macro calls and their neighboring C++ declarations', () =
     ).toEqual(['Final']);
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -97,22 +103,23 @@ test('does not split ordinary multiline declarations or calls at macro boundarie
   }
 });
 
-test('keeps macro EOF query ranges with and without a trailing semicolon', () => {
+test('keeps macro EOF source ranges with and without a trailing semicolon', () => {
   const source = '#define REGISTER(...)\nREGISTER(Item)';
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, '(expression_statement (call_expression) @call)');
   const tree = parser.parse(source)!;
   const terminated = parser.parse(`${source};`)!;
   try {
     expect(tree.rootNode.hasError).toBe(false);
-    expect(query.captures(tree.rootNode).map(({ node }) => [node.text, node.startIndex, node.endIndex])).toEqual([
+    const calls = tree.rootNode
+      .descendantsOfType('expression_statement')
+      .flatMap((node) => childrenOfType(node, 'call_expression'));
+    expect(calls.map((node) => [node.text, node.startIndex, node.endIndex])).toEqual([
       ['REGISTER(Item)', source.indexOf('REGISTER(Item)'), source.length],
     ]);
     expect(terminated.rootNode.hasError).toBe(false);
   } finally {
     terminated.delete();
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -130,17 +137,11 @@ testCommand(
   }
 );
 
-test('keeps Unicode neighboring calls and query ranges for each identifier spelling', () => {
+test('keeps Unicode neighboring calls and source ranges for each identifier spelling', () => {
   const source = fs.readFileSync(new URL('../fixtures/unicodeMacroLines.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(expression_statement (call_expression function: (identifier) @function arguments: (argument_list) @arguments))'
-  );
   const tree = parser.parse(source)!;
-  const captures = (parsed: Tree): [string, string, number, number][] =>
-    query.captures(parsed.rootNode).map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
-  const originalCaptures = captures(tree);
+  const originalCaptures = unicodeCallCaptures(tree);
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     expect(originalCaptures.filter(([name]) => name === 'function').map(([, text]) => text)).toEqual([
@@ -169,14 +170,27 @@ test('keeps Unicode neighboring calls and query ranges for each identifier spell
       const variant = parser.parse(source.slice(0, start) + replacement + source.slice(start + '本体'.length))!;
       try {
         expect(variant.rootNode.hasError, variant.rootNode.toString()).toBe(false);
-        expect(captures(variant).filter(([name]) => name === 'function')[1]?.[1]).toBe(replacement);
+        expect(unicodeCallCaptures(variant).filter(([name]) => name === 'function')[1]?.[1]).toBe(replacement);
       } finally {
         variant.delete();
       }
     }
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
+
+function unicodeCallCaptures(parsed: Tree): [string, string, number, number][] {
+  return collectCaptures(parsed.rootNode, (node, emit) => {
+    if (node.type !== 'expression_statement') return;
+    for (const call of childrenOfType(node, 'call_expression')) {
+      const fn = fieldChild(call, 'function', 'identifier');
+      const args = fieldChild(call, 'arguments', 'argument_list');
+      if (fn && args) {
+        emit('function', fn);
+        emit('arguments', args);
+      }
+    }
+  }).map(({ name, node }) => [name, node.text, node.startIndex, node.endIndex]);
+}

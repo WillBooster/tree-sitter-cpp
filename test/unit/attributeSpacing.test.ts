@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
 import { loadCurrentWasmBuild } from './wasmBuild.js';
@@ -11,12 +11,8 @@ const source = fs.readFileSync(path.join(root, 'test/fixtures/spacedAttributes.c
 await Parser.init();
 const language = await loadCurrentWasmBuild();
 
-test('preserves C++ declarators and query ranges across attribute bracket spacing', () => {
+test('preserves C++ declarators and source ranges across attribute bracket spacing', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(attribute_declaration) @attribute (qualified_identifier) @qualified (reference_declarator) @reference'
-  );
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
@@ -51,8 +47,13 @@ test('preserves C++ declarators and query ranges across attribute bracket spacin
       const parsed = parser.parse(current)!;
       try {
         expect(parsed.rootNode.hasError).toBe(false);
-        for (const { node } of query.captures(parsed.rootNode))
+        for (const node of parsed.rootNode.descendantsOfType([
+          'attribute_declaration',
+          'qualified_identifier',
+          'reference_declarator',
+        ])) {
           expect(current.slice(node.startIndex, node.endIndex)).toBe(node.text);
+        }
         expect(parsed.rootNode.lastNamedChild?.text).toBe(
           'int indexed(int *values) { return values[([] { return 0; }())]; }'
         );
@@ -62,7 +63,6 @@ test('preserves C++ declarators and query ranges across attribute bracket spacin
     }
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });

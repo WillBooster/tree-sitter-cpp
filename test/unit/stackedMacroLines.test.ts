@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 
-import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { type Node, Parser, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { type AstCapture, captureNodes, childrenOfType, collectCaptures, fieldChild } from '../helpers/ast';
 import { testCommand } from './run';
 import { loadCurrentWasmBuild } from './wasmBuild';
 
@@ -24,22 +25,14 @@ testCommand(
   }
 );
 
-test('keeps every marker, directive and declaration query range in nested conditionals', () => {
+test('keeps every marker, directive and declaration source range in nested conditionals', () => {
   const source = fs.readFileSync(new URL('../fixtures/stackedMacroLines.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    `(expression_statement (identifier) @marker)
-(preproc_if condition: (preproc_defined (identifier) @condition))
-(template_declaration parameters: (template_parameter_list) @parameters)
-(class_specifier name: (type_identifier) @class)
-(function_definition declarator: (function_declarator declarator: (identifier) @function))`
-  );
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    const captures = query.captures(tree.rootNode);
-    expect(captures.filter(({ name }) => name === 'marker').map(({ node }) => node.text)).toEqual([
+    const captures = stackedMacroCaptures(tree.rootNode);
+    expect(captureNodes(captures, 'marker').map((node) => node.text)).toEqual([
       'PUSH_STATE',
       'OPEN_SCOPE',
       'OPEN_ABI',
@@ -50,10 +43,7 @@ test('keeps every marker, directive and declaration query range in nested condit
       'CLOSE_ABI',
       'CLOSE_SCOPE',
     ]);
-    expect(captures.filter(({ name }) => name === 'parameters').map(({ node }) => node.text)).toEqual([
-      '<class T, class U>',
-      '<class T>',
-    ]);
+    expect(captureNodes(captures, 'parameters').map((node) => node.text)).toEqual(['<class T, class U>', '<class T>']);
     expect(captures.filter(({ name }) => name === 'class' || name === 'function').map(({ node }) => node.text)).toEqual(
       ['Channel', 'preserved']
     );
@@ -71,7 +61,6 @@ test('keeps every marker, directive and declaration query range in nested condit
     expect(tree.rootNode.descendantsOfType('declaration').at(-1)?.text).toBe('int following;');
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -82,27 +71,43 @@ test('recognizes stacked marker lines around a middle terminator and a final dec
   const terminated = original.slice(0, middle) + ';' + original.slice(middle);
   const declared = original.replace('template<class T> void kept();', 'int following;');
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(expression_statement (identifier) @marker) (declaration type: (_) @type declarator: (_) @declarator)'
-  );
   const trees = [original, terminated, declared].map((source) => parser.parse(source)!);
-  const markers = (tree: Tree): number => query.captures(tree.rootNode).filter(({ name }) => name === 'marker').length;
   try {
     for (const tree of trees) expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
     const [originalTree, terminatedTree, declaredTree] = trees as [Tree, Tree, Tree];
-    expect(markers(originalTree)).toBe(12);
-    expect(markers(terminatedTree)).toBe(6);
+    expect(countMarkerStatements(originalTree)).toBe(12);
+    expect(countMarkerStatements(terminatedTree)).toBe(6);
     expect(terminatedTree.rootNode.descendantsOfType('template_declaration').map((node) => node.text)).toEqual([
       'template<class T> void kept();',
     ]);
-    expect(markers(declaredTree)).toBe(0);
+    expect(countMarkerStatements(declaredTree)).toBe(0);
     expect(declaredTree.rootNode.descendantsOfType('declaration').at(-1)?.childForFieldName('declarator')?.text).toBe(
       'following'
     );
   } finally {
     for (const tree of trees) tree.delete();
-    query.delete();
     parser.delete();
   }
 });
+
+function countMarkerStatements(tree: Tree): number {
+  return tree.rootNode.descendantsOfType('expression_statement').flatMap((node) => childrenOfType(node, 'identifier'))
+    .length;
+}
+
+function stackedMacroCaptures(root: Node): AstCapture[] {
+  return collectCaptures(root, (node, emit) => {
+    if (node.type === 'expression_statement') {
+      for (const marker of childrenOfType(node, 'identifier')) emit('marker', marker);
+    } else if (node.type === 'preproc_if') {
+      const defined = fieldChild(node, 'condition', 'preproc_defined');
+      for (const condition of childrenOfType(defined, 'identifier')) emit('condition', condition);
+    } else if (node.type === 'template_declaration') {
+      emit('parameters', fieldChild(node, 'parameters', 'template_parameter_list'));
+    } else if (node.type === 'class_specifier') {
+      emit('class', fieldChild(node, 'name', 'type_identifier'));
+    } else if (node.type === 'function_definition') {
+      emit('function', fieldChild(fieldChild(node, 'declarator', 'function_declarator'), 'declarator', 'identifier'));
+    }
+  });
+}

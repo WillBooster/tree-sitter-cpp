@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { childrenOfType, fieldChild, fieldChildren } from '../helpers/ast';
 import { loadCurrentWasmBuild } from './wasmBuild';
 
 await Parser.init();
@@ -55,16 +56,10 @@ test('preserves macro class definitions and ordinary declarators', () => {
 
 test('retains macro function fields and ranges with changed bodies', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(function_definition type: (_) @type declarator: (identifier) @declarator body: (compound_statement) @body) @function'
-  );
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    const functions = tree.rootNode
-      .descendantsOfType('function_definition')
-      .filter((node) => node.childForFieldName('declarator')?.type === 'identifier');
+    const functions = macroFunctions(tree.rootNode);
     expect(
       functions.map((node) => ['type', 'declarator', 'body'].map((field) => node.childForFieldName(field)?.text))
     ).toEqual([
@@ -87,17 +82,13 @@ test('retains macro function fields and ranges with changed bodies', () => {
     try {
       expect(changed.rootNode.hasError, changed.rootNode.toString()).toBe(false);
       expect(
-        query
-          .captures(changed.rootNode)
-          .filter(({ name }) => name === 'body')
-          .map(({ node }) => node.text)
+        macroFunctions(changed.rootNode).map((node) => fieldChild(node, 'body', 'compound_statement')?.text)
       ).toEqual(['{ return 2; }', '{ return Type{}; }', '{ return Type{}; }']);
     } finally {
       changed.delete();
     }
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -105,14 +96,17 @@ test('retains macro function fields and ranges with changed bodies', () => {
 test('retains nested template argument types inside function bodies', () => {
   const nestedSource = fs.readFileSync(new URL('../fixtures/nestedTemplateStatements.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(template_argument_list (type_descriptor type: (qualified_identifier name: (template_type) @nested)))'
-  );
   const tree = parser.parse(nestedSource)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual([
+    const nested = tree.rootNode
+      .descendantsOfType('template_argument_list')
+      .flatMap((node) => childrenOfType(node, 'type_descriptor'))
+      .flatMap(
+        (descriptor) =>
+          fieldChild(fieldChild(descriptor, 'type', 'qualified_identifier'), 'name', 'template_type') ?? []
+      );
+    expect(nested.map((node) => node.text)).toEqual([
       'vector<std::string>',
       'set<std::string>',
       'unordered_set<std::string>',
@@ -120,7 +114,6 @@ test('retains nested template argument types inside function bodies', () => {
     ]);
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -128,14 +121,16 @@ test('retains nested template argument types inside function bodies', () => {
 test('keeps nonempty elaborated-type variable initializers as declarations', () => {
   const input = fs.readFileSync(new URL('../fixtures/elaboratedInitializers.cpp', import.meta.url), 'utf8');
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(declaration type: (class_specifier) declarator: (init_declarator declarator: (identifier) @variable value: (initializer_list)))'
-  );
   const tree = parser.parse(input)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual([
+    const variables = tree.rootNode
+      .descendantsOfType('declaration')
+      .filter((node) => Boolean(fieldChild(node, 'type', 'class_specifier')))
+      .flatMap((node) => fieldChildren(node, 'declarator', 'init_declarator'))
+      .filter((init) => Boolean(fieldChild(init, 'value', 'initializer_list')))
+      .flatMap((init) => fieldChild(init, 'declarator', 'identifier') ?? []);
+    expect(variables.map((node) => node.text)).toEqual([
       'object',
       'defaultItem',
       'designated',
@@ -151,7 +146,6 @@ test('keeps nonempty elaborated-type variable initializers as declarations', () 
     );
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -161,11 +155,6 @@ test('retains nested template expression types and ranges inside function bodies
   const first = 'std::cout << std::is_same<Plain, A<Nested<C>>>::value;';
   const second = 'std::cout << std::is_same<ns::A<std::vector<std::uint8_t>>, Plain>::value;';
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    `(template_argument_list (type_descriptor type: (template_type) @nested))
-(template_argument_list (type_descriptor type: (qualified_identifier name: (template_type) @nested)))`
-  );
   try {
     for (const [removed, expected] of [
       [second, ['A<Nested<C>>', 'Nested<C>']],
@@ -177,9 +166,9 @@ test('retains nested template expression types and ranges inside function bodies
         expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
         expect(tree.rootNode.descendantsOfType('binary_expression')).toHaveLength(1);
         expect(tree.rootNode.descendantsOfType('comma_expression')).toHaveLength(0);
-        const captures = query.captures(tree.rootNode);
-        expect(captures.map(({ node }) => node.text)).toEqual(expect.arrayContaining([...expected]));
-        for (const { node } of captures) {
+        const nested = nestedTemplateTypes(tree.rootNode);
+        expect(nested.map((node) => node.text)).toEqual(expect.arrayContaining([...expected]));
+        for (const node of nested) {
           const start = current.indexOf(node.text, current.indexOf('int main()'));
           expect(node.startIndex).toBe(start);
           expect(node.endIndex).toBe(start + node.text.length);
@@ -189,7 +178,6 @@ test('retains nested template expression types and ranges inside function bodies
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });
@@ -225,3 +213,26 @@ test.each(['std::string_view', 'std::pmr::string'])(
     }
   }
 );
+
+function macroFunctions(root: Node): Node[] {
+  return root
+    .descendantsOfType('function_definition')
+    .filter(
+      (node) =>
+        Boolean(fieldChild(node, 'type')) &&
+        Boolean(fieldChild(node, 'declarator', 'identifier')) &&
+        Boolean(fieldChild(node, 'body', 'compound_statement'))
+    );
+}
+
+function nestedTemplateTypes(root: Node): Node[] {
+  return root
+    .descendantsOfType('template_argument_list')
+    .flatMap((node) => childrenOfType(node, 'type_descriptor'))
+    .flatMap(
+      (descriptor) =>
+        fieldChild(descriptor, 'type', 'template_type') ??
+        fieldChild(fieldChild(descriptor, 'type', 'qualified_identifier'), 'name', 'template_type') ??
+        []
+    );
+}

@@ -2,9 +2,10 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { type Node, Parser, type Tree } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { childrenOfType, fieldChild } from '../helpers/ast.js';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const Root = path.join(import.meta.dirname, '../..');
@@ -79,74 +80,63 @@ int main() { ~Box<int>(); return ~Box<int>() == 1 ? 0 : 1; }
   const parser = new Parser();
   try {
     parser.setLanguage(language);
-    const calls = new Query(
-      language,
-      '(call_expression function: (field_expression argument: (identifier) @object field: (_) @field) @member arguments: (argument_list)) @call'
-    );
+    const tree = parser.parse(source)!;
     try {
-      const tree = parser.parse(source)!;
-      try {
-        expect(tree.rootNode.hasError).toBe(false);
-        const fields = calls
-          .captures(tree.rootNode)
-          .filter(({ name }) => name === 'field')
-          .map(({ node }) => node);
-        expect(fields.map((node) => node.text)).toEqual([
-          '~Box<int>',
-          'ns::Box<int>::~Box<int>',
-          'Plain::~Plain',
-          '~Box<Box<int>>',
-          '~Box<int>',
-          'Plain::~Plain',
-          '~Box<T>',
-        ]);
-        expect(fields.map((node) => node.type)).toEqual([
-          'destructor_name',
-          'qualified_identifier',
-          'qualified_identifier',
-          'destructor_name',
-          'destructor_name',
-          'qualified_identifier',
-          'destructor_name',
-        ]);
-        const qualified = fields[1]!;
-        expect(qualified.childForFieldName('scope')?.type).toBe('namespace_identifier');
-        expect(qualified.childForFieldName('scope')?.text).toBe('ns');
-        const specialized = qualified.childForFieldName('name')!;
-        expect(specialized.type).toBe('qualified_identifier');
-        expect(specialized.childForFieldName('scope')?.type).toBe('template_type');
-        expect(specialized.childForFieldName('scope')?.text).toBe('Box<int>');
-        expect(specialized.childForFieldName('name')?.type).toBe('destructor_name');
-        expect(specialized.childForFieldName('name')?.text).toBe('~Box<int>');
-        expect(fields[3]?.namedChildren.map((node) => node.type)).toEqual(['identifier', 'template_argument_list']);
-        expect(fields[3]?.namedChildren[1]?.text).toBe('<Box<int>>');
-        const selfCall = tree.rootNode.descendantsOfType('call_expression')[0]!;
-        const selfName = selfCall.childForFieldName('function')!;
-        expect(selfName.type).toBe('qualified_identifier');
-        expect(selfName.childForFieldName('scope')?.type).toBe('template_type');
-        expect(selfName.childForFieldName('scope')?.text).toBe('Box<int>');
-        expect(selfName.childForFieldName('name')?.type).toBe('destructor_name');
-        expect(selfName.childForFieldName('name')?.text).toBe('~Box<int>');
-        const unary = tree.rootNode.descendantsOfType('unary_expression');
-        expect(unary.map((node) => node.text)).toEqual(['~Box<int>()', '~Box<int>()']);
-        expect(unary.map((node) => node.childForFieldName('argument')?.type)).toEqual([
-          'call_expression',
-          'call_expression',
-        ]);
-        const unaryCalls = new Query(
-          language,
-          '(unary_expression argument: (call_expression function: (template_function name: (identifier) @name)))'
-        );
-        try {
-          expect(unaryCalls.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['Box', 'Box']);
-        } finally {
-          unaryCalls.delete();
-        }
-      } finally {
-        tree.delete();
-      }
+      expect(tree.rootNode.hasError).toBe(false);
+      const fields = memberCallFields(tree.rootNode);
+      expect(fields.map((node) => node.text)).toEqual([
+        '~Box<int>',
+        'ns::Box<int>::~Box<int>',
+        'Plain::~Plain',
+        '~Box<Box<int>>',
+        '~Box<int>',
+        'Plain::~Plain',
+        '~Box<T>',
+      ]);
+      expect(fields.map((node) => node.type)).toEqual([
+        'destructor_name',
+        'qualified_identifier',
+        'qualified_identifier',
+        'destructor_name',
+        'destructor_name',
+        'qualified_identifier',
+        'destructor_name',
+      ]);
+      const qualified = fields[1]!;
+      expect(qualified.childForFieldName('scope')?.type).toBe('namespace_identifier');
+      expect(qualified.childForFieldName('scope')?.text).toBe('ns');
+      const specialized = qualified.childForFieldName('name')!;
+      expect(specialized.type).toBe('qualified_identifier');
+      expect(specialized.childForFieldName('scope')?.type).toBe('template_type');
+      expect(specialized.childForFieldName('scope')?.text).toBe('Box<int>');
+      expect(specialized.childForFieldName('name')?.type).toBe('destructor_name');
+      expect(specialized.childForFieldName('name')?.text).toBe('~Box<int>');
+      expect(fields[3]?.namedChildren.map((node) => node.type)).toEqual(['identifier', 'template_argument_list']);
+      expect(fields[3]?.namedChildren[1]?.text).toBe('<Box<int>>');
+      const selfCall = tree.rootNode.descendantsOfType('call_expression')[0]!;
+      const selfName = selfCall.childForFieldName('function')!;
+      expect(selfName.type).toBe('qualified_identifier');
+      expect(selfName.childForFieldName('scope')?.type).toBe('template_type');
+      expect(selfName.childForFieldName('scope')?.text).toBe('Box<int>');
+      expect(selfName.childForFieldName('name')?.type).toBe('destructor_name');
+      expect(selfName.childForFieldName('name')?.text).toBe('~Box<int>');
+      const unary = tree.rootNode.descendantsOfType('unary_expression');
+      expect(unary.map((node) => node.text)).toEqual(['~Box<int>()', '~Box<int>()']);
+      expect(unary.map((node) => node.childForFieldName('argument')?.type)).toEqual([
+        'call_expression',
+        'call_expression',
+      ]);
+      const unaryCallNames = unary.flatMap(
+        (node) =>
+          fieldChild(
+            fieldChild(fieldChild(node, 'argument', 'call_expression'), 'function', 'template_function'),
+            'name',
+            'identifier'
+          ) ?? []
+      );
+      expect(unaryCallNames.map((node) => node.text)).toEqual(['Box', 'Box']);
     } finally {
-      calls.delete();
+      tree.delete();
     }
   } finally {
     parser.delete();
@@ -166,28 +156,14 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
   const language = await loadCurrentWasmBuild();
   const parser = new Parser();
   let tree: Tree | undefined;
-  let friends: Query | undefined;
   try {
     parser.setLanguage(language);
-    friends = new Query(
-      language,
-      '(friend_declaration (function_definition declarator: (function_declarator declarator: (identifier) @name) body: (compound_statement)) @function) @friend'
-    );
     tree = parser.parse(source)!;
     expect(tree.rootNode.hasError).toBe(false);
-    const matches = friends.matches(tree.rootNode);
-    expect(matches.map(({ captures }) => captures.find(({ name }) => name === 'name')?.node.text)).toEqual([
-      'get',
-      'twice',
-      'plain',
-    ]);
+    const matches = friendFunctionDefinitions(tree.rootNode);
+    expect(matches.map(({ name }) => name.text)).toEqual(['get', 'twice', 'plain']);
     expect(
-      matches.map(({ captures }) =>
-        captures
-          .find(({ name }) => name === 'friend')!
-          .node.namedChildren.filter((node) => node.type === 'attribute_declaration')
-          .map((node) => node.text)
-      )
+      matches.map(({ friend }) => childrenOfType(friend, 'attribute_declaration').map((node) => node.text))
     ).toEqual([['[[nodiscard]]'], ['[[nodiscard]]', '[[maybe_unused]]'], []]);
 
     const recoveryInputs = [
@@ -231,7 +207,6 @@ int main() { return get(Value{3}) + plain(Value{3}) == 6 ? 0 : 1; }
       withoutAttribute.delete();
     }
   } finally {
-    friends?.delete();
     tree?.delete();
     parser.delete();
   }
@@ -249,60 +224,42 @@ int main() { Both value; return left + right + value.first() + value.second() ==
   const parser = new Parser();
   try {
     parser.setLanguage(language);
-    const query = new Query(
-      language,
-      '(using_declaration (qualified_identifier scope: (_) @scope name: (identifier) @name) @entry) @using'
-    );
+    const tree = parser.parse(source)!;
     try {
-      const tree = parser.parse(source)!;
+      expect(tree.rootNode.hasError).toBe(false);
+      const declarations = tree.rootNode.descendantsOfType('using_declaration');
+      expect(declarations.map((node) => node.namedChildren.map((child) => child.text))).toEqual([
+        ['source::left', 'source::right'],
+        ['First::first', 'Second::second'],
+      ]);
+      expect(declarations.map((node) => node.children.map((child) => child.type))).toEqual([
+        ['using', 'qualified_identifier', ',', 'qualified_identifier', ';'],
+        ['using', 'qualified_identifier', ',', 'qualified_identifier', ';'],
+      ]);
+      const entries = usingQualifiedEntries(tree.rootNode);
+      expect(entries.map(({ name }) => name.text)).toEqual(['left', 'right', 'first', 'second']);
+      expect(entries.map(({ scope }) => scope.text)).toEqual(['source', 'source', 'First', 'Second']);
+      const withoutRight = parser.parse(source.replace(', source::right', ''))!;
       try {
-        expect(tree.rootNode.hasError).toBe(false);
-        const declarations = tree.rootNode.descendantsOfType('using_declaration');
-        expect(declarations.map((node) => node.namedChildren.map((child) => child.text))).toEqual([
-          ['source::left', 'source::right'],
-          ['First::first', 'Second::second'],
+        expect(withoutRight.rootNode.hasError).toBe(false);
+        expect(usingQualifiedEntries(withoutRight.rootNode).map(({ name }) => name.text)).toEqual([
+          'left',
+          'first',
+          'second',
         ]);
-        expect(declarations.map((node) => node.children.map((child) => child.type))).toEqual([
-          ['using', 'qualified_identifier', ',', 'qualified_identifier', ';'],
-          ['using', 'qualified_identifier', ',', 'qualified_identifier', ';'],
-        ]);
-        expect(
-          query
-            .captures(tree.rootNode)
-            .filter(({ name }) => name === 'name')
-            .map(({ node }) => node.text)
-        ).toEqual(['left', 'right', 'first', 'second']);
-        expect(
-          query
-            .captures(tree.rootNode)
-            .filter(({ name }) => name === 'scope')
-            .map(({ node }) => node.text)
-        ).toEqual(['source', 'source', 'First', 'Second']);
-        const withoutRight = parser.parse(source.replace(', source::right', ''))!;
-        try {
-          expect(withoutRight.rootNode.hasError).toBe(false);
-          expect(
-            query
-              .captures(withoutRight.rootNode)
-              .filter(({ name }) => name === 'name')
-              .map(({ node }) => node.text)
-          ).toEqual(['left', 'first', 'second']);
-        } finally {
-          withoutRight.delete();
-        }
       } finally {
-        tree.delete();
-      }
-      for (const invalid of ['using namespace source, other;', 'using enum E, F;', 'using source::left,;']) {
-        const tree = parser.parse(invalid)!;
-        try {
-          expect(tree.rootNode.hasError, invalid).toBe(true);
-        } finally {
-          tree.delete();
-        }
+        withoutRight.delete();
       }
     } finally {
-      query.delete();
+      tree.delete();
+    }
+    for (const invalid of ['using namespace source, other;', 'using enum E, F;', 'using source::left,;']) {
+      const invalidTree = parser.parse(invalid)!;
+      try {
+        expect(invalidTree.rootNode.hasError, invalid).toBe(true);
+      } finally {
+        invalidTree.delete();
+      }
     }
   } finally {
     parser.delete();
@@ -320,13 +277,8 @@ int main() { Derived<Base> derived; Joined<First, Second> joined; return derived
   const language = await loadCurrentWasmBuild();
   const parser = new Parser();
   let tree: Tree | undefined;
-  let names: Query | undefined;
   try {
     parser.setLanguage(language);
-    names = new Query(
-      language,
-      '(using_declaration (qualified_identifier scope: (_) @scope name: (identifier) @name)) @using'
-    );
     tree = parser.parse(source)!;
     expect(tree.rootNode.hasError).toBe(false);
     const declarations = tree.rootNode.descendantsOfType('using_declaration');
@@ -339,22 +291,12 @@ int main() { Derived<Base> derived; Joined<First, Second> joined; return derived
       'value_type',
       'f',
     ]);
-    expect(
-      names
-        .captures(tree.rootNode)
-        .filter(({ name }) => name === 'name')
-        .map(({ node }) => node.text)
-    ).toEqual(['value_type', 'f']);
+    expect(usingQualifiedEntries(tree.rootNode).map(({ name }) => name.text)).toEqual(['value_type', 'f']);
     const oldLine = `${source.split('\n')[1]}\n`;
     const renamed = parser.parse(source.replace(oldLine, oldLine.replaceAll('value_type', 'other_type')))!;
     try {
       expect(renamed.rootNode.hasError).toBe(false);
-      expect(
-        names
-          .captures(renamed.rootNode)
-          .filter(({ name }) => name === 'name')
-          .map(({ node }) => node.text)
-      ).toEqual(['other_type', 'f']);
+      expect(usingQualifiedEntries(renamed.rootNode).map(({ name }) => name.text)).toEqual(['other_type', 'f']);
     } finally {
       renamed.delete();
     }
@@ -374,7 +316,6 @@ int main() { Derived<Base> derived; Joined<First, Second> joined; return derived
       }
     }
   } finally {
-    names?.delete();
     tree?.delete();
     parser.delete();
   }
@@ -394,18 +335,14 @@ int main() { Value value; return first(value) + second(value) + third(value) + b
   const language = await loadCurrentWasmBuild();
   const parser = new Parser();
   let tree: Tree | undefined;
-  let attributes: Query | undefined;
   try {
     parser.setLanguage(language);
-    attributes = new Query(language, '(friend_declaration (attribute_specifier) @attribute) @friend');
     tree = parser.parse(source)!;
     expect(tree.rootNode.hasError).toBe(false);
-    expect(
-      attributes
-        .captures(tree.rootNode)
-        .filter(({ name }) => name === 'attribute')
-        .map(({ node }) => ({ text: node.text, parent: node.parent?.type }))
-    ).toEqual([
+    const attributes = tree.rootNode
+      .descendantsOfType('friend_declaration')
+      .flatMap((friend) => childrenOfType(friend, 'attribute_specifier'));
+    expect(attributes.map((node) => ({ text: node.text, parent: node.parent?.type }))).toEqual([
       { text: '__attribute__((unused))', parent: 'friend_declaration' },
       { text: '__attribute__((unused))', parent: 'friend_declaration' },
       { text: '__attribute__((noinline))', parent: 'friend_declaration' },
@@ -424,8 +361,37 @@ int main() { Value value; return first(value) + second(value) + third(value) + b
       withoutAttribute.delete();
     }
   } finally {
-    attributes?.delete();
     tree?.delete();
     parser.delete();
   }
 });
+
+function memberCallFields(root: Node): Node[] {
+  return root.descendantsOfType('call_expression').flatMap((call) => {
+    if (!fieldChild(call, 'arguments', 'argument_list')) return [];
+    const member = fieldChild(call, 'function', 'field_expression');
+    if (!fieldChild(member, 'argument', 'identifier')) return [];
+    return fieldChild(member, 'field') ?? [];
+  });
+}
+
+function friendFunctionDefinitions(root: Node): { friend: Node; name: Node }[] {
+  return root.descendantsOfType('friend_declaration').flatMap((friend) =>
+    childrenOfType(friend, 'function_definition').flatMap((fn) => {
+      if (!fieldChild(fn, 'body', 'compound_statement')) return [];
+      const name = fieldChild(fieldChild(fn, 'declarator', 'function_declarator'), 'declarator', 'identifier');
+      return name ? [{ friend, name }] : [];
+    })
+  );
+}
+
+function usingQualifiedEntries(root: Node): { scope: Node; name: Node }[] {
+  return root
+    .descendantsOfType('using_declaration')
+    .flatMap((usingNode) => childrenOfType(usingNode, 'qualified_identifier'))
+    .flatMap((entry) => {
+      const scope = fieldChild(entry, 'scope');
+      const name = fieldChild(entry, 'name', 'identifier');
+      return scope && name ? [{ scope, name }] : [];
+    });
+}
