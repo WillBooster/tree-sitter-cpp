@@ -1,6 +1,7 @@
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { collectCaptures, fieldChild } from '../helpers/ast';
 import { loadCurrentWasmBuild } from './wasmBuild';
 
 await Parser.init();
@@ -15,13 +16,13 @@ const char *raw = R"tag(_Pragma("not a directive"))tag";
 `;
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(source)!;
-  const query = new Query(
-    language,
-    '(preproc_function_def value: (preproc_arg) @body) (va_arg_expression type: (type_descriptor) @type)'
-  );
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    expect(query.captures(tree.rootNode).map(({ name, node }) => [name, node.text])).toEqual([
+    const captures = collectCaptures(tree.rootNode, (node, emit) => {
+      if (node.type === 'preproc_function_def') emit('body', fieldChild(node, 'value', 'preproc_arg'));
+      if (node.type === 'va_arg_expression') emit('type', fieldChild(node, 'type', 'type_descriptor'));
+    });
+    expect(captures.map(({ name, node }) => [name, node.text])).toEqual([
       ['body', 'x/**/+1'],
       ['type', 'int'],
     ]);
@@ -36,7 +37,6 @@ const char *raw = R"tag(_Pragma("not a directive"))tag";
       '*raw'
     );
   } finally {
-    query.delete();
     tree.delete();
     parser.delete();
   }

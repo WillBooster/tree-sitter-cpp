@@ -1,6 +1,7 @@
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { type AstCapture, collectCaptures, fieldChild } from '../helpers/ast.js';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const source = `int evaluate(int TRUE, int FALSE) {
@@ -14,11 +15,6 @@ const language = await loadCurrentWasmBuild();
 
 test('preserves uppercase boolean variable reads and writes beside boolean literals', () => {
   const parser = new Parser().setLanguage(language);
-  const references = new Query(
-    language,
-    '(assignment_expression left: (identifier) @write right: (identifier) @read) ' +
-      '(conditional_expression condition: [(identifier) (true)] @condition consequence: (identifier) @read)'
-  );
   const start = source.indexOf('TRUE ?');
   try {
     for (const replacement of ['TRUE', 'true']) {
@@ -26,7 +22,7 @@ test('preserves uppercase boolean variable reads and writes beside boolean liter
       const tree = parser.parse(nextSource)!;
       try {
         expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-        const captures = references.captures(tree.rootNode);
+        const captures = booleanReferenceCaptures(tree.rootNode);
         expect(captures.map(({ name, node }) => [name, node.type, node.text])).toEqual([
           ['write', 'identifier', 'TRUE'],
           ['read', 'identifier', 'FALSE'],
@@ -46,7 +42,27 @@ test('preserves uppercase boolean variable reads and writes beside boolean liter
       }
     }
   } finally {
-    references.delete();
     parser.delete();
   }
 });
+
+function booleanReferenceCaptures(rootNode: Node): AstCapture[] {
+  return collectCaptures(rootNode, (node, emit) => {
+    if (node.type === 'assignment_expression') {
+      const left = fieldChild(node, 'left', 'identifier');
+      const right = fieldChild(node, 'right', 'identifier');
+      if (left && right) {
+        emit('write', left);
+        emit('read', right);
+      }
+    }
+    if (node.type === 'conditional_expression') {
+      const condition = fieldChild(node, 'condition', ['identifier', 'true']);
+      const consequence = fieldChild(node, 'consequence', 'identifier');
+      if (condition && consequence) {
+        emit('condition', condition);
+        emit('read', consequence);
+      }
+    }
+  });
+}

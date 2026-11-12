@@ -1,6 +1,7 @@
-import { Parser, Query } from '@willbooster/web-tree-sitter';
+import { type Node, Parser } from '@willbooster/web-tree-sitter';
 import { expect, test } from 'vitest';
 
+import { childrenOfType, fieldChild, fieldChildren } from '../helpers/ast.js';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 await Parser.init();
@@ -21,12 +22,12 @@ template<class... size_t> void libraryNamedPack(size_t...);
 `;
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(source)!;
-  let query: Query | undefined;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    query = new Query(language, '(parameter_list (variadic_parameter) @ellipsis)');
-    const captures = query.captures(tree.rootNode);
-    expect(captures.map(({ node }) => node.parent?.parent?.childForFieldName('declarator')?.text)).toEqual([
+    const ellipses = tree.rootNode
+      .descendantsOfType('parameter_list')
+      .flatMap((node) => childrenOfType(node, 'variadic_parameter'));
+    expect(ellipses.map((node) => node.parent?.parent?.childForFieldName('declarator')?.text)).toEqual([
       'first',
       'second',
       'third',
@@ -36,7 +37,7 @@ template<class... size_t> void libraryNamedPack(size_t...);
       'wide',
       'after',
     ]);
-    for (const { node } of captures) {
+    for (const node of ellipses) {
       expect(node.text).toBe('...');
       expect(node.parent?.namedChildren.at(-1)?.startIndex).toBe(node.startIndex);
     }
@@ -53,7 +54,6 @@ template<class... size_t> void libraryNamedPack(size_t...);
       'size_t...',
     ]);
   } finally {
-    query?.delete();
     tree.delete();
     parser.delete();
   }
@@ -83,7 +83,6 @@ test('rejects parameters after a variadic ellipsis and a leading comma', () => {
 
 test('keeps function varargs separate from exception declarations', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(language, '(catch_clause parameters: (parameter_list (variadic_parameter) @catch_all))');
   const source = `void handled() {
   try {}
   catch (int) {}
@@ -94,8 +93,12 @@ test('keeps function varargs separate from exception declarations', () => {
   const tree = parser.parse(source)!;
   try {
     expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-    expect(tree.rootNode.descendantsOfType('catch_clause')).toHaveLength(4);
-    expect(query.captures(tree.rootNode).map(({ node }) => node.text)).toEqual(['...']);
+    const catches = tree.rootNode.descendantsOfType('catch_clause');
+    expect(catches).toHaveLength(4);
+    const catchAll = catches.flatMap((clause) =>
+      childrenOfType(fieldChild(clause, 'parameters', 'parameter_list'), 'variadic_parameter')
+    );
+    expect(catchAll.map((node) => node.text)).toEqual(['...']);
     for (const parameters of [
       'int value...',
       'int...',
@@ -113,7 +116,6 @@ test('keeps function varargs separate from exception declarations', () => {
     }
   } finally {
     tree.delete();
-    query.delete();
     parser.delete();
   }
 });
@@ -160,10 +162,6 @@ test('recovers conditional parameter lists without consuming following definitio
 
 test('keeps conditional parameter prefixes and tails within the complete function declaration', () => {
   const parser = new Parser().setLanguage(language);
-  const query = new Query(
-    language,
-    '(declaration declarator: (function_declarator declarator: (identifier) @name)) @declaration'
-  );
   const conditionalTail = '#ifdef VARARGS\n  const char *fmt, ...\n#else\n  const char *fmt\n#endif\n';
   const definitions = ['int after1(int value) { return value; }', 'int after2(int value) { return value; }'];
   const following = definitions.join('\n') + '\n';
@@ -203,18 +201,14 @@ test('keeps conditional parameter prefixes and tails within the complete functio
         const tree = parser.parse(source)!;
         try {
           expect(tree.rootNode.hasError, tree.rootNode.toString()).toBe(false);
-          const captures = query.captures(tree.rootNode);
+          const declarations = functionDeclarations(tree.rootNode);
+          expect(declarations.map(({ name }) => [name.text, name.startIndex, name.endIndex])).toEqual([
+            ['log_message', 4, 15],
+          ]);
+          const declarationText = prefix + parameters + tail + ');';
           expect(
-            captures
-              .filter(({ name }) => name === 'name')
-              .map(({ node }) => [node.text, node.startIndex, node.endIndex])
-          ).toEqual([['log_message', 4, 15]]);
-          const declaration = prefix + parameters + tail + ');';
-          expect(
-            captures
-              .filter(({ name }) => name === 'declaration')
-              .map(({ node }) => [node.text, node.startIndex, node.endIndex])
-          ).toEqual([[declaration, 0, declaration.length]]);
+            declarations.map(({ declaration }) => [declaration.text, declaration.startIndex, declaration.endIndex])
+          ).toEqual([[declarationText, 0, declarationText.length]]);
           expect(
             tree.rootNode
               .descendantsOfType('function_definition')
@@ -232,7 +226,15 @@ test('keeps conditional parameter prefixes and tails within the complete functio
       }
     }
   } finally {
-    query.delete();
     parser.delete();
   }
 });
+
+function functionDeclarations(root: Node): { declaration: Node; name: Node }[] {
+  return root.descendantsOfType('declaration').flatMap((declaration) =>
+    fieldChildren(declaration, 'declarator', 'function_declarator').flatMap((declarator) => {
+      const name = fieldChild(declarator, 'declarator', 'identifier');
+      return name ? [{ declaration, name }] : [];
+    })
+  );
+}

@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Parser, Query, type Tree } from '@willbooster/web-tree-sitter';
+import { type Node, Parser, type Tree } from '@willbooster/web-tree-sitter';
 import { test } from 'vitest';
 
+import { fieldChild, pointAt } from '../helpers/ast.js';
 import { loadCurrentWasmBuild } from './wasmBuild.js';
 
 const Root = path.resolve(import.meta.dirname, '../..');
@@ -13,34 +14,23 @@ await Parser.init();
 
 test('parses conversion declarations', async () => {
   const parser = new Parser();
-  let query: Query | undefined;
   let tree: Tree | undefined;
   try {
     const language = await loadCurrentWasmBuild();
     parser.setLanguage(language);
-    query = new Query(
-      language,
-      '(function_definition declarator: (qualified_identifier name: (operator_cast) @cast)) @definition (function_definition declarator: (operator_cast) @cast) @definition'
-    );
     const minimal = parser.parse('struct A { operator int(); }; inline A::operator int() { return 42; }')!;
     try {
       assert.equal(minimal.rootNode.hasError, false);
-      const definitions = query.captures(minimal.rootNode).filter((c) => c.name === 'definition');
+      const definitions = conversionDefinitions(minimal.rootNode);
       assert.equal(definitions.length, 1);
-      assert.equal(
-        definitions[0]!.node.childForFieldName('declarator')?.childForFieldName('name')?.type,
-        'operator_cast'
-      );
-      assert.equal(definitions[0]!.node.childForFieldName('type') ?? undefined, undefined);
+      assert.equal(definitions[0]!.childForFieldName('declarator')?.childForFieldName('name')?.type, 'operator_cast');
+      assert.equal(definitions[0]!.childForFieldName('type') ?? undefined, undefined);
     } finally {
       minimal.delete();
     }
     tree = parser.parse(Source)!;
     assert.equal(tree.rootNode.hasError, false, tree.rootNode.toString());
-    const definitions = query
-      .captures(tree.rootNode)
-      .filter((c) => c.name === 'definition')
-      .map((c) => c.node);
+    const definitions = conversionDefinitions(tree.rootNode);
     assert.equal(definitions.length, 16);
     for (const definition of definitions) {
       assert.equal(definition.childForFieldName('type') ?? undefined, undefined);
@@ -52,7 +42,7 @@ test('parses conversion declarations', async () => {
       assert.equal(Source.slice(declarator.startIndex, declarator.endIndex), declarator.text);
       assert.deepEqual(
         [declarator.startPosition, declarator.endPosition],
-        [point(Source, declarator.startIndex), point(Source, declarator.endIndex)]
+        [pointAt(Source, declarator.startIndex), pointAt(Source, declarator.endIndex)]
       );
     }
     const friends = tree.rootNode.descendantsOfType('friend_declaration');
@@ -80,12 +70,16 @@ test('parses conversion declarations', async () => {
     }
   } finally {
     tree?.delete();
-    query?.delete();
     parser.delete();
   }
 });
 
-function point(source: string, index: number): { row: number; column: number } {
-  const prefix = source.slice(0, index);
-  return { row: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
+function conversionDefinitions(root: Node): Node[] {
+  return root.descendantsOfType('function_definition').filter((node) => {
+    const declarator = fieldChild(node, 'declarator');
+    return (
+      declarator?.type === 'operator_cast' ||
+      (declarator?.type === 'qualified_identifier' && fieldChild(declarator, 'name')?.type === 'operator_cast')
+    );
+  });
 }
