@@ -1,9 +1,7 @@
 //! This crate provides C++ language support for the [tree-sitter] parsing library.
 //!
-//! Use [willbooster-tree-sitter] 20.0.0 or later in the 20.x series. The parser carries
-//! WillBooster/tree-sitter ABI `0x5742000c`, which upstream Tree-sitter runtimes reject, and omits
-//! unused `TSLanguage` tables that pre-19.1.0 WillBooster runtimes (`17.x` and `18.x`) dereference
-//! despite sharing ABI `0x5742000c`.
+//! Use [willbooster-tree-sitter] 23.0.0 or later in the 23.x series. The parser carries
+//! WillBooster/tree-sitter ABI `0x5742000d`, which upstream Tree-sitter runtimes reject.
 //!
 //! Typically, you will use the [`LANGUAGE`] constant to add this language to a
 //! tree-sitter [`Parser`], and then use the parser to parse some code:
@@ -19,7 +17,7 @@
 //! assert!(!tree.root_node().has_error());
 //! ```
 //!
-//! [`Parser`]: https://docs.rs/willbooster-tree-sitter/20.0.0/tree_sitter/struct.Parser.html
+//! [`Parser`]: https://docs.rs/willbooster-tree-sitter/23.0.0/tree_sitter/struct.Parser.html
 //! [willbooster-tree-sitter]: https://crates.io/crates/willbooster-tree-sitter
 //! [tree-sitter]: https://tree-sitter.github.io/
 
