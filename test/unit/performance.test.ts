@@ -42,19 +42,44 @@ test('recovers from malformed nested initializer alternatives in linear time', {
   expectLinearParseTime(malformedInitializerAlternatives(2000), malformedInitializerAlternatives(20_000), true);
 });
 
-test.each(['empty', 'value'])(
+test.each(['empty', 'value', 'padded-stride', 'padded-hash'])(
   'parses deeply nested %s initializer groups in linear time',
   { timeout: 60_000 },
   (kind) => {
-    const input = (count: number): string =>
+    expectLinearParseTime(nestedInitializerGroups(kind, 2000), nestedInitializerGroups(kind, 20_000), false);
+  }
+);
+
+function nestedInitializerGroups(kind: string, count: number): string {
+  if (kind === 'empty' || kind === 'value') {
+    return (
       'int value =\n#if A\n' +
       '#if E\n'.repeat(count) +
       (kind === 'value' ? '1\n' : '') +
       '#endif\n'.repeat(count) +
-      '#else\n2\n#endif\n;';
-    expectLinearParseTime(input(2000), input(20_000), false);
+      '#else\n2\n#endif\n;'
+    );
   }
-);
+  const capacity = 1 << Math.ceil(Math.log2(count + 1));
+  const mask = capacity * 2 - 1;
+  const parts = ['int value =\n#if A\n'];
+  let length = parts[0]!.length;
+  for (let i = 0; i < count; i++) {
+    let pad = 0;
+    if (kind === 'padded-stride') {
+      pad = (64 - (length & 63)) & 63;
+    } else {
+      while (((Math.imul(length + pad, 0x9e_37_79_b1) ^ ((length + pad) >>> 16)) & mask) >= capacity >> 3) {
+        pad++;
+      }
+    }
+    const piece = ' '.repeat(pad) + '#if E\n';
+    parts.push(piece);
+    length += piece.length;
+  }
+  parts.push('#endif\n'.repeat(count), '#else\n2\n#endif\n;');
+  return parts.join('');
+}
 
 test.each(['elif', 'elifdef', 'elifndef'])(
   'recovers from invalid #%s initializer bodies in linear time',

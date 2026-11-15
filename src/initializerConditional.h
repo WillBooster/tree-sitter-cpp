@@ -11,10 +11,17 @@
 
 typedef enum { INITIALIZER_UNKNOWN, INITIALIZER_EMPTY, INITIALIZER_NONEMPTY } InitializerConditionalKind;
 
+#define INITIALIZER_LEAF_BIT UINT32_C(0x80000000)
+
 typedef struct {
     uint32_t position;
     uint8_t kind;
 } InitializerConditionalEntry;
+
+typedef struct {
+    uint32_t child[2];
+    uint8_t bit;
+} InitializerConditionalBranch;
 
 typedef struct {
     uint32_t entry;
@@ -23,10 +30,11 @@ typedef struct {
 
 typedef struct {
     InitializerConditionalEntry *entries;
-    uint32_t *buckets;
+    InitializerConditionalBranch *branches;
+    uint32_t root;
     uint32_t entry_count;
+    uint32_t branch_count;
     uint32_t entry_capacity;
-    uint32_t bucket_capacity;
     InitializerConditionalFrame *frames;
     uint32_t frame_count;
     uint32_t frame_capacity;
@@ -52,8 +60,10 @@ static bool initializer_conditional_trivia(TSLexer *lexer);
 static bool initializer_conditional_splice(TSLexer *lexer);
 static InitializerConditionalKind initializer_conditional_lookup(const InitializerConditionals *state, uint32_t position);
 static uint32_t initializer_conditional_entry(InitializerConditionals *state, uint32_t position);
-static void initializer_conditional_grow(InitializerConditionals *state);
-static inline uint32_t initializer_conditional_find_slot(const InitializerConditionals *state, uint32_t position);
+static uint32_t initializer_conditional_leaf(const InitializerConditionals *state, uint32_t position);
+static uint32_t initializer_conditional_append_entry(InitializerConditionals *state, uint32_t position);
+static void initializer_conditional_insert_branch(InitializerConditionals *state, uint32_t position, uint32_t entry, uint8_t bit);
+static inline uint8_t initializer_conditional_msb(uint32_t diff);
 static void initializer_conditional_push(InitializerConditionals *state, uint32_t entry);
 static bool initializer_conditional_nonempty(InitializerConditionals *state);
 static InitializerDirective initializer_conditional_directive(TSLexer *lexer);
@@ -147,47 +157,70 @@ static bool initializer_conditional_splice(TSLexer *lexer) {
 }
 
 static InitializerConditionalKind initializer_conditional_lookup(const InitializerConditionals *state, uint32_t position) {
-    if (!state->bucket_capacity) return INITIALIZER_UNKNOWN;
-    uint32_t raw = state->buckets[initializer_conditional_find_slot(state, position)];
-    return raw ? (InitializerConditionalKind)state->entries[raw - 1u].kind : INITIALIZER_UNKNOWN;
+    if (!state->entry_count) return INITIALIZER_UNKNOWN;
+    const InitializerConditionalEntry *entry = &state->entries[initializer_conditional_leaf(state, position)];
+    return entry->position == position ? (InitializerConditionalKind)entry->kind : INITIALIZER_UNKNOWN;
 }
 
 static uint32_t initializer_conditional_entry(InitializerConditionals *state, uint32_t position) {
-    uint32_t slot = 0;
-    if (state->bucket_capacity) {
-        slot = initializer_conditional_find_slot(state, position);
-        uint32_t raw = state->buckets[slot];
-        if (raw) return raw - 1u;
+    if (!state->entry_count) {
+        uint32_t first = initializer_conditional_append_entry(state, position);
+        state->root = INITIALIZER_LEAF_BIT | first;
+        return first;
     }
-    if (state->entry_count == state->entry_capacity) {
-        initializer_conditional_grow(state);
-        slot = initializer_conditional_find_slot(state, position);
-    }
-    uint32_t index = state->entry_count++;
-    state->entries[index] = (InitializerConditionalEntry){.position = position, .kind = INITIALIZER_UNKNOWN};
-    state->buckets[slot] = index + 1u;
+    uint32_t existing = initializer_conditional_leaf(state, position);
+    uint32_t diff = state->entries[existing].position ^ position;
+    if (!diff) return existing;
+    uint32_t index = initializer_conditional_append_entry(state, position);
+    initializer_conditional_insert_branch(state, position, index, initializer_conditional_msb(diff));
     return index;
 }
 
-static void initializer_conditional_grow(InitializerConditionals *state) {
-    state->entry_capacity = state->entry_capacity ? state->entry_capacity * 2u : 16u;
-    state->bucket_capacity = state->entry_capacity * 2u;
-    state->entries = ts_realloc(state->entries, (size_t)state->entry_capacity * sizeof(*state->entries));
-    if (state->buckets) ts_free(state->buckets);
-    state->buckets = ts_calloc(state->bucket_capacity, sizeof(*state->buckets));
-    for (uint32_t i = 0; i < state->entry_count; i++) {
-        uint32_t slot = initializer_conditional_find_slot(state, state->entries[i].position);
-        state->buckets[slot] = i + 1u;
+static uint32_t initializer_conditional_leaf(const InitializerConditionals *state, uint32_t position) {
+    uint32_t node = state->root;
+    while (!(node & INITIALIZER_LEAF_BIT)) {
+        const InitializerConditionalBranch *branch = &state->branches[node];
+        node = branch->child[(position >> branch->bit) & 1u];
     }
+    return node & ~INITIALIZER_LEAF_BIT;
 }
 
-static inline uint32_t initializer_conditional_find_slot(const InitializerConditionals *state, uint32_t position) {
-    uint32_t mask = state->bucket_capacity - 1u;
-    uint32_t slot = ((position * 0x9e3779b1u) ^ (position >> 16)) & mask;
-    for (;; slot = (slot + 1u) & mask) {
-        uint32_t raw = state->buckets[slot];
-        if (!raw || state->entries[raw - 1u].position == position) return slot;
+static uint32_t initializer_conditional_append_entry(InitializerConditionals *state, uint32_t position) {
+    if (state->entry_count == state->entry_capacity) {
+        state->entry_capacity = state->entry_capacity ? state->entry_capacity * 2u : 16u;
+        state->entries = ts_realloc(state->entries, (size_t)state->entry_capacity * sizeof(*state->entries));
+        state->branches = ts_realloc(state->branches, (size_t)state->entry_capacity * sizeof(*state->branches));
     }
+    uint32_t index = state->entry_count++;
+    state->entries[index] = (InitializerConditionalEntry){.position = position, .kind = INITIALIZER_UNKNOWN};
+    return index;
+}
+
+static void initializer_conditional_insert_branch(InitializerConditionals *state, uint32_t position,
+                                                  uint32_t entry, uint8_t bit) {
+    uint32_t *link = &state->root;
+    while (!(*link & INITIALIZER_LEAF_BIT)) {
+        InitializerConditionalBranch *branch = &state->branches[*link];
+        if (branch->bit < bit) break;
+        link = &branch->child[(position >> branch->bit) & 1u];
+    }
+    uint32_t direction = (position >> bit) & 1u;
+    uint32_t branch_index = state->branch_count++;
+    InitializerConditionalBranch *branch = &state->branches[branch_index];
+    branch->bit = bit;
+    branch->child[direction] = INITIALIZER_LEAF_BIT | entry;
+    branch->child[1u - direction] = *link;
+    *link = branch_index;
+}
+
+static inline uint8_t initializer_conditional_msb(uint32_t diff) {
+#if defined(__GNUC__) || defined(__clang__)
+    return (uint8_t)(31u - (unsigned)__builtin_clz(diff));
+#else
+    uint8_t bit = 0;
+    while (diff >>= 1u) bit++;
+    return bit;
+#endif
 }
 
 static void initializer_conditional_push(InitializerConditionals *state, uint32_t entry) {
@@ -369,7 +402,7 @@ static void initializer_conditional_literal_body(TSLexer *lexer, int32_t closing
 
 static void delete_initializer_conditionals(InitializerConditionals *state) {
     if (state->entries) ts_free(state->entries);
-    if (state->buckets) ts_free(state->buckets);
+    if (state->branches) ts_free(state->branches);
     if (state->frames) ts_free(state->frames);
 }
 
