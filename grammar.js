@@ -1332,7 +1332,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             $._declaration_specifiers,
             choice(
               seq(field('declarator', $._parameter_declarator), repeat($._parameter_annotation)),
-              field('declarator', optional($.abstract_reference_declarator))
+              seq(optional(field('declarator', $._abstract_declarator)), repeat($.attribute_specifier))
             ),
             '=',
             field('default_value', choice($.expression, $.initializer_list))
@@ -1341,10 +1341,20 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             PREC.CERTAIN_DECLARATION,
             seq(
               $._built_in_declaration_specifiers,
-              field('declarator', $._parameter_parenthesized_declarator),
-              repeat($._parameter_annotation),
-              '=',
-              field('default_value', choice($.expression, $.initializer_list))
+              choice(
+                seq(
+                  field('declarator', $._parameter_parenthesized_declarator),
+                  repeat($._parameter_annotation),
+                  '=',
+                  field('default_value', choice($.expression, $.initializer_list))
+                ),
+                seq(
+                  field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+                  repeat($._parameter_annotation),
+                  '=',
+                  field('default_value', $.initializer_list)
+                )
+              )
             )
           )
         ),

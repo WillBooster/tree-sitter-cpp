@@ -5661,7 +5661,7 @@
         "required": false,
         "types": [
           {
-            "type": "abstract_reference_declarator",
+            "type": "_abstract_declarator",
             "named": true
           },
           {
@@ -5694,10 +5694,6 @@
           },
           {
             "type": "pointer_declarator",
-            "named": true
-          },
-          {
-            "type": "qualified_identifier",
             "named": true
           },
           {
