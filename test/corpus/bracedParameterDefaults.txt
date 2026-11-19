@@ -14,6 +14,8 @@ void builtInPointer(int (*value) = {});
 void expressionPointer(int (*value) = nullptr);
 void builtInReference(int (&&value) = {1});
 void wrappedPointer(int *(*pointer)[3] = {});
+void scalarExpression(int (value) = 41 + 1) { value++; }
+void abstractBuiltIn(int (int) = nullptr);
 void namedArray(int (values)[3] = {}) { if (values) values[0] = 1; }
 void doubleWrappedArray(int ((values))[3] = nullptr);
 void namedFunction(int (callback)(int) = {});
@@ -178,6 +180,34 @@ void directInitialization() {
                   (identifier)))
               (number_literal)))
           (initializer_list)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (identifier))
+          (binary_expression
+            (number_literal)
+            (number_literal)))))
+    (compound_statement
+      (expression_statement
+        (update_expression
+          (identifier)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (abstract_function_declarator
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))
+          (null)))))
   (function_definition
     (primitive_type)
     (function_declarator

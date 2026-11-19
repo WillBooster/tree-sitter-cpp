@@ -1341,30 +1341,27 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             PREC.CERTAIN_DECLARATION,
             seq(
               $._built_in_declaration_specifiers,
-              choice(
-                seq(
-                  field(
-                    'declarator',
-                    choice(
-                      $._parameter_parenthesized_declarator,
-                      alias($.built_in_parenthesized_array_declarator, $.array_declarator),
-                      alias($.built_in_parenthesized_function_declarator, $.function_declarator)
-                    )
-                  ),
-                  repeat($._parameter_annotation),
-                  '=',
-                  field('default_value', choice($.expression, $.initializer_list))
-                ),
-                seq(
-                  field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
-                  repeat($._parameter_annotation),
-                  '=',
-                  field('default_value', $.initializer_list)
+              field(
+                'declarator',
+                choice(
+                  $._parameter_parenthesized_declarator,
+                  $._built_in_parenthesized_name_declarator,
+                  alias($.single_builtin_abstract_function_declarator, $.abstract_function_declarator)
                 )
-              )
+              ),
+              repeat($._parameter_annotation),
+              '=',
+              field('default_value', choice($.expression, $.initializer_list))
             )
           )
         ),
+
+      // A written built-in argument type identifies an abstract function declarator before a keyword can read as a name.
+      single_builtin_abstract_function_declarator: ($) =>
+        prec.dynamic(1, field('parameters', alias($._single_builtin_function_parameters, $.parameter_list))),
+      _single_builtin_function_parameters: ($) =>
+        seq('(', alias($._single_builtin_function_parameter, $.parameter_declaration), ')'),
+      _single_builtin_function_parameter: ($) => $._built_in_declaration_specifiers,
 
       // Only a named pack takes annotations, so that after `...` a name such as `I` in `size_t... I` lexes as the pack's
       // name rather than as an annotation.
