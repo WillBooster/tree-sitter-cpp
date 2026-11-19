@@ -14,6 +14,8 @@ void builtInPointer(int (*value) = {});
 void expressionPointer(int (*value) = nullptr);
 void builtInReference(int (&&value) = {1});
 void wrappedPointer(int *(*pointer)[3] = {});
+void attributed(int (value [[maybe_unused]]) = 42) { value++; }
+void attributedBrace(int ((value [[maybe_unused]])) = {}) { value++; }
 void scalarExpression(int (value) = 41 + 1) { value++; }
 void abstractBuiltIn(int (int) = nullptr);
 void namedArray(int (values)[3] = {}) { if (values) values[0] = 1; }
@@ -180,6 +182,43 @@ void directInitialization() {
                   (identifier)))
               (number_literal)))
           (initializer_list)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (attributed_declarator
+              (identifier)
+              (attribute_declaration
+                (attribute
+                  (identifier)))))
+          (number_literal))))
+    (compound_statement
+      (expression_statement
+        (update_expression
+          (identifier)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (parenthesized_declarator
+              (attributed_declarator
+                (identifier)
+                (attribute_declaration
+                  (attribute
+                    (identifier))))))
+          (initializer_list))))
+    (compound_statement
+      (expression_statement
+        (update_expression
+          (identifier)))))
   (function_definition
     (primitive_type)
     (function_declarator

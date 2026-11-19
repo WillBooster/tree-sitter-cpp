@@ -230,6 +230,9 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
+      [$.macro_specifier, $.built_in_attributed_name],
+      [$.attributed_declarator, $.built_in_attributed_name],
+      [$._declarator, $.attributed_declarator, $.built_in_attributed_name],
       [$._type_name_specifier, $._sized_type_name, $.sized_type_specifier],
       [$._sized_type_name, $.sized_type_specifier],
       [$._sized_type_name, $.sized_type_specifier, $.expression],
@@ -869,10 +872,20 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           '(',
           field(
             'declarator',
-            choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator))
+            choice(
+              $._contextual_identifier,
+              alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+              alias($.built_in_attributed_name, $.attributed_declarator)
+            )
           ),
           ')'
         ),
+      built_in_attributed_name: ($) =>
+        seq(
+          choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+          repeat1($.attribute_declaration)
+        ),
+
       built_in_parenthesized_array_declarator: ($) =>
         withDeclarator(
           C.grammar.rules.array_declarator,

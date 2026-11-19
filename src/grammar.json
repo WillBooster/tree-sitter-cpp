@@ -22959,6 +22959,15 @@
                 },
                 "named": true,
                 "value": "parenthesized_declarator"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "built_in_attributed_name"
+                },
+                "named": true,
+                "value": "attributed_declarator"
               }
             ]
           }
@@ -22966,6 +22975,36 @@
         {
           "type": "STRING",
           "value": ")"
+        }
+      ]
+    },
+    "built_in_attributed_name": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_contextual_identifier"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "built_in_parenthesized_declarator"
+              },
+              "named": true,
+              "value": "parenthesized_declarator"
+            }
+          ]
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_declaration"
+          }
         }
       ]
     },
@@ -42384,6 +42423,19 @@
     }
   ],
   "conflicts": [
+    [
+      "macro_specifier",
+      "built_in_attributed_name"
+    ],
+    [
+      "attributed_declarator",
+      "built_in_attributed_name"
+    ],
+    [
+      "_declarator",
+      "attributed_declarator",
+      "built_in_attributed_name"
+    ],
     [
       "_type_name_specifier",
       "_sized_type_name",
