@@ -85,14 +85,10 @@ test('separates annotation brackets without losing enum and class attributes', (
   }
 });
 
-test('keeps long qualified declarator attribute lists flat with linear parse growth', () => {
+test('keeps long qualified declarator attribute lists flat with linear parse growth', { timeout: 60_000 }, () => {
   const parser = new Parser().setLanguage(language);
-  const parse = (count: number): number => {
-    const start = process.threadCpuUsage();
-    const tree = parser.parse(
-      `namespace N { extern int value; } int N::value ${'[[maybe_unused]] '.repeat(count)} = 0; int after() { return N::value; }`
-    )!;
-    const cpu = process.threadCpuUsage(start);
+  const check = (count: number): void => {
+    const tree = parser.parse(qualifiedAttributes(count))!;
     try {
       expect(tree.rootNode.hasError).toBe(false);
       const groups = tree.rootNode.descendantsOfType('attributed_declarator');
@@ -102,11 +98,29 @@ test('keeps long qualified declarator attribute lists flat with linear parse gro
     } finally {
       tree.delete();
     }
-    return cpu.user + cpu.system;
+  };
+  const measure = (input: string): number => {
+    const start = process.threadCpuUsage();
+    let iterations = 0;
+    let elapsed = 0;
+    // Batch short parses so CPU accounting resolution cannot dominate the growth ratio.
+    do {
+      const tree = parser.parse(input)!;
+      tree.delete();
+      iterations++;
+      const { user, system } = process.threadCpuUsage(start);
+      elapsed = user + system;
+    } while (elapsed < 50_000);
+    return elapsed / iterations;
   };
   try {
-    parse(1000);
-    const samples = Array.from({ length: 4 }, () => [parse(200), parse(1000)] as const);
+    check(200);
+    check(1000);
+    const smallSource = qualifiedAttributes(200);
+    const largeSource = qualifiedAttributes(1000);
+    measure(smallSource);
+    measure(largeSource);
+    const samples = Array.from({ length: 4 }, () => [measure(smallSource), measure(largeSource)] as const);
     const small = Math.min(...samples.map(([small]) => small));
     const large = Math.min(...samples.map(([, large]) => large));
     const diagnostic = JSON.stringify({ node: process.version, samples, small, large });
@@ -116,3 +130,7 @@ test('keeps long qualified declarator attribute lists flat with linear parse gro
     parser.delete();
   }
 });
+
+function qualifiedAttributes(count: number): string {
+  return `namespace N { extern int value; } int N::value ${'[[maybe_unused]] '.repeat(count)} = 0; int after() { return N::value; }`;
+}
