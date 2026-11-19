@@ -1821,6 +1821,10 @@
             "named": true
           },
           {
+            "type": "sized_type_specifier",
+            "named": true
+          },
+          {
             "type": "splice_type_specifier",
             "named": true
           },
@@ -5338,6 +5342,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "type_qualifier",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -8247,7 +8261,7 @@
         "required": true,
         "types": [
           {
-            "type": "compound_statement",
+            "type": "statement",
             "named": true
           }
         ]

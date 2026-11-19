@@ -13638,7 +13638,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "compound_statement"
+            "name": "_single_statement"
           }
         }
       ]
@@ -18212,6 +18212,32 @@
                   {
                     "type": "SYMBOL",
                     "name": "primitive_type"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": "unsigned"
+                        },
+                        {
+                          "type": "STRING",
+                          "value": "signed"
+                        },
+                        {
+                          "type": "STRING",
+                          "value": "long"
+                        },
+                        {
+                          "type": "STRING",
+                          "value": "short"
+                        }
+                      ]
+                    },
+                    "named": true,
+                    "value": "sized_type_specifier"
                   },
                   {
                     "type": "SEQ",
@@ -35725,11 +35751,25 @@
             }
           },
           {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "type_qualifier"
+            }
+          },
+          {
             "type": "FIELD",
             "name": "type",
             "content": {
               "type": "SYMBOL",
               "name": "type_specifier"
+            }
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "type_qualifier"
             }
           },
           {

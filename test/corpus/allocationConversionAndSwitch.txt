@@ -1,0 +1,155 @@
+================================================================================
+Braced conversions for single-token sized types
+================================================================================
+
+auto l = long{5};
+auto u = unsigned{6};
+auto s = short{7};
+auto i = signed{8};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (compound_literal_expression
+        (sized_type_specifier)
+        (initializer_list
+          (number_literal)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (compound_literal_expression
+        (sized_type_specifier)
+        (initializer_list
+          (number_literal)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (compound_literal_expression
+        (sized_type_specifier)
+        (initializer_list
+          (number_literal)))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (compound_literal_expression
+        (sized_type_specifier)
+        (initializer_list
+          (number_literal))))))
+
+================================================================================
+Allocation with cv-qualifiers on the element type
+================================================================================
+
+auto before = new const char*[2];
+auto after = new char const*[2];
+auto pointer = new int* const{};
+auto scalar = new const volatile int{4};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (new_expression
+        (type_qualifier)
+        (primitive_type)
+        (abstract_pointer_declarator
+          (new_declarator
+            (number_literal))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (new_expression
+        (primitive_type)
+        (type_qualifier)
+        (abstract_pointer_declarator
+          (new_declarator
+            (number_literal))))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (new_expression
+        (primitive_type)
+        (abstract_pointer_declarator
+          (type_qualifier))
+        (initializer_list))))
+  (declaration
+    (placeholder_type_specifier
+      (auto))
+    (init_declarator
+      (identifier)
+      (new_expression
+        (type_qualifier)
+        (type_qualifier)
+        (primitive_type)
+        (initializer_list
+          (number_literal))))))
+
+================================================================================
+Switch with a single statement as its body
+================================================================================
+
+int f(int n) {
+  switch (n) case 5: default: return 1;
+  switch (n) if (n > 0) case 1: return 2;
+  switch (n) return 3;
+  return 4;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (case_statement
+          (number_literal)
+          (case_statement
+            (return_statement
+              (number_literal)))))
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (if_statement
+          (condition_clause
+            (binary_expression
+              (identifier)
+              (number_literal)))
+          (case_statement
+            (number_literal)
+            (return_statement
+              (number_literal)))))
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (return_statement
+          (number_literal)))
+      (return_statement
+        (number_literal)))))

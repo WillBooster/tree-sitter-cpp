@@ -2369,7 +2369,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       _single_unattributed_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
       switch_statement: ($) =>
-        seq('switch', field('condition', $.condition_clause), field('body', $.compound_statement)),
+        seq('switch', field('condition', $.condition_clause), field('body', $._single_statement)),
 
       while_statement: ($) => seq('while', field('condition', $.condition_clause), field('body', $._single_statement)),
 
@@ -2512,7 +2512,9 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             optional('::'),
             'new',
             field('placement', optional($.argument_list)),
+            repeat($.type_qualifier),
             field('type', $.type_specifier),
+            repeat($.type_qualifier),
             field('declarator', optional($._new_declarator)),
             field('arguments', optional(choice($.argument_list, $.initializer_list)))
           )
@@ -2932,6 +2934,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
                 $._class_name,
                 $.pack_index_type,
                 $.primitive_type,
+                alias(choice('unsigned', 'signed', 'long', 'short'), $.sized_type_specifier),
                 seq(optional('typename'), $.splice_type_specifier)
               )
             ),
