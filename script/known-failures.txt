@@ -148,7 +148,6 @@ examples/json/tests/thirdparty/Fuzzer/FuzzerTracePC.cpp
 examples/json/tests/thirdparty/Fuzzer/FuzzerUtilWindows.cpp
 examples/json/tests/thirdparty/doctest/doctest.h
 examples/leveldb/benchmarks/db_bench.cc
-examples/leveldb/db/c.cc
 examples/leveldb/db/db_impl.h
 examples/leveldb/db/db_test.cc
 examples/leveldb/db/fault_injection_test.cc
