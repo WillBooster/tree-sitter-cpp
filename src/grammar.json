@@ -26993,31 +26993,8 @@
                 "type": "FIELD",
                 "name": "declarator",
                 "content": {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "_built_in_parenthesized_name_declarator"
-                    },
-                    {
-                      "type": "ALIAS",
-                      "content": {
-                        "type": "SYMBOL",
-                        "name": "required_parentheses_array_declarator"
-                      },
-                      "named": true,
-                      "value": "array_declarator"
-                    },
-                    {
-                      "type": "ALIAS",
-                      "content": {
-                        "type": "SYMBOL",
-                        "name": "required_parentheses_function_declarator"
-                      },
-                      "named": true,
-                      "value": "function_declarator"
-                    }
-                  ]
+                  "type": "SYMBOL",
+                  "name": "_built_in_parenthesized_declarator"
                 }
               },
               {
@@ -42420,6 +42397,28 @@
       "_parameter_pointer_declarator",
       "_annotatable_variadic_pointer_declarator",
       "variadic_pointer_declarator"
+    ],
+    [
+      "pointer_declarator",
+      "abstract_pointer_declarator",
+      "_parameter_pointer_declarator",
+      "_annotatable_variadic_pointer_declarator",
+      "variadic_pointer_declarator",
+      "required_parentheses_pointer_declarator"
+    ],
+    [
+      "pointer_declarator",
+      "_parameter_pointer_declarator",
+      "_annotatable_variadic_pointer_declarator",
+      "variadic_pointer_declarator",
+      "required_parentheses_pointer_declarator"
+    ],
+    [
+      "pointer_declarator",
+      "abstract_pointer_declarator",
+      "_annotatable_variadic_pointer_declarator",
+      "variadic_pointer_declarator",
+      "required_parentheses_pointer_declarator"
     ],
     [
       "macro_specifier",

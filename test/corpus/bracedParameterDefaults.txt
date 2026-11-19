@@ -12,6 +12,12 @@ void array(const int (&)[3] = {1, 2, 3});
 void existing(Point point = Point{6, 7});
 void named(Point (point) = {});
 void arrayPointer(Point (*points)[3] = {});
+void builtInPointer(int (*value) = {});
+void expressionPointer(int (*value) = nullptr);
+void builtInReference(int (&&value) = {1});
+void namedPointer(Point (*point) = {});
+void namedReference(Point (&&point) = {});
+void nestedPointer(Point *(*point)[3] = {});
 int namedDefinition(Point (point) = {}) { return point.x; }
 int expressionDefault(Point (point) = Point{}) { return point.x; }
 void directInitialization() {
@@ -141,6 +147,76 @@ void directInitialization() {
               (pointer_declarator
                 (identifier)))
             (number_literal))
+          (initializer_list)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (initializer_list)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (null)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (reference_declarator
+              (identifier)))
+          (initializer_list
+            (number_literal))))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (type_identifier)
+          (parenthesized_declarator
+            (pointer_declarator
+              (identifier)))
+          (initializer_list)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (type_identifier)
+          (parenthesized_declarator
+            (reference_declarator
+              (identifier)))
+          (initializer_list)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (type_identifier)
+          (pointer_declarator
+            (array_declarator
+              (parenthesized_declarator
+                (pointer_declarator
+                  (identifier)))
+              (number_literal)))
           (initializer_list)))))
   (function_definition
     (primitive_type)

@@ -257,6 +257,28 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         $._annotatable_variadic_pointer_declarator,
         $.variadic_pointer_declarator,
       ],
+      [
+        $.pointer_declarator,
+        $.abstract_pointer_declarator,
+        $._parameter_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+        $.required_parentheses_pointer_declarator,
+      ],
+      [
+        $.pointer_declarator,
+        $._parameter_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+        $.required_parentheses_pointer_declarator,
+      ],
+      [
+        $.pointer_declarator,
+        $.abstract_pointer_declarator,
+        $._annotatable_variadic_pointer_declarator,
+        $.variadic_pointer_declarator,
+        $.required_parentheses_pointer_declarator,
+      ],
       [$.macro_specifier, $._parameter_declarator],
       [$._annotatable_variadic_pointer_declarator],
       [$.variadic_declarator, $._named_variadic_declarator],
@@ -1345,14 +1367,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             PREC.CERTAIN_DECLARATION,
             seq(
               $._declaration_specifiers,
-              field(
-                'declarator',
-                choice(
-                  $._built_in_parenthesized_name_declarator,
-                  alias($.required_parentheses_array_declarator, $.array_declarator),
-                  alias($.required_parentheses_function_declarator, $.function_declarator)
-                )
-              ),
+              field('declarator', $._built_in_parenthesized_declarator),
               repeat($._parameter_annotation),
               '=',
               field('default_value', choice($.expression, $.initializer_list))
