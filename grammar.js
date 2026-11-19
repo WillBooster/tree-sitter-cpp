@@ -3113,10 +3113,26 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           field('right', choice($.expression, $.initializer_list))
         ),
 
-      // This prevents an ambiguity between fold expressions
-      // and assignment expressions within parentheses.
+      _parenthesized_assignment_comma: ($) =>
+        seq(
+          field('left', alias($._assignment_expression_lhs, $.assignment_expression)),
+          ',',
+          field('right', choice($.expression, $.comma_expression))
+        ),
+
+      // Keep the assignment alternative available while a fold expression can still follow its left operand.
       parenthesized_expression: ($, original = missingOriginalRule()) =>
-        choice(original, seq('(', alias($._assignment_expression_lhs, $.assignment_expression), ')')),
+        choice(
+          original,
+          seq(
+            '(',
+            choice(
+              alias($._assignment_expression_lhs, $.assignment_expression),
+              alias($._parenthesized_assignment_comma, $.comma_expression)
+            ),
+            ')'
+          )
+        ),
 
       reflect_expression: ($) =>
         prec.right(
