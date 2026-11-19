@@ -50,7 +50,6 @@ examples/json/include/nlohmann/detail/output/serializer.hpp
 examples/json/include/nlohmann/detail/value_t.hpp
 examples/json/include/nlohmann/json.hpp
 examples/json/single_include/nlohmann/json.hpp
-examples/json/tests/abi/config/config.hpp
 examples/json/tests/abi/config/custom.cpp
 examples/json/tests/abi/config/default.cpp
 examples/json/tests/abi/config/noversion.cpp
