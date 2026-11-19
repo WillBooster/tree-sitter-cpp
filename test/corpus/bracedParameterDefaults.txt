@@ -14,6 +14,9 @@ void builtInPointer(int (*value) = {});
 void expressionPointer(int (*value) = nullptr);
 void builtInReference(int (&&value) = {1});
 void wrappedPointer(int *(*pointer)[3] = {});
+void namedArray(int (values)[3] = {}) { if (values) values[0] = 1; }
+void doubleWrappedArray(int ((values))[3] = nullptr);
+void namedFunction(int (callback)(int) = {});
 using Arg = int;
 void abstractFunction(Point (Arg) = {}) {}
 void abstractExpression(Point (Arg) = nullptr) {}
@@ -174,6 +177,56 @@ void directInitialization() {
                 (pointer_declarator
                   (identifier)))
               (number_literal)))
+          (initializer_list)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (array_declarator
+            (parenthesized_declarator
+              (identifier))
+            (number_literal))
+          (initializer_list))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (expression_statement
+          (assignment_expression
+            (subscript_expression
+              (identifier)
+              (subscript_argument_list
+                (number_literal)))
+            (number_literal))))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (array_declarator
+            (parenthesized_declarator
+              (parenthesized_declarator
+                (identifier)))
+            (number_literal))
+          (null)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (function_declarator
+            (parenthesized_declarator
+              (identifier))
+            (parameter_list
+              (parameter_declaration
+                (primitive_type))))
           (initializer_list)))))
   (alias_declaration
     (type_identifier)

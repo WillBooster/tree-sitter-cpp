@@ -1343,7 +1343,14 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
               $._built_in_declaration_specifiers,
               choice(
                 seq(
-                  field('declarator', $._parameter_parenthesized_declarator),
+                  field(
+                    'declarator',
+                    choice(
+                      $._parameter_parenthesized_declarator,
+                      alias($.built_in_parenthesized_array_declarator, $.array_declarator),
+                      alias($.built_in_parenthesized_function_declarator, $.function_declarator)
+                    )
+                  ),
                   repeat($._parameter_annotation),
                   '=',
                   field('default_value', choice($.expression, $.initializer_list))

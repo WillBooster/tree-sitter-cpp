@@ -26999,8 +26999,31 @@
                         "type": "FIELD",
                         "name": "declarator",
                         "content": {
-                          "type": "SYMBOL",
-                          "name": "_parameter_parenthesized_declarator"
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "SYMBOL",
+                              "name": "_parameter_parenthesized_declarator"
+                            },
+                            {
+                              "type": "ALIAS",
+                              "content": {
+                                "type": "SYMBOL",
+                                "name": "built_in_parenthesized_array_declarator"
+                              },
+                              "named": true,
+                              "value": "array_declarator"
+                            },
+                            {
+                              "type": "ALIAS",
+                              "content": {
+                                "type": "SYMBOL",
+                                "name": "built_in_parenthesized_function_declarator"
+                              },
+                              "named": true,
+                              "value": "function_declarator"
+                            }
+                          ]
                         }
                       },
                       {
