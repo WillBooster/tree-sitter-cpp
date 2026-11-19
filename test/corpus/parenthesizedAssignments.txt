@@ -8,6 +8,8 @@ void check(int a, int b) {
   while ((a = next(a), a < 4)) f(a);
   for (; (a = next(a), a < 5);) f(a);
   (1, a = 2);
+  (a ? b : b = 2, 3);
+  (a ? b : b += 2, 3);
   (a = 2) + 1;
 }
 template <class... T> void fold(T... args) {
@@ -45,14 +47,14 @@ template <class... T> void fold(T... args) {
           arguments: (argument_list
             (parenthesized_expression
               (comma_expression
-                left: (assignment_expression
-                  left: (identifier)
-                  right: (number_literal))
-                right: (comma_expression
+                left: (comma_expression
                   left: (assignment_expression
                     left: (identifier)
                     right: (number_literal))
-                  right: (identifier)))))))
+                  right: (assignment_expression
+                    left: (identifier)
+                    right: (number_literal)))
+                right: (identifier))))))
       (while_statement
         condition: (condition_clause
           value: (parenthesized_expression
@@ -95,6 +97,26 @@ template <class... T> void fold(T... args) {
             right: (assignment_expression
               left: (identifier)
               right: (number_literal)))))
+      (expression_statement
+        (parenthesized_expression
+          (comma_expression
+            left: (conditional_expression
+              condition: (identifier)
+              consequence: (identifier)
+              alternative: (assignment_expression
+                left: (identifier)
+                right: (number_literal)))
+            right: (number_literal))))
+      (expression_statement
+        (parenthesized_expression
+          (comma_expression
+            left: (conditional_expression
+              condition: (identifier)
+              consequence: (identifier)
+              alternative: (assignment_expression
+                left: (identifier)
+                right: (number_literal)))
+            right: (number_literal))))
       (expression_statement
         (binary_expression
           left: (parenthesized_expression

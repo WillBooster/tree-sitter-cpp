@@ -510,7 +510,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$.sized_type_specifier, $.expression],
       [$.sized_type_specifier, $._top_level_expression_statement],
       [$.expression, $.call_expression],
-      [$._binary_fold_operator, $._fold_operator],
       [$._function_declarator_core],
       [$._trailing_return_type_descriptor],
       [$._trailing_abstract_pointer_declarator],
@@ -2714,14 +2713,26 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         choice(seq(optional('*'), $.this), $._lambda_capture_identifier, $.lambda_capture_initializer),
 
       _fold_operator: () => choice(...FOLD_OPERATORS),
-      _binary_fold_operator: () =>
-        choice(...FOLD_OPERATORS.map((operator) => seq(field('operator', operator), '...', operator))),
-
       _unary_left_fold: ($) =>
         seq(field('left', '...'), field('operator', $._fold_operator), field('right', $.expression)),
       _unary_right_fold: ($) =>
-        seq(field('left', $.expression), field('operator', $._fold_operator), field('right', '...')),
-      _binary_fold: ($) => seq(field('left', $.expression), $._binary_fold_operator, field('right', $.expression)),
+        choice(
+          ...FOLD_OPERATORS.map((operator) =>
+            seq(field('left', assignmentFoldOperand($, operator)), field('operator', operator), field('right', '...'))
+          )
+        ),
+      _binary_fold: ($) =>
+        choice(
+          ...FOLD_OPERATORS.map((operator) =>
+            seq(
+              field('left', assignmentFoldOperand($, operator)),
+              field('operator', operator),
+              '...',
+              operator,
+              field('right', $.expression)
+            )
+          )
+        ),
 
       fold_expression: ($) => seq('(', choice($._unary_right_fold, $._unary_left_fold, $._binary_fold), ')'),
 
@@ -3106,33 +3117,17 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           )
         ),
 
-      _assignment_expression_lhs: ($) =>
-        seq(
-          field('left', $.expression),
-          field('operator', choice(...ASSIGNMENT_OPERATORS)),
-          field('right', choice($.expression, $.initializer_list))
-        ),
-
-      _parenthesized_assignment_comma: ($) =>
-        seq(
-          field('left', alias($._assignment_expression_lhs, $.assignment_expression)),
-          ',',
-          field('right', choice($.expression, $.comma_expression))
-        ),
-
-      // Keep the assignment alternative available while a fold expression can still follow its left operand.
-      parenthesized_expression: ($, original = missingOriginalRule()) =>
-        choice(
-          original,
+      _parenthesized_comma: ($) =>
+        prec.left(
           seq(
-            '(',
-            choice(
-              alias($._assignment_expression_lhs, $.assignment_expression),
-              alias($._parenthesized_assignment_comma, $.comma_expression)
-            ),
-            ')'
+            field('left', choice($.expression, alias($._parenthesized_comma, $.comma_expression))),
+            ',',
+            field('right', $.expression)
           )
         ),
+
+      parenthesized_expression: ($) =>
+        seq('(', choice($.expression, $.compound_statement, alias($._parenthesized_comma, $.comma_expression)), ')'),
 
       reflect_expression: ($) =>
         prec.right(
@@ -3819,6 +3814,13 @@ function withCppStatements($, original) {
     $.try_statement,
     $.throw_statement
   );
+}
+
+/** @param {GrammarSymbols<'_assignment_left_expression' | 'expression'>} $ @param {string} operator */
+function assignmentFoldOperand($, operator) {
+  return ASSIGNMENT_OPERATORS.some((assignment) => assignment === operator)
+    ? $._assignment_left_expression
+    : $.expression;
 }
 
 /** @returns {never} */
