@@ -230,6 +230,9 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     ],
 
     conflicts: ($, original) => [
+      [$.macro_specifier, $.built_in_attributed_name],
+      [$.attributed_declarator, $.built_in_attributed_name],
+      [$._declarator, $.attributed_declarator, $.built_in_attributed_name],
       [$._type_name_specifier, $._sized_type_name, $.sized_type_specifier],
       [$._sized_type_name, $.sized_type_specifier],
       [$._sized_type_name, $.sized_type_specifier, $.expression],
@@ -869,10 +872,20 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           '(',
           field(
             'declarator',
-            choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator))
+            choice(
+              $._contextual_identifier,
+              alias($.built_in_parenthesized_declarator, $.parenthesized_declarator),
+              alias($.built_in_attributed_name, $.attributed_declarator)
+            )
           ),
           ')'
         ),
+      built_in_attributed_name: ($) =>
+        seq(
+          choice($._contextual_identifier, alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+          repeat1($.attribute_declaration)
+        ),
+
       built_in_parenthesized_array_declarator: ($) =>
         withDeclarator(
           C.grammar.rules.array_declarator,
@@ -1332,22 +1345,36 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             $._declaration_specifiers,
             choice(
               seq(field('declarator', $._parameter_declarator), repeat($._parameter_annotation)),
-              field('declarator', optional($.abstract_reference_declarator))
+              seq(optional(field('declarator', $._abstract_declarator)), repeat($.attribute_specifier))
             ),
             '=',
-            field('default_value', $.expression)
+            field('default_value', choice($.expression, $.initializer_list))
           ),
           prec.dynamic(
             PREC.CERTAIN_DECLARATION,
             seq(
               $._built_in_declaration_specifiers,
-              field('declarator', $._parameter_parenthesized_declarator),
+              field(
+                'declarator',
+                choice(
+                  $._parameter_parenthesized_declarator,
+                  $._built_in_parenthesized_name_declarator,
+                  alias($.single_builtin_abstract_function_declarator, $.abstract_function_declarator)
+                )
+              ),
               repeat($._parameter_annotation),
               '=',
-              field('default_value', $.expression)
+              field('default_value', choice($.expression, $.initializer_list))
             )
           )
         ),
+
+      // A written built-in argument type identifies an abstract function declarator before a keyword can read as a name.
+      single_builtin_abstract_function_declarator: ($) =>
+        prec.dynamic(1, field('parameters', alias($._single_builtin_function_parameters, $.parameter_list))),
+      _single_builtin_function_parameters: ($) =>
+        seq('(', alias($._single_builtin_function_parameter, $.parameter_declaration), ')'),
+      _single_builtin_function_parameter: ($) => $._built_in_declaration_specifiers,
 
       // Only a named pack takes annotations, so that after `...` a name such as `I` in `size_t... I` lexes as the pack's
       // name rather than as an annotation.

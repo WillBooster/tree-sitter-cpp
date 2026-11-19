@@ -5661,7 +5661,7 @@
         "required": false,
         "types": [
           {
-            "type": "abstract_reference_declarator",
+            "type": "_abstract_declarator",
             "named": true
           },
           {
@@ -5697,10 +5697,6 @@
             "named": true
           },
           {
-            "type": "qualified_identifier",
-            "named": true
-          },
-          {
             "type": "reference_declarator",
             "named": true
           },
@@ -5720,6 +5716,10 @@
         "types": [
           {
             "type": "expression",
+            "named": true
+          },
+          {
+            "type": "initializer_list",
             "named": true
           }
         ]
