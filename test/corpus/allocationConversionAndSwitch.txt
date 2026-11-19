@@ -111,6 +111,8 @@ int f(int n) {
   switch (n) case 5: default: return 1;
   switch (n) if (n > 0) case 1: return 2;
   switch (n) return 3;
+  switch (n) int unused = 0;
+  switch (n) using T = int;
   return 4;
 }
 
@@ -151,5 +153,20 @@ int f(int n) {
           (identifier))
         (return_statement
           (number_literal)))
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (declaration
+          (primitive_type)
+          (init_declarator
+            (identifier)
+            (number_literal))))
+      (switch_statement
+        (condition_clause
+          (identifier))
+        (alias_declaration
+          (type_identifier)
+          (type_descriptor
+            (primitive_type))))
       (return_statement
         (number_literal)))))

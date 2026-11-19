@@ -485,6 +485,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$.attributed_statement, $.case_statement, $.using_declaration],
       [$.attributed_statement, $.case_statement],
       [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement],
+      [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement, $.using_declaration],
       [$._single_case_statement, $._single_attributed_statement],
       [$._declaration_modifiers, $._case_body_attributed_statement],
 
@@ -2369,7 +2370,23 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       _single_unattributed_non_case_statement: ($, original = missingOriginalRule()) => withCppStatements($, original),
 
       switch_statement: ($) =>
-        seq('switch', field('condition', $.condition_clause), field('body', $._single_statement)),
+        seq(
+          'switch',
+          field('condition', $.condition_clause),
+          field(
+            'body',
+            choice(
+              $._single_statement,
+              $.declaration,
+              $.type_definition,
+              $._empty_declaration,
+              $.namespace_alias_definition,
+              $.using_declaration,
+              $.alias_declaration,
+              $.static_assert_declaration
+            )
+          )
+        ),
 
       while_statement: ($) => seq('while', field('condition', $.condition_clause), field('body', $._single_statement)),
 
