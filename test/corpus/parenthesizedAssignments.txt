@@ -1,0 +1,143 @@
+==============================================
+Assignments in parenthesized comma expressions
+==============================================
+
+void check(int a, int b) {
+  int x = (a = 2, 1);
+  f((a += 2, b = 3, x));
+  while ((a = next(a), a < 4)) f(a);
+  for (; (a = next(a), a < 5);) f(a);
+  (1, a = 2);
+  (a ? b : b = 2, 3);
+  (a ? b : b += 2, 3);
+  (a = 2) + 1;
+}
+template <class... T> void fold(T... args) {
+  (args = ...);
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (declaration
+        type: (primitive_type)
+        declarator: (init_declarator
+          declarator: (identifier)
+          value: (parenthesized_expression
+            (comma_expression
+              left: (assignment_expression
+                left: (identifier)
+                right: (number_literal))
+              right: (number_literal)))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (parenthesized_expression
+              (comma_expression
+                left: (comma_expression
+                  left: (assignment_expression
+                    left: (identifier)
+                    right: (number_literal))
+                  right: (assignment_expression
+                    left: (identifier)
+                    right: (number_literal)))
+                right: (identifier))))))
+      (while_statement
+        condition: (condition_clause
+          value: (parenthesized_expression
+            (comma_expression
+              left: (assignment_expression
+                left: (identifier)
+                right: (call_expression
+                  function: (identifier)
+                  arguments: (argument_list
+                    (identifier))))
+              right: (binary_expression
+                left: (identifier)
+                right: (number_literal)))))
+        body: (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (identifier)))))
+      (for_statement
+        condition: (parenthesized_expression
+          (comma_expression
+            left: (assignment_expression
+              left: (identifier)
+              right: (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (identifier))))
+            right: (binary_expression
+              left: (identifier)
+              right: (number_literal))))
+        body: (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (identifier)))))
+      (expression_statement
+        (parenthesized_expression
+          (comma_expression
+            left: (number_literal)
+            right: (assignment_expression
+              left: (identifier)
+              right: (number_literal)))))
+      (expression_statement
+        (parenthesized_expression
+          (comma_expression
+            left: (conditional_expression
+              condition: (identifier)
+              consequence: (identifier)
+              alternative: (assignment_expression
+                left: (identifier)
+                right: (number_literal)))
+            right: (number_literal))))
+      (expression_statement
+        (parenthesized_expression
+          (comma_expression
+            left: (conditional_expression
+              condition: (identifier)
+              consequence: (identifier)
+              alternative: (assignment_expression
+                left: (identifier)
+                right: (number_literal)))
+            right: (number_literal))))
+      (expression_statement
+        (binary_expression
+          left: (parenthesized_expression
+            (assignment_expression
+              left: (identifier)
+              right: (number_literal)))
+          right: (number_literal)))))
+  (template_declaration
+    parameters: (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (variadic_parameter_declaration
+            type: (type_identifier)
+            declarator: (variadic_declarator
+              (identifier)))))
+      body: (compound_statement
+        (expression_statement
+          (fold_expression
+            left: (identifier)))))))
