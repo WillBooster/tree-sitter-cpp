@@ -1,0 +1,76 @@
+==================
+Braced default arguments
+==================
+
+struct Point { int x; int y; };
+void draw(const Point& point = {1, 2}, Point origin = {});
+void unnamed(const Point& = {3, 4});
+void coordinate(int (n) = {5}) {}
+void existing(Point point = Point{6, 7});
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (reference_declarator
+            (identifier))
+          (initializer_list
+            (number_literal)
+            (number_literal)))
+        (optional_parameter_declaration
+          (type_identifier)
+          (identifier)
+          (initializer_list)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (abstract_reference_declarator)
+          (initializer_list
+            (number_literal)
+            (number_literal))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (parenthesized_declarator
+            (identifier))
+          (initializer_list
+            (number_literal)))))
+    (compound_statement))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (type_identifier)
+          (identifier)
+          (compound_literal_expression
+            (type_identifier)
+            (initializer_list
+              (number_literal)
+              (number_literal))))))))

@@ -1335,7 +1335,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
               field('declarator', optional($.abstract_reference_declarator))
             ),
             '=',
-            field('default_value', $.expression)
+            field('default_value', choice($.expression, $.initializer_list))
           ),
           prec.dynamic(
             PREC.CERTAIN_DECLARATION,
@@ -1344,7 +1344,7 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
               field('declarator', $._parameter_parenthesized_declarator),
               repeat($._parameter_annotation),
               '=',
-              field('default_value', $.expression)
+              field('default_value', choice($.expression, $.initializer_list))
             )
           )
         ),
