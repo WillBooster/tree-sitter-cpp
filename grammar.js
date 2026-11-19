@@ -242,7 +242,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$._macro_case_parameter_declarator, $._macro_case_attributed_declarator],
       [$._macro_case_macro_specifier, $._macro_case_unattributed_declarator],
       [$.pointer_declarator, $._parameter_pointer_declarator],
-      [$.pointer_declarator, $.abstract_pointer_declarator, $.required_parentheses_pointer_declarator],
       [$.pointer_declarator, $.abstract_pointer_declarator, $._parameter_pointer_declarator],
       [
         $.pointer_declarator,
@@ -257,28 +256,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         $._annotatable_variadic_pointer_declarator,
         $.variadic_pointer_declarator,
       ],
-      [
-        $.pointer_declarator,
-        $.abstract_pointer_declarator,
-        $._parameter_pointer_declarator,
-        $._annotatable_variadic_pointer_declarator,
-        $.variadic_pointer_declarator,
-        $.required_parentheses_pointer_declarator,
-      ],
-      [
-        $.pointer_declarator,
-        $._parameter_pointer_declarator,
-        $._annotatable_variadic_pointer_declarator,
-        $.variadic_pointer_declarator,
-        $.required_parentheses_pointer_declarator,
-      ],
-      [
-        $.pointer_declarator,
-        $.abstract_pointer_declarator,
-        $._annotatable_variadic_pointer_declarator,
-        $.variadic_pointer_declarator,
-        $.required_parentheses_pointer_declarator,
-      ],
       [$.macro_specifier, $._parameter_declarator],
       [$._annotatable_variadic_pointer_declarator],
       [$.variadic_declarator, $._named_variadic_declarator],
@@ -289,7 +266,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         $.variadic_pointer_declarator,
       ],
       [$._type_definition_head, $.sized_type_specifier, $._built_in_declaration_specifiers],
-      [$._declarator, $.type_specifier, $.built_in_parenthesized_declarator],
       [$.sized_type_specifier, $._built_in_declaration_specifiers],
       [$._type_definition_head, $._built_in_declaration_specifiers],
       [
@@ -1361,16 +1337,24 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             '=',
             field('default_value', choice($.expression, $.initializer_list))
           ),
-          // A default keeps a named parenthesized parameter in the declaration, even when the
-          // competing expression reads its type as a call or its name as an abstract function parameter.
           prec.dynamic(
             PREC.CERTAIN_DECLARATION,
             seq(
-              $._declaration_specifiers,
-              field('declarator', $._built_in_parenthesized_declarator),
-              repeat($._parameter_annotation),
-              '=',
-              field('default_value', choice($.expression, $.initializer_list))
+              $._built_in_declaration_specifiers,
+              choice(
+                seq(
+                  field('declarator', $._parameter_parenthesized_declarator),
+                  repeat($._parameter_annotation),
+                  '=',
+                  field('default_value', choice($.expression, $.initializer_list))
+                ),
+                seq(
+                  field('declarator', alias($.built_in_parenthesized_declarator, $.parenthesized_declarator)),
+                  repeat($._parameter_annotation),
+                  '=',
+                  field('default_value', $.initializer_list)
+                )
+              )
             )
           )
         ),
