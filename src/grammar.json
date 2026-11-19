@@ -35754,7 +35754,7 @@
             "type": "REPEAT",
             "content": {
               "type": "SYMBOL",
-              "name": "type_qualifier"
+              "name": "_new_type_qualifier"
             }
           },
           {
@@ -35769,7 +35769,7 @@
             "type": "REPEAT",
             "content": {
               "type": "SYMBOL",
-              "name": "type_qualifier"
+              "name": "_new_type_qualifier"
             }
           },
           {
@@ -35815,6 +35815,24 @@
           }
         ]
       }
+    },
+    "_new_type_qualifier": {
+      "type": "ALIAS",
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "const"
+          },
+          {
+            "type": "STRING",
+            "value": "volatile"
+          }
+        ]
+      },
+      "named": true,
+      "value": "type_qualifier"
     },
     "_new_declarator": {
       "type": "CHOICE",

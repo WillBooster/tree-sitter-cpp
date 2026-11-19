@@ -2512,13 +2512,15 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             optional('::'),
             'new',
             field('placement', optional($.argument_list)),
-            repeat($.type_qualifier),
+            repeat($._new_type_qualifier),
             field('type', $.type_specifier),
-            repeat($.type_qualifier),
+            repeat($._new_type_qualifier),
             field('declarator', optional($._new_declarator)),
             field('arguments', optional(choice($.argument_list, $.initializer_list)))
           )
         ),
+
+      _new_type_qualifier: ($) => alias(choice('const', 'volatile'), $.type_qualifier),
 
       // new-declarator: ptr-operator new-declarator? | noptr-new-declarator ([expr.new]). The `&` and `&&` operators
       // are left out, since a new-type-id must denote an object type.
