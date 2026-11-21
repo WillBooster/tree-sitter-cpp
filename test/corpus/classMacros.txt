@@ -158,3 +158,32 @@ x;
     (type_identifier)
     (preproc_empty)
     (identifier)))
+
+================================================================================
+Conditionally annotated prototypes
+================================================================================
+
+#define ANN
+void
+#ifdef FEATURE
+ANN
+#endif
+f(), g();
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_def
+    (identifier))
+  (declaration
+    (primitive_type)
+    (preproc_ifdef
+      (identifier)
+      (macro_specifier
+        (identifier)))
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (function_declarator
+      (identifier)
+      (parameter_list))))

@@ -41597,28 +41597,128 @@
       ]
     },
     "_conditional_declaration": {
-      "type": "CHOICE",
+      "type": "SEQ",
       "members": [
+        {
+          "type": "PREC_DYNAMIC",
+          "value": 1,
+          "content": {
+            "type": "SYMBOL",
+            "name": "_conditional_function_specifiers"
+          }
+        },
         {
           "type": "SEQ",
           "members": [
             {
-              "type": "PREC_DYNAMIC",
-              "value": 1,
+              "type": "FIELD",
+              "name": "declarator",
               "content": {
-                "type": "SYMBOL",
-                "name": "_conditional_function_specifiers"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "SYMBOL",
+                            "name": "ms_call_modifier"
+                          },
+                          {
+                            "type": "BLANK"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_declarator"
+                      },
+                      {
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "SYMBOL",
+                            "name": "gnu_asm_expression"
+                          },
+                          {
+                            "type": "BLANK"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "init_declarator"
+                  }
+                ]
               }
             },
             {
-              "type": "SYMBOL",
-              "name": "_declaration_declarators"
-            },
-            {
-              "type": "STRING",
-              "value": ";"
+              "type": "REPEAT",
+              "content": {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "STRING",
+                    "value": ","
+                  },
+                  {
+                    "type": "FIELD",
+                    "name": "declarator",
+                    "content": {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "SEQ",
+                          "members": [
+                            {
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "ms_call_modifier"
+                                },
+                                {
+                                  "type": "BLANK"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "SYMBOL",
+                              "name": "_declarator"
+                            },
+                            {
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "gnu_asm_expression"
+                                },
+                                {
+                                  "type": "BLANK"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "init_declarator"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
             }
           ]
+        },
+        {
+          "type": "STRING",
+          "value": ";"
         }
       ]
     },

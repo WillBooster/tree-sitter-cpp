@@ -813,6 +813,15 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
 
       declaration: ($) => cppDeclaration($),
 
+      // The C grammar shares its declarator list across declaration forms, which lacks the C++ declarators and their
+      // preference for a parameter list over an initializer.
+      _conditional_declaration: ($) =>
+        seq(
+          prec.dynamic(1, sym('_conditional_function_specifiers')),
+          commaSep1(field('declarator', declarationItem($))),
+          ';'
+        ),
+
       _statement_declaration: ($) => cppDeclaration($),
 
       // A typedef's tokens before its `;` are a rule of their own so that every context a typedef appears in shares their
