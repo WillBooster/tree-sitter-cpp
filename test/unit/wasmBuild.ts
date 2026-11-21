@@ -12,16 +12,11 @@ export async function loadCurrentWasmBuild(): Promise<Language> {
   const wasmPath = path.join(Root, 'tree-sitter-cpp.wasm');
   const sources = [
     'grammar.js',
-    'src/parser.c',
-    'src/scanner.c',
     'src/tree_sitter/parser.h',
-    'src/pragma.h',
-    'src/identifier.h',
-    'src/keywords.h',
-    'src/functionMacro.h',
-    'src/conditionalMacro.h',
-    'src/initializerConditional.h',
-    'src/cppTrivia.h',
+    ...fs
+      .readdirSync(path.join(Root, 'src'))
+      .filter((name) => name.endsWith('.c') || name.endsWith('.h'))
+      .map((name) => `src/${name}`),
   ].map((name) => fs.statSync(path.join(Root, name)).mtimeMs);
   if (Math.max(generationInputMtime(Root), ...sources) > fs.statSync(wasmPath).mtimeMs) {
     throw new Error('generation inputs or src/ changed after the Wasm build was built; run `bun run build/ci`');

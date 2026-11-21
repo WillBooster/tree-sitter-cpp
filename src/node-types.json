@@ -456,6 +456,14 @@
     "named": true,
     "subtypes": [
       {
+        "type": "atomic_type_specifier",
+        "named": true
+      },
+      {
+        "type": "bit_int_specifier",
+        "named": true
+      },
+      {
         "type": "class_specifier",
         "named": true
       },
@@ -844,7 +852,15 @@
           "named": true
         },
         {
+          "type": "initializer_pair",
+          "named": true
+        },
+        {
           "type": "operator_argument",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
           "named": true
         },
         {
@@ -2585,14 +2601,6 @@
         "required": false,
         "types": [
           {
-            "type": "atomic_type_specifier",
-            "named": true
-          },
-          {
-            "type": "bit_int_specifier",
-            "named": true
-          },
-          {
             "type": "type_specifier",
             "named": true
           }
@@ -3154,6 +3162,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "call_expression",
+          "named": true
+        },
         {
           "type": "enumerator",
           "named": true
@@ -4496,6 +4508,10 @@
         "required": true,
         "types": [
           {
+            "type": "raw_string_literal",
+            "named": true
+          },
+          {
             "type": "string_literal",
             "named": true
           }
@@ -4547,6 +4563,10 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "raw_string_literal",
+            "named": true
+          },
           {
             "type": "string_literal",
             "named": true
@@ -5865,47 +5885,7 @@
             "named": true
           },
           {
-            "type": "array_declarator",
-            "named": true
-          },
-          {
-            "type": "attributed_declarator",
-            "named": true
-          },
-          {
-            "type": "destructor_name",
-            "named": true
-          },
-          {
-            "type": "function_declarator",
-            "named": true
-          },
-          {
-            "type": "identifier",
-            "named": true
-          },
-          {
-            "type": "operator_name",
-            "named": true
-          },
-          {
-            "type": "parenthesized_declarator",
-            "named": true
-          },
-          {
-            "type": "pointer_declarator",
-            "named": true
-          },
-          {
-            "type": "reference_declarator",
-            "named": true
-          },
-          {
-            "type": "structured_binding_declarator",
-            "named": true
-          },
-          {
-            "type": "template_function",
+            "type": "_declarator",
             "named": true
           }
         ]
@@ -5969,7 +5949,23 @@
       "required": false,
       "types": [
         {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
           "type": "explicit_object_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "expression",
+          "named": true
+        },
+        {
+          "type": "initializer_list",
+          "named": true
+        },
+        {
+          "type": "initializer_pair",
           "named": true
         },
         {
@@ -5986,6 +5982,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "type_descriptor",
           "named": true
         },
         {
@@ -9116,14 +9116,6 @@
         "required": true,
         "types": [
           {
-            "type": "atomic_type_specifier",
-            "named": true
-          },
-          {
-            "type": "bit_int_specifier",
-            "named": true
-          },
-          {
             "type": "type_specifier",
             "named": true
           }
@@ -9226,6 +9218,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
         {
           "type": "type_qualifier",
           "named": true
@@ -10494,6 +10490,11 @@
   {
     "type": "preproc_directive",
     "named": true
+  },
+  {
+    "type": "preproc_empty",
+    "named": true,
+    "extra": true
   },
   {
     "type": "private",

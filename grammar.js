@@ -137,83 +137,9 @@ const BUILTIN_TYPE_KEYWORDS = [
 const preprocIf = C.preprocIf;
 const preprocessor = C.preprocessor;
 
-// Every keyword of the grammar that `MACRO_CASE_IDENTIFIER` would otherwise spell.
-const MACRO_CASE_KEYWORDS = [
-  'NULL',
-  '__alignof',
-  '__alignof__',
-  '__asm',
-  '__asm__',
-  '__attribute',
-  '__attribute__',
-  '__based',
-  '__builtin_available',
-  '__builtin_va_arg',
-  '__cdecl',
-  '__clrcall',
-  '__complex__',
-  '__declspec',
-  '__except',
-  '__extension__',
-  '__fastcall',
-  '__finally',
-  '__forceinline',
-  '__inline',
-  '__inline__',
-  '__leave',
-  '__ptr32',
-  '__ptr64',
-  '__restrict',
-  '__restrict__',
-  '__sptr',
-  '__stdcall',
-  '__thiscall',
-  '__thread',
-  '__try',
-  '__typeof',
-  '__typeof__',
-  '__typeof_unqual',
-  '__typeof_unqual__',
-  '__unaligned',
-  '__uptr',
-  '__vectorcall',
-  '__volatile__',
-];
-const UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const IDENTIFIER_CHARACTERS = `${UPPER_CASE}abcdefghijklmnopqrstuvwxyz0123456789_`;
-const MACRO_CASE_IDENTIFIER = new RegExp(
-  `${identifierExcept(
-    ['', ...MACRO_CASE_KEYWORDS.filter((keyword) => !keyword.startsWith('__'))],
-    `${UPPER_CASE}_`,
-    `${UPPER_CASE}0123456789_`
-  )}|__${identifierExcept(
-    MACRO_CASE_KEYWORDS.filter((keyword) => keyword.startsWith('__')).map((keyword) => keyword.slice(2)),
-    IDENTIFIER_CHARACTERS,
-    IDENTIFIER_CHARACTERS
-  )}`
-);
-
-// Names spelled like macros or with the implementation's `__` prefix, which a trailing annotation must have, other than
-// keywords (see `assertMacroCaseIdentifierSpellsNoKeyword`). Rule order, not precedence, must settle names that it and
-// `identifier` both match in full, and rules this grammar adds follow the C grammar's, so it is inserted into the C
-// rules right before `identifier`; keywords lex through `identifier`, the word token.
-const BASE = /** @type {typeof C} */ ({
-  ...C,
-  grammar: {
-    ...C.grammar,
-    rules: Object.fromEntries(
-      Object.entries(C.grammar.rules).flatMap((entry) =>
-        entry[0] === 'identifier'
-          ? [['_macro_case_identifier', { type: 'PATTERN', value: MACRO_CASE_IDENTIFIER.source }], entry]
-          : [entry]
-      )
-    ),
-  },
-});
-
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
-module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
-  grammar(BASE, {
+module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
+  grammar(C, {
     name: 'cpp',
 
     externals: (_, original) => [
@@ -277,12 +203,10 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         $.sized_type_specifier,
         $._built_in_declaration_specifiers,
       ],
-      [$._macro_declaration_specifiers, $.sized_type_specifier, $._built_in_declaration_specifiers],
       [$._type_definition_head, $._macro_declaration_specifiers, $._built_in_declaration_specifiers],
       [sym('preproc_elif'), sym('preproc_elif_in_block')],
       [sym('preproc_elifdef'), sym('preproc_elifdef_in_block')],
       [sym('preproc_if'), sym('preproc_if_in_block')],
-      [$.pointer_declarator, $.abstract_pointer_declarator, $.variadic_pointer_declarator],
       [sym('preproc_else'), sym('preproc_else_in_block')],
       [sym('preproc_ifdef'), sym('preproc_ifdef_in_block')],
       [$.declaration, $._statement_declaration],
@@ -335,13 +259,11 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$._declaration_modifiers, $.attributed_statement, $.case_statement],
       [$._type_name_specifier, $.typeof_specifier],
       [$._type_definition_head, $._macro_declaration_specifiers, $._sized_bit_int_specifier],
-      [$._macro_declaration_specifiers, $._sized_bit_int_specifier],
       [$._conditional_function_specifiers],
       [$._type_name_specifier, $.call_expression, $.built_in_function_type_descriptor],
       [$._type_name_specifier, $.typeof_specifier, $.expression],
       [$._type_name_specifier, $.expression, $.va_arg_expression],
       [$._type_name_specifier, $.expression, $.template_type, $.template_function],
-      [$._macro_declaration_specifiers, $.attributed_declarator],
       [$._macro_declaration_specifiers],
       [$.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
       [$._type_definition_head, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
@@ -358,7 +280,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$._declarator, $._type_name_specifier, $.expression, $.va_arg_expression],
       [$._declarator, $.attributed_declarator, $.expression, $.macro_specifier],
       [$._declarator, $.expression, $.macro_specifier],
-      [$._macro_declaration_specifiers, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
       [
         $._type_definition_head,
         $._macro_declaration_specifiers,
@@ -366,7 +287,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         $.sized_type_specifier,
         $._built_in_declaration_specifiers,
       ],
-      [$._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
       [$._type_definition_head, $._macro_declaration_specifiers, $.type_specifier, $._built_in_declaration_specifiers],
       [$._conditional_function_specifiers, $._declaration_specifiers],
       [
@@ -401,7 +321,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       ],
       [$._declarator, $.type_specifier, $.expression, $.macro_specifier],
       [$.type_specifier, $.expression, $.macro_specifier],
-      [$._macro_declaration_specifiers, $._declarator, $.attributed_declarator, $.type_specifier, $.expression],
       [$._class_declaration_item, $._class_name],
       [$.attribute, $._scope_resolution],
       [$.expression, $.contract_specifier],
@@ -456,7 +375,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [sym('preproc_ifdef_in_initializer_list'), sym('preproc_ifdef_in_block')],
       [$.comma_expression, $._initializer_element],
       [$._block_item, $._initializer_directive],
-      [$.type_specifier, $.expression, $.template_type],
       [$.type_specifier, $.expression, $.va_arg_expression],
       [$._declarator, $.type_specifier, $.typeof_specifier, $.expression],
       [$.typeof_specifier, $.expression],
@@ -475,21 +393,14 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       ],
       [$._type_definition_head, $.type_specifier, $._built_in_declaration_specifiers],
       [$.storage_class_specifier, $.expression],
-      [$.sized_type_specifier, $._sized_bit_int_specifier, $._top_level_expression_statement],
-      [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression],
-      [$.sized_type_specifier, $._sized_bit_int_specifier, $.expression, $.call_expression],
-      [$.expression, $.template_type],
       [$._declarator, $.type_specifier, $.expression, $.va_arg_expression],
       [$.pack_index_expression, $.pack_index_type],
       [$._declaration_modifiers, $.friend_declaration],
       [$.type_qualifier, $.friend_declaration],
       [$._declaration_modifiers, $.friend_declaration, $.using_declaration],
       [$._declaration_modifiers, $.attributed_statement, $.case_statement, $.using_declaration],
-      [$.attributed_statement, $.case_statement, $.using_declaration],
-      [$.attributed_statement, $.case_statement],
       [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement],
       [$._declaration_modifiers, $._single_case_statement, $._single_attributed_statement, $.using_declaration],
-      [$._single_case_statement, $._single_attributed_statement],
       [$._declaration_modifiers, $._case_body_attributed_statement],
 
       [$.template_function, $.template_type],
@@ -498,7 +409,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$.template_function, $.template_type, $.qualified_identifier, $.qualified_type_identifier],
       [$.template_type, $.qualified_type_identifier],
       [$.qualified_type_identifier, $.qualified_identifier],
-      [$.comma_expression, $.initializer_list],
       [$.expression, $._declarator],
       [$.expression, $.structured_binding_declarator],
       [$.expression, $._declarator, $.type_specifier],
@@ -558,8 +468,55 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$._declaration_specifiers, $._built_in_declaration_specifiers, $._constructor_specifiers],
       [$.type_specifier, $._built_in_declaration_specifiers],
       [$.type_specifier, $.call_expression, $._built_in_declaration_specifiers],
-      [$.type_specifier, $.call_expression, $.built_in_function_type_descriptor],
       [$._declarator, $._function_definition_declarator],
+      [$._declarator, $.type_specifier, $.expression, $.va_arg_expression, $.macro_type_specifier],
+      [$._annotation_type_specifier, $._declarator, $.attributed_declarator, $.type_specifier, $.expression],
+      [$._declarator, $.type_specifier, $.expression, $.macro_specifier, $.macro_type_specifier],
+      [
+        $._annotation_type_specifier,
+        $._declarator,
+        $.attributed_declarator,
+        $.type_specifier,
+        $.expression,
+        $.macro_specifier,
+      ],
+      [$._macro_only_declaration, $._macro_declaration_specifiers, $._declaration_modifiers],
+      [
+        $._macro_only_declaration,
+        $._macro_declaration_specifiers,
+        $._declaration_modifiers,
+        $._statement_empty_declaration,
+      ],
+      [
+        $._macro_only_declaration,
+        $._macro_declaration_specifiers,
+        $._declaration_modifiers,
+        $._empty_declaration,
+        $._statement_empty_declaration,
+      ],
+      [
+        $._macro_only_declaration,
+        $._macro_declaration_specifiers,
+        $._declaration_modifiers,
+        $._statement_empty_declaration,
+        $._type_definition_head,
+      ],
+      [$._annotation_type_specifier, $._type_definition_head],
+      [$._annotation_type_specifier, $._sized_bit_int_specifier, $._type_definition_head],
+      [$._annotation_type_specifier, $.type_specifier, $._built_in_declaration_specifiers],
+      [$._annotation_type_specifier, $.type_specifier, $._type_definition_head, $._built_in_declaration_specifiers],
+      [$._annotation_type_specifier, $.type_specifier, $.sized_type_specifier, $._built_in_declaration_specifiers],
+      [
+        $._annotation_type_specifier,
+        $.type_specifier,
+        $.sized_type_specifier,
+        $._type_definition_head,
+        $._built_in_declaration_specifiers,
+      ],
+      [$.type_specifier, $._type_name_specifier, $.expression, $.va_arg_expression],
+      [$.type_specifier, $._type_name_specifier, $.typeof_specifier, $.expression],
+      [$._sized_type_name, $.sized_type_specifier, $.expression, $.call_expression],
+      [$.type_specifier, $._type_name_specifier, $.call_expression],
     ],
 
     inline: ($, original) => [...original, $._namespace_identifier, $._contextual_identifier],
@@ -569,7 +526,13 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
       [$._expression_not_binary, $._class_name],
     ],
 
+    reserved: { global: () => [], marker: ($) => [$._typedef_primitive_type, $._non_pack_builtin_type] },
+
     rules: {
+      // C++ ([lex.name]) admits only XID characters, while the C grammar also admits C17 Annex D ranges such as U+200B.
+      identifier: () =>
+        /(\p{XID_Start}|\$|_|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8})(\p{XID_Continue}|\$|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8})*/u,
+
       _top_level_expression_statement: ($, original = missingOriginalRule()) =>
         choice(
           original,
@@ -578,6 +541,17 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
             choice(seq($.call_expression, sym('_macro_call_end')), seq($.identifier, sym('_macro_identifier_end')))
           )
         ),
+
+      // A function-like macro alone on its line is a statement in C++ (see `_macro_call_end`), so the C readings of
+      // `MACRO(T)` as the macro-annotated type of a declaration, as in `REGISTER(Item)` followed by
+      // `REGISTER(Other)` and `int following;` on the next lines, are left out, and so are the braced annotations that
+      // the scanner never recognizes (see `scan_declaration_attribute`).
+      _macro_declaration_specifiers: (_, original = missingOriginalRule()) =>
+        withoutAlternativesNeeding(original, [
+          '_guarded_macro_type_specifier',
+          '_braced_leading_macro_attribute_specifier',
+          '_braced_function_attribute_start',
+        ]),
 
       _top_level_item: ($, original = missingOriginalRule()) =>
         choice(
@@ -804,26 +778,28 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           )
         ),
 
-      function_definition: ($, original = missingOriginalRule()) =>
-        choice(
-          {
-            type: 'SEQ',
-            members: ruleMembers(original, 'SEQ').map((e) =>
-              e.type === 'FIELD' && e.name === 'body' ? field('body', choice(e.content, $.try_statement)) : e
-            ),
-          },
+      // The C grammar also starts definitions with macro-annotated specifiers and declarators that its scanner guards; in
+      // C++ those readings compete with braced initializers and attributes, and the extra parse versions they add push
+      // valid code such as attributed case bodies past the runtime's version limit, so definitions take only the
+      // ordinary declaration specifiers.
+      function_definition: ($) => {
+        const head = [optional($.ms_call_modifier), $._declaration_specifiers, optional($.ms_call_modifier)];
+        return choice(
+          seq(
+            ...head,
+            field('declarator', $._declarator),
+            field('body', choice($.compound_statement, $.try_statement))
+          ),
           // Only declarators that end in a parameter list take `= default;` or `= delete;`; offering the clause after any
           // declarator would make `default` a keyword in every initializer, e.g. in `int c = default + 1;` when `default`
           // is a macro.
-          {
-            type: 'SEQ',
-            members: ruleMembers(original, 'SEQ').map((e) => {
-              if (e.type !== 'FIELD') return e;
-              if (e.name === 'declarator') return field('declarator', $._function_definition_declarator);
-              return e.name === 'body' ? choice($.default_method_clause, $.delete_method_clause) : e;
-            }),
-          }
-        ),
+          seq(
+            ...head,
+            field('declarator', $._function_definition_declarator),
+            choice($.default_method_clause, $.delete_method_clause)
+          )
+        );
+      },
 
       _function_definition_declarator: ($) =>
         choice(
@@ -836,6 +812,26 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
         prec.dynamic(1, prec.right(withReferenceDeclarator($, $._function_definition_declarator))),
 
       declaration: ($) => cppDeclaration($),
+
+      // The C grammar shares its declarator list across declaration forms, which lacks the C++ declarators and their
+      // preference for a parameter list over an initializer.
+      // As in `function_definition`, without the C grammar's guarded post-type annotations, whose lookahead reads a
+      // direct initializer followed by a prototype (`x(3), f(int);`) as an annotation.
+      _conditional_function_definition: ($) =>
+        seq(
+          optional($.ms_call_modifier),
+          sym('_conditional_function_specifiers'),
+          optional($.ms_call_modifier),
+          field('declarator', $._declarator),
+          field('body', choice($.compound_statement, $.try_statement))
+        ),
+
+      _conditional_declaration: ($) =>
+        seq(
+          prec.dynamic(1, sym('_conditional_function_specifiers')),
+          commaSep1(field('declarator', declarationItem($))),
+          ';'
+        ),
 
       _statement_declaration: ($) => cppDeclaration($),
 
@@ -1173,12 +1169,16 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
           field('declarator', optional($._abstract_declarator))
         ),
 
-      primitive_type: ($, original = missingOriginalRule()) => {
+      primitive_type: ($) => choice($._typedef_primitive_type, $._non_pack_builtin_type),
+
+      _typedef_primitive_type: () => {
+        const original = C.grammar.rules.primitive_type;
         if (original.type !== 'TOKEN') throw new Error('Expected an inherited primitive type token.');
+        // C's `_Bool` is a reserved identifier in C++, where implementations may define it as a macro.
         const typedefNames = ruleMembers(original.content, 'CHOICE').filter(
-          (rule) => rule.type !== 'STRING' || !BUILTIN_TYPE_KEYWORDS.includes(rule.value)
+          (rule) => rule.type !== 'STRING' || ![...BUILTIN_TYPE_KEYWORDS, '_Bool'].includes(rule.value)
         );
-        return choice(token(prec(1, choice(...typedefNames))), $._non_pack_builtin_type);
+        return token(prec(1, choice(...typedefNames)));
       },
 
       _non_pack_builtin_type: () => token(prec(1, choice(...BUILTIN_TYPE_KEYWORDS))),
@@ -3395,65 +3395,6 @@ function callArgumentList($, extra) {
 }
 
 /**
- * Returns a regular expression source that matches every string of a character in `first` followed by characters in
- * `rest`, the empty string included, except the given words.
- * @param {string[]} words
- * @param {string} first
- * @param {string} rest
- * @returns {string}
- */
-function identifierExcept(words, first, rest) {
-  /** @type {Map<string, string[]>} */
-  const byFirst = new Map();
-  let excludesEmpty = false;
-  for (const word of words) {
-    if (word === '') {
-      excludesEmpty = true;
-      continue;
-    }
-    const character = word.charAt(0);
-    byFirst.set(character, [...(byFirst.get(character) ?? []), word.slice(1)]);
-  }
-  const others = first
-    .split('')
-    .filter((character) => !byFirst.has(character))
-    .join('');
-  const alternatives = [`[${others}][${rest}]*`];
-  for (const [character, rests] of byFirst) alternatives.push(`${character}${identifierExcept(rests, rest, rest)}`);
-  return `(?:${alternatives.join('|')})${excludesEmpty ? '' : '?'}`;
-}
-
-/**
- * Throws when `_macro_case_identifier` matches a keyword of the grammar in full, since it would take the keyword's place
- * wherever both are valid. Returns the grammar unchanged.
- * @template T
- * @param {T} grammar
- * @returns {T}
- */
-function assertMacroCaseIdentifierSpellsNoKeyword(grammar) {
-  const whole = new RegExp(`^(?:${MACRO_CASE_IDENTIFIER.source})$`);
-  for (const keyword of keywordStrings(grammar)) {
-    if (whole.test(keyword)) {
-      throw new Error(`_macro_case_identifier spells the keyword ${keyword}; add it to MACRO_CASE_KEYWORDS`);
-    }
-  }
-  return grammar;
-}
-
-/**
- * Yields the string literals of a grammar outside `token(...)`, which are the candidates for keywords.
- * @param {unknown} node
- * @returns {Generator<string>}
- */
-function* keywordStrings(node) {
-  if (!node || typeof node !== 'object') return;
-  const record = /** @type {Record<string, unknown>} */ (node);
-  if (record.type === 'TOKEN' || record.type === 'IMMEDIATE_TOKEN') return;
-  if (record.type === 'STRING' && typeof record.value === 'string') yield record.value;
-  for (const child of Object.values(record)) yield* keywordStrings(child);
-}
-
-/**
  * Makes a trailing parameter annotation, whose name must be spelled like a macro since any other name after a
  * declarator is more likely misread, as in `const void *__sized_by(n) s1`. It outranks a leading marker (-2) that reads
  * `int *A B` the other way (`char **argv UNUSED`), since macro definitions are unknown.
@@ -3833,7 +3774,8 @@ function packIndex($, pack) {
  */
 function withCppStatements($, original) {
   return choice(
-    original,
+    // C2y's `_Defer` is a reserved identifier in C++, where implementations may define it as a macro.
+    withoutAlternativesNeeding(original, ['defer_statement']),
     $.co_return_statement,
     $.co_yield_statement,
     $.for_range_loop,
@@ -3875,6 +3817,59 @@ function withTypeDefinitionHeads(conflicts) {
     _statement_type_definition: '_statement_type_definition_head',
   };
   return conflicts.map((rules) => rules.map((rule) => sym(heads[rule.name] ?? rule.name)));
+}
+
+/**
+ * Removes the alternatives that need one of the named rules: a sequence or a nonempty repetition needs every member, and a
+ * choice needs only one.
+ * @param {Rule} rule
+ * @param {string[]} names
+ * @returns {Rule}
+ */
+function withoutAlternativesNeeding(rule, names) {
+  const result = withoutNeeded(rule, names);
+  if (!result) throw new Error(`Every alternative needs ${names.join(', ')}.`);
+  return result;
+}
+
+/**
+ * @param {Rule} rule
+ * @param {string[]} names
+ * @returns {Rule | undefined}
+ */
+function withoutNeeded(rule, names) {
+  switch (rule.type) {
+    case 'SYMBOL': {
+      return names.includes(rule.name) ? undefined : rule;
+    }
+    case 'SEQ': {
+      const members = rule.members.map((member) => withoutNeeded(member, names));
+      return members.every(Boolean) ? { ...rule, members: /** @type {Rule[]} */ (members) } : undefined;
+    }
+    case 'CHOICE': {
+      const members = rule.members.map((member) => withoutNeeded(member, names)).filter(Boolean);
+      return members.length > 0 ? { ...rule, members: /** @type {Rule[]} */ (members) } : undefined;
+    }
+    case 'REPEAT': {
+      const content = withoutNeeded(rule.content, names);
+      return content ? { ...rule, content } : blank();
+    }
+    case 'REPEAT1':
+    case 'FIELD':
+    case 'ALIAS':
+    case 'TOKEN':
+    case 'IMMEDIATE_TOKEN':
+    case 'PREC':
+    case 'PREC_DYNAMIC':
+    case 'PREC_LEFT':
+    case 'PREC_RIGHT': {
+      const content = withoutNeeded(rule.content, names);
+      return content ? { ...rule, content } : undefined;
+    }
+    default: {
+      return rule;
+    }
+  }
 }
 
 /** @param {Rule} rule */

@@ -708,3 +708,33 @@ constexpr int h() { if not consteval { return 1; } else { return 2; } }
           (compound_statement
             (return_statement
               (number_literal))))))))
+
+================================================================================
+Calls to C keywords that are reserved identifiers in C++
+================================================================================
+
+void f() { _Defer(g()); _Bool(h()); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (call_expression
+              (identifier)
+              (argument_list))))))))

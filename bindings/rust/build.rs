@@ -32,7 +32,10 @@ fn main() {
         "identifier.h",
         "keywords.h",
         "functionMacro.h",
+        "macroProof.h",
         "conditionalMacro.h",
+        "emptyDirectives.h",
+        "gnuRawString.h",
         "initializerConditional.h",
         "cppTrivia.h",
     ] {

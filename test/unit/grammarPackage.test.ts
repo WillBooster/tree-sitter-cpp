@@ -38,6 +38,17 @@ for (const [packageKind, listFiles] of Object.entries(listPublishedFiles)) {
   });
 }
 
+// The CLI recompiles its cached parser only when parser.c, scanner.c, or an `external-files` entry changed.
+test('lists every scanner header in the external files of tree-sitter.json', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(Root, 'tree-sitter.json'), 'utf8')) as {
+    grammars: { 'external-files': string[] }[];
+  };
+  const headers = scannerDependencies().filter(
+    (file) => file !== 'src/scanner.c' && !file.startsWith('src/tree_sitter/')
+  );
+  expect(config.grammars[0]!['external-files'].toSorted()).toEqual(headers.toSorted());
+});
+
 function scannerDependencies(): string[] {
   const dependencies = execFileSync('cc', ['-MM', '-Isrc', 'src/scanner.c'], execOptions)
     .replaceAll(/\\\r?\n/g, ' ')
@@ -51,7 +62,16 @@ function scannerDependencies(): string[] {
 }
 
 test('keeps vendored C scanner headers synchronized with the installed dependency', () => {
-  for (const file of ['pragma.h', 'identifier.h', 'keywords.h', 'functionMacro.h', 'conditionalMacro.h']) {
+  for (const file of [
+    'pragma.h',
+    'identifier.h',
+    'keywords.h',
+    'functionMacro.h',
+    'macroProof.h',
+    'conditionalMacro.h',
+    'emptyDirectives.h',
+    'gnuRawString.h',
+  ]) {
     expect(fs.readFileSync(path.join(Root, 'src', file)), `${file} differs; run script/copy-c-scanner`).toEqual(
       fs.readFileSync(path.join(Root, 'node_modules/@willbooster/tree-sitter-c/src', file))
     );
