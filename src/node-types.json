@@ -3037,6 +3037,22 @@
     }
   },
   {
+    "type": "else_continuation",
+    "named": true,
+    "fields": {
+      "condition": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "condition_clause",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "enum_specifier",
     "named": true,
     "fields": {
@@ -6429,6 +6445,10 @@
           "named": true
         },
         {
+          "type": "else_continuation",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -6653,6 +6673,10 @@
           "named": true
         },
         {
+          "type": "else_continuation",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -6845,6 +6869,10 @@
         },
         {
           "type": "declaration",
+          "named": true
+        },
+        {
+          "type": "else_continuation",
           "named": true
         },
         {
@@ -7150,6 +7178,10 @@
           "named": true
         },
         {
+          "type": "else_continuation",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -7371,6 +7403,10 @@
         },
         {
           "type": "declaration",
+          "named": true
+        },
+        {
+          "type": "else_continuation",
           "named": true
         },
         {

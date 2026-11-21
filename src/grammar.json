@@ -64514,7 +64514,7 @@
             "type": "REPEAT",
             "content": {
               "type": "SYMBOL",
-              "name": "_block_item"
+              "name": "_conditional_block_item"
             }
           },
           {
@@ -66118,7 +66118,7 @@
             "type": "REPEAT",
             "content": {
               "type": "SYMBOL",
-              "name": "_block_item"
+              "name": "_conditional_block_item"
             }
           },
           {
@@ -67172,7 +67172,7 @@
             "type": "REPEAT",
             "content": {
               "type": "SYMBOL",
-              "name": "_block_item"
+              "name": "_conditional_block_item"
             }
           }
         ]
@@ -67697,7 +67697,7 @@
             "type": "REPEAT",
             "content": {
               "type": "SYMBOL",
-              "name": "_block_item"
+              "name": "_conditional_block_item"
             }
           },
           {
@@ -68860,7 +68860,7 @@
             "type": "REPEAT",
             "content": {
               "type": "SYMBOL",
-              "name": "_block_item"
+              "name": "_conditional_block_item"
             }
           },
           {
@@ -68909,6 +68909,73 @@
           }
         ]
       }
+    },
+    "_conditional_block_item": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_block_item"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "else_continuation"
+        }
+      ]
+    },
+    "else_continuation": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "}"
+        },
+        {
+          "type": "STRING",
+          "value": "else"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "if"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": "constexpr"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                },
+                {
+                  "type": "FIELD",
+                  "name": "condition",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "condition_clause"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "{"
+        }
+      ]
     },
     "placeholder_type_specifier": {
       "type": "PREC",

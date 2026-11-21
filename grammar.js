@@ -653,7 +653,14 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       _preproc_include_token: ($, original = missingOriginalRule()) => choice(original, $.raw_string_literal),
 
       ...preprocIf('', () => sym('_top_level_item')),
-      ...preprocIf('_in_block', () => sym('_block_item')),
+      // A conditional branch may close the block of an `if` statement and open the next one of its `else` chain, as in
+      // libc++'s `#ifdef X` / `} else if (c) {` / `#endif`; the branch keeps that seam as an `else_continuation`.
+      ...preprocIf('_in_block', () => sym('_conditional_block_item')),
+
+      _conditional_block_item: ($) => choice($._block_item, $.else_continuation),
+
+      else_continuation: ($) =>
+        seq('}', 'else', optional(seq('if', optional('constexpr'), field('condition', $.condition_clause))), '{'),
 
       placeholder_type_specifier: ($) =>
         prec(

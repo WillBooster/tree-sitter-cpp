@@ -1,0 +1,236 @@
+================================================================================
+Else-if branch guarded by one conditional
+================================================================================
+
+int classify(int x) {
+  if (x < 0) {
+    return -1;
+#ifdef ZERO_CASE
+  } else if (x == 0) {
+    return 0;
+#endif
+  } else {
+    return 2;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (binary_expression
+            (identifier)
+            (number_literal)))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (condition_clause
+                (binary_expression
+                  (identifier)
+                  (number_literal))))
+            (return_statement
+              (number_literal))))
+        (else_clause
+          (compound_statement
+            (return_statement
+              (number_literal))))))))
+
+================================================================================
+Else-if branches guarded by two conditionals
+================================================================================
+
+int classify(int x) {
+  if (x < 0) {
+    return -1;
+#ifdef ZERO_CASE
+  } else if (x == 0) {
+    return 0;
+#endif
+#ifdef ONE_CASE
+  } else if (x == 1) {
+    return 1;
+#endif
+  } else {
+    return 2;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (binary_expression
+            (identifier)
+            (number_literal)))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (condition_clause
+                (binary_expression
+                  (identifier)
+                  (number_literal))))
+            (return_statement
+              (number_literal)))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (condition_clause
+                (binary_expression
+                  (identifier)
+                  (number_literal))))
+            (return_statement
+              (number_literal))))
+        (else_clause
+          (compound_statement
+            (return_statement
+              (number_literal))))))))
+
+================================================================================
+Else-if branches in #if and #else
+================================================================================
+
+int classify(int x) {
+  if (x < 0) {
+    return -1;
+#if defined(ZERO_CASE)
+  } else if (x == 0) {
+    return 0;
+#else
+  } else if (x == 1) {
+    return 1;
+#endif
+  } else {
+    return 2;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (binary_expression
+            (identifier)
+            (number_literal)))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_if
+            (preproc_defined
+              (identifier))
+            (else_continuation
+              (condition_clause
+                (binary_expression
+                  (identifier)
+                  (number_literal))))
+            (return_statement
+              (number_literal))
+            (preproc_else
+              (else_continuation
+                (condition_clause
+                  (binary_expression
+                    (identifier)
+                    (number_literal))))
+              (return_statement
+                (number_literal)))))
+        (else_clause
+          (compound_statement
+            (return_statement
+              (number_literal))))))))
+
+================================================================================
+Constexpr and plain else branches in #ifndef and #else
+================================================================================
+
+template <class T> int pick(T value) {
+  if constexpr (sizeof(T) == 1) {
+    return 1;
+#ifndef NO_WIDE
+  } else if constexpr (sizeof(T) == 2) {
+    return 2;
+#else
+  } else {
+    return 0;
+#endif
+  }
+  return value;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (type_identifier)
+            (identifier))))
+      (compound_statement
+        (if_statement
+          (condition_clause
+            (binary_expression
+              (sizeof_expression
+                (parenthesized_expression
+                  (identifier)))
+              (number_literal)))
+          (compound_statement
+            (return_statement
+              (number_literal))
+            (preproc_ifdef
+              (identifier)
+              (else_continuation
+                (condition_clause
+                  (binary_expression
+                    (sizeof_expression
+                      (parenthesized_expression
+                        (identifier)))
+                    (number_literal))))
+              (return_statement
+                (number_literal))
+              (preproc_else
+                (else_continuation)
+                (return_statement
+                  (number_literal))))))
+        (return_statement
+          (identifier))))))
