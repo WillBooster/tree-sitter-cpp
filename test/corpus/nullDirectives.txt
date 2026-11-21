@@ -1,0 +1,77 @@
+================================================================================
+Null directives inside pack indexing
+================================================================================
+
+template<typename... Ts>
+using First = Ts...
+#
+[0];
+template<class... T> auto f(T... xs) { return xs...
+#
+[0]; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (alias_declaration
+      (type_identifier)
+      (type_descriptor
+        (pack_index_type
+          (type_identifier)
+          (preproc_empty)
+          (number_literal)))))
+  (template_declaration
+    (template_parameter_list
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (placeholder_type_specifier
+        (auto))
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (variadic_parameter_declaration
+            (type_identifier)
+            (variadic_declarator
+              (identifier)))))
+      (compound_statement
+        (return_statement
+          (pack_index_expression
+            (identifier)
+            (preproc_empty)
+            (number_literal)))))))
+
+================================================================================
+Null directives inside empty conditional initializer branches
+================================================================================
+
+int a =
+#if X
+#if Y
+#
+#endif
+1
+#else
+2
+#endif
+;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (preproc_if
+        (identifier)
+        (preproc_if
+          (identifier)
+          (preproc_empty))
+        (number_literal)
+        (preproc_else
+          (number_literal))))))

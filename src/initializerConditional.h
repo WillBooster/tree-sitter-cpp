@@ -39,6 +39,8 @@ typedef struct {
     uint32_t frame_count;
     uint32_t frame_capacity;
     bool invalid_directive_order;
+    /// The null directives that lookaheads skip as trivia.
+    EmptyDirectives *directives;
 } InitializerConditionals;
 
 typedef enum { INITIALIZER_CONDITION, INITIALIZER_HEADER, INITIALIZER_REPLACEMENT, INITIALIZER_DIRECTIVE_TEXT } InitializerHeaderMode;
@@ -56,7 +58,7 @@ typedef enum { INITIALIZER_START_NONE, INITIALIZER_START_EMPTY, INITIALIZER_STAR
 
 static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer *lexer);
 static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive);
-static bool initializer_conditional_trivia(TSLexer *lexer);
+static bool initializer_conditional_trivia(InitializerConditionals *state, TSLexer *lexer);
 static bool initializer_conditional_splice(TSLexer *lexer);
 static InitializerConditionalKind initializer_conditional_lookup(const InitializerConditionals *state, uint32_t position);
 static uint32_t initializer_conditional_entry(InitializerConditionals *state, uint32_t position);
@@ -102,7 +104,7 @@ static InitializerStartKind scan_initializer_start(InitializerConditionals *stat
 static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer *lexer) {
     TSLexerPosition position;
     for (;;) {
-        if (!initializer_conditional_trivia(lexer) || lexer->lookahead != '#') {
+        if (!initializer_conditional_trivia(state, lexer) || lexer->lookahead != '#') {
             return initializer_conditional_nonempty(state);
         }
         lexer->get_position(lexer, &position);
@@ -142,10 +144,10 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
     return initializer_conditional_header(lexer, INITIALIZER_CONDITION) != frame->has_else;
 }
 
-static bool initializer_conditional_trivia(TSLexer *lexer) {
+static bool initializer_conditional_trivia(InitializerConditionals *state, TSLexer *lexer) {
     for (;;) {
         bool newline = false;
-        if (!skip_cpp_trivia(lexer, &newline)) return false;
+        if (!skip_cpp_trivia(lexer, &newline, state->directives)) return false;
         if (lexer->lookahead != '_') return true;
         if (!scan_pragma(lexer)) return false;
     }

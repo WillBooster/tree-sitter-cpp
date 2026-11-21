@@ -1,15 +1,26 @@
 #ifndef TREE_SITTER_CPP_TRIVIA_H_
 #define TREE_SITTER_CPP_TRIVIA_H_
 
+#include "emptyDirectives.h"
 #include "pragma.h"
 
 #include <wctype.h>
 
 static bool skip_cpp_comment(TSLexer *lexer, bool *newline);
+static bool skip_cpp_space(TSLexer *lexer, bool *newline);
 static inline bool is_unicode_whitespace(int32_t c);
 static inline bool at_eof(const TSLexer *lexer);
 
-static bool skip_cpp_trivia(TSLexer *lexer, bool *newline) {
+/// Skips the trivia a lookahead crosses, null directives included, which end a line like the newline they contain.
+static bool skip_cpp_trivia(TSLexer *lexer, bool *newline, EmptyDirectives *directives) {
+    for (;;) {
+        if (!skip_cpp_space(lexer, newline)) return false;
+        if (!empty_directives_consume(lexer, directives, false)) return true;
+        *newline = true;
+    }
+}
+
+static bool skip_cpp_space(TSLexer *lexer, bool *newline) {
     for (;;) {
         while (is_unicode_whitespace(lexer->lookahead)) {
             *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';

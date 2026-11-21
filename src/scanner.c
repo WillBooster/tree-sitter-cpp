@@ -36,7 +36,6 @@ static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer);
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static inline bool is_macro_call_continuation(int32_t c);
 static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer);
-static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline);
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols);
 static bool scan_extras(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_extras_pragma(EmptyDirectives *state, TSLexer *lexer, const TSLexerCheckpoint *start, bool skipped);
@@ -46,8 +45,7 @@ static bool scan_preprocessor_token(EmptyDirectives *state, TSLexer *lexer, cons
 static bool scan_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
 static bool scan_preproc_tokens(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_initializer_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
-static bool scan_pack_index_operator(TSLexer *lexer);
-static bool skip_pack_index_trivia(TSLexer *lexer);
+static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer);
 static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
 static bool skip_template_splices(TSLexer *lexer, bool skip);
@@ -58,7 +56,9 @@ static inline void reset(Scanner *scanner);
 static inline void advance(TSLexer *lexer);
 
 void *tree_sitter_cpp_external_scanner_create(void) {
-    return ts_calloc(1, sizeof(Scanner));
+    Scanner *scanner = ts_calloc(1, sizeof(Scanner));
+    if (scanner) scanner->initializer_conditionals.directives = &scanner->directives;
+    return scanner;
 }
 
 void tree_sitter_cpp_external_scanner_destroy(void *payload) {
@@ -167,7 +167,7 @@ static bool scan_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *vali
         return scan_initializer_token(scanner, lexer, valid_symbols);
     }
     if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
-        return scan_pack_index_operator(lexer);
+        return scan_pack_index_operator(scanner, lexer);
     }
     if ((valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE]) && lexer->lookahead == '>') {
         return scan_template_close(scanner, lexer, valid_symbols, pending_close);
@@ -298,7 +298,7 @@ static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const boo
     lexer->get_position(lexer, &position);
     bool newline = scanner->null_directive_end && position.bytes == scanner->null_directive_end;
     lexer->mark_end(lexer);
-    if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline)) return false;
+    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives)) return false;
     if (at_eof(lexer)) {
         scanner->pending_macro_identifiers = 0;
         lexer->result_symbol = valid_symbols[MACRO_CALL_END] ? MACRO_CALL_END : MACRO_IDENTIFIER_END;
@@ -342,20 +342,11 @@ static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer) {
         static const char *const starters[] = {"class", "concept", "decltype", "enum", "export", "namespace", "struct", "template", "union", "using"};
         if (name.ascii && function_macro_word_in(word, starters, sizeof(starters) / sizeof(starters[0]))) break;
         bool newline = false;
-        if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline) || (!newline && !at_eof(lexer))) return false;
+        if (!skip_cpp_trivia(lexer, &newline, &scanner->directives) || (!newline && !at_eof(lexer))) return false;
         remaining++;
     }
     scanner->pending_macro_identifiers = remaining;
     return true;
-}
-
-// Null directives end a line like the newline they contain, so a macro line's boundary looks past them.
-static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline) {
-    for (;;) {
-        if (!skip_cpp_trivia(lexer, newline)) return false;
-        if (!empty_directives_consume(lexer, state, false)) return true;
-        *newline = true;
-    }
 }
 
 // code-gauge-allow functionCognitiveComplexity 28 -- External-token validity selects one preprocessor lexing mode and preserves its token range.
@@ -418,26 +409,18 @@ static bool scan_initializer_token(Scanner *scanner, TSLexer *lexer, const bool 
     return kind != INITIALIZER_START_NONE;
 }
 
-static bool scan_pack_index_operator(TSLexer *lexer) {
+static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer) {
+    bool newline = false;
     for (int i = 0; i < 3; ++i) {
         if (lexer->lookahead != '.') return false;
         advance(lexer);
     }
     lexer->mark_end(lexer);
-    if (!skip_pack_index_trivia(lexer) || lexer->lookahead != '[') return false;
+    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives) || lexer->lookahead != '[') return false;
     advance(lexer);
-    if (!skip_pack_index_trivia(lexer) || lexer->lookahead == ']' || at_eof(lexer)) return false;
+    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives) || lexer->lookahead == ']' || at_eof(lexer)) return false;
     lexer->result_symbol = PACK_INDEX_OPERATOR;
     return true;
-}
-
-static bool skip_pack_index_trivia(TSLexer *lexer) {
-    bool newline = false;
-    for (;;) {
-        if (!skip_pack_index_whitespace(lexer, false)) return false;
-        if (lexer->lookahead != '/') return true;
-        if (!skip_cpp_comment(lexer, &newline)) return false;
-    }
 }
 
 static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip) {
