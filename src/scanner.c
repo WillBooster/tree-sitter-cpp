@@ -1,4 +1,4 @@
-// code-gauge-allow-file fileNcss 408 -- The C scanner's extras and directive dispatch index this grammar's external-token enum, so they live beside the C++ tokens.
+// code-gauge-allow-file fileNcss 437 -- The C scanner's extras and directive dispatch index this grammar's external-token enum, so they live beside the C++ tokens.
 #include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
 #include "conditionalMacro.h"
@@ -13,6 +13,12 @@ enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, 
 
 /// C++ [lex.string] limits raw-string d-char-sequences to 16 characters.
 #define MAX_DELIMITER_LENGTH 16
+
+/// The range of a null directive that a lookahead consumed.
+typedef struct {
+    bool found;
+    TSLexerCheckpoint start, end;
+} NullDirective;
 
 typedef struct {
     EmptyDirectives directives;
@@ -32,8 +38,10 @@ static bool scan_raw_string_token(Scanner *scanner, TSLexer *lexer, const bool *
 static bool scan_raw_string_delimiter(Scanner *scanner, TSLexer *lexer);
 static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer);
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static bool scan_macro_boundary(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, NullDirective *directive);
 static inline bool is_macro_call_continuation(int32_t c);
 static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer);
+static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline, NullDirective *first);
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols);
 static bool scan_extras(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_extras_pragma(EmptyDirectives *state, TSLexer *lexer, const TSLexerCheckpoint *start, bool skipped);
@@ -282,10 +290,22 @@ static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer) {
     return true;
 }
 
+// When no boundary follows, a null directive that the lookahead crossed right after the macro line is still returned,
+// since this scan runs before the extras that would otherwise consume it.
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+    NullDirective directive = {0};
+    if (scan_macro_boundary(scanner, lexer, valid_symbols, &directive)) return true;
+    if (!directive.found || !valid_symbols[PREPROC_EMPTY]) return false;
+    lexer->mark_start(lexer, &directive.start);
+    lexer->mark_end_at(lexer, &directive.end);
+    lexer->result_symbol = PREPROC_EMPTY;
+    return true;
+}
+
+static bool scan_macro_boundary(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, NullDirective *directive) {
     lexer->mark_end(lexer);
     bool newline = false;
-    if (!skip_cpp_trivia(lexer, &newline)) return false;
+    if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline, directive)) return false;
     if (at_eof(lexer)) {
         scanner->pending_macro_identifiers = 0;
         lexer->result_symbol = valid_symbols[MACRO_CALL_END] ? MACRO_CALL_END : MACRO_IDENTIFIER_END;
@@ -329,11 +349,27 @@ static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer) {
         static const char *const starters[] = {"class", "concept", "decltype", "enum", "export", "namespace", "struct", "template", "union", "using"};
         if (name.ascii && function_macro_word_in(word, starters, sizeof(starters) / sizeof(starters[0]))) break;
         bool newline = false;
-        if (!skip_cpp_trivia(lexer, &newline) || (!newline && !at_eof(lexer))) return false;
+        if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline, NULL) || (!newline && !at_eof(lexer))) return false;
         remaining++;
     }
     scanner->pending_macro_identifiers = remaining;
     return true;
+}
+
+// Null directives end a line like the newline they contain, so a macro line's boundary looks past them; `first`, when
+// given, receives the range of the first one.
+static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline, NullDirective *first) {
+    for (;;) {
+        if (!skip_cpp_trivia(lexer, newline)) return false;
+        TSLexerCheckpoint start;
+        if (first && !first->found) lexer->get_checkpoint(lexer, &start);
+        if (!empty_directives_consume(lexer, state, false)) return true;
+        *newline = true;
+        if (first && !first->found) {
+            *first = (NullDirective){.found = true, .start = start};
+            lexer->get_checkpoint(lexer, &first->end);
+        }
+    }
 }
 
 // code-gauge-allow functionCognitiveComplexity 28 -- External-token validity selects one preprocessor lexing mode and preserves its token range.
