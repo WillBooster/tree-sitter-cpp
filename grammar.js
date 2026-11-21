@@ -684,17 +684,12 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       preproc_elif_in_if_block: () => initializerElif(ifBlockBranch(true)),
       preproc_elifdef_in_if_block: () => initializerElifdef(ifBlockBranch(true)),
 
-      _if_conditional_item: ($) => choice($._block_item, $.else_continuation),
+      // A branch continues the chain with any number of `else if` seams and at most one plain `else` after them (see
+      // `ifBlockBranch`); the heads are those of `if_statement`, whose bodies may be attributed.
+      _else_if_continuation: ($) =>
+        seq('}', 'else', 'if', choice(ifConditionHead($), constevalHead()), repeat($.attribute_declaration), '{'),
 
-      // The `else` and `if` heads are those of `if_statement` and `else_clause`, whose bodies may be attributed.
-      else_continuation: ($) =>
-        seq(
-          '}',
-          'else',
-          optional(seq('if', choice(ifConditionHead($), constevalHead()))),
-          repeat($.attribute_declaration),
-          '{'
-        ),
+      _else_continuation: ($) => seq('}', 'else', repeat($.attribute_declaration), '{'),
 
       placeholder_type_specifier: ($) =>
         prec(
@@ -3594,11 +3589,17 @@ function constevalHead() {
 }
 
 /**
- * The items of a conditional branch in the block of an `if` statement, then its next branch if `hasAlternative`.
+ * The items of a conditional branch in the block of an `if` statement, then its next branch if `hasAlternative`. Whether
+ * the chain stays valid across branches and later conditionals depends on which branches are enabled, which the tree
+ * leaves to a preprocessor.
  * @param {boolean} hasAlternative
  */
 function ifBlockBranch(hasAlternative) {
-  const items = repeat(sym('_if_conditional_item'));
+  const items = seq(
+    repeat(sym('_block_item')),
+    repeat(seq(alias(sym('_else_if_continuation'), sym('else_continuation')), repeat(sym('_block_item')))),
+    optional(seq(alias(sym('_else_continuation'), sym('else_continuation')), repeat(sym('_block_item'))))
+  );
   if (!hasAlternative) return items;
   const alternative = choice(
     ...['preproc_else', 'preproc_elif', 'preproc_elifdef'].map((name) => alias(sym(`${name}_in_if_block`), sym(name)))
