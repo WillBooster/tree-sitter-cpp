@@ -75,3 +75,36 @@ int a =
         (number_literal)
         (preproc_else
           (number_literal))))))
+
+================================================================================
+Null directives inside _Pragma in empty conditional initializer branches
+================================================================================
+
+int a =
+#if X
+#if Y
+_Pragma
+#
+("once")
+#endif
+1
+#else
+2
+#endif
+;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (preproc_if
+        (identifier)
+        (preproc_if
+          (identifier)
+          (pragma_operator))
+        (number_literal)
+        (preproc_else
+          (number_literal))))))
