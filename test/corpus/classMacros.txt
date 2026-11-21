@@ -84,3 +84,43 @@ class Forward;
         parameters: (parameter_list))))
   (class_specifier
     name: (type_identifier)))
+
+================================================================================
+Null directives after standalone macro lines
+================================================================================
+
+#define CALL()
+#define API
+CALL()
+#
+int x;
+API
+#
+template<class T> struct S{};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_function_def
+    (identifier)
+    (preproc_params))
+  (preproc_def
+    (identifier))
+  (expression_statement
+    (call_expression
+      (identifier)
+      (argument_list)))
+  (preproc_empty)
+  (declaration
+    (primitive_type)
+    (identifier))
+  (expression_statement
+    (identifier))
+  (preproc_empty)
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list))))

@@ -115,12 +115,13 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     EmptyDirectives *state = &scanner->directives;
     if (only_extras_valid(state, valid_symbols)) return scan_extras(state, lexer, valid_symbols);
+    // A macro line ends at its newline, which a null directive on the next line would otherwise consume.
+    if (valid_symbols[MACRO_CALL_END] || valid_symbols[MACRO_IDENTIFIER_END]) {
+        return scan_macro_statement_end(scanner, lexer, valid_symbols);
+    }
     if (scan_directive_context(state, lexer, valid_symbols)) return true;
     if (valid_symbols[RAW_STRING_DELIMITER] || valid_symbols[RAW_STRING_CONTENT]) {
         return scan_raw_string_token(scanner, lexer, valid_symbols);
-    }
-    if (valid_symbols[MACRO_CALL_END] || valid_symbols[MACRO_IDENTIFIER_END]) {
-        return scan_macro_statement_end(scanner, lexer, valid_symbols);
     }
     bool pending_close = scanner->pending_template_close;
     scanner->pending_template_close = false;
