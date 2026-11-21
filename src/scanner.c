@@ -14,6 +14,14 @@ enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, 
 /// C++ [lex.string] limits raw-string d-char-sequences to 16 characters.
 #define MAX_DELIMITER_LENGTH 16
 
+/// A trivia run from which no macro line ends, for the macro-line tokens that `valid` marks (bit 0 for the call end, bit 1
+/// for the identifier end); every scan starting inside it reaches the same token with no more newlines, so it fails too.
+/// It depends only on the source text, so it is kept across scanner states.
+typedef struct {
+    uint32_t start, end;
+    uint8_t valid;
+} MacroLineMiss;
+
 typedef struct {
     EmptyDirectives directives;
     InitializerConditionals initializer_conditionals;
@@ -21,6 +29,7 @@ typedef struct {
     uint32_t pending_macro_identifiers;
     /// The byte after the last null directive scanned, which ends a line like a newline; zero when none.
     uint32_t null_directive_end;
+    MacroLineMiss macro_line_miss;
     uint8_t delimiter_length;
     int32_t delimiter[MAX_DELIMITER_LENGTH];
 } Scanner;
@@ -34,6 +43,7 @@ static bool scan_raw_string_token(Scanner *scanner, TSLexer *lexer, const bool *
 static bool scan_raw_string_delimiter(Scanner *scanner, TSLexer *lexer);
 static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer);
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static bool scan_macro_line_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, uint32_t start, uint32_t *end);
 static inline bool is_macro_call_continuation(int32_t c);
 static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer);
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols);
@@ -296,9 +306,24 @@ static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer) {
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
-    bool newline = scanner->null_directive_end && position.bytes == scanner->null_directive_end;
+    uint8_t valid = (valid_symbols[MACRO_CALL_END] ? 1 : 0) | (valid_symbols[MACRO_IDENTIFIER_END] ? 2 : 0);
+    MacroLineMiss *miss = &scanner->macro_line_miss;
+    bool counted = scanner->pending_macro_identifiers != 0;
+    if (!counted && miss->valid == valid && miss->start <= position.bytes && position.bytes <= miss->end) return false;
+    uint32_t end = 0;
+    if (scan_macro_line_end(scanner, lexer, valid_symbols, position.bytes, &end)) return true;
+    if (!counted && end) *miss = (MacroLineMiss){.start = position.bytes, .end = end, .valid = valid};
+    return false;
+}
+
+// Sets `*end` to the byte of the token after the trivia when the trivia is well formed.
+static bool scan_macro_line_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, uint32_t start, uint32_t *end) {
+    bool newline = scanner->null_directive_end && start == scanner->null_directive_end;
     lexer->mark_end(lexer);
     if (!skip_cpp_trivia(lexer, &newline, &scanner->directives)) return false;
+    TSLexerPosition position;
+    lexer->get_position(lexer, &position);
+    *end = position.bytes;
     if (at_eof(lexer)) {
         scanner->pending_macro_identifiers = 0;
         lexer->result_symbol = valid_symbols[MACRO_CALL_END] ? MACRO_CALL_END : MACRO_IDENTIFIER_END;

@@ -38,13 +38,17 @@ test.each(['plain', 'conditional', 'null-directive'])(
   }
 );
 
-test('parses null directives between a declaration type and its declarator in linear time', { timeout: 60_000 }, () => {
-  // The declarations before the gap keep the small input above the CPU timer's millisecond resolution on CI.
-  const [short, long] = [2000, 20_000].map(
-    (count) => `${'int y;\n'.repeat(count)}using T = int;\nT\n${'#\n'.repeat(count)}x;\n`
-  );
-  expectLinearParseTime(short!, long!, false);
-});
+test(
+  'parses null directives and comments between a declaration type and its declarator in linear time',
+  { timeout: 60_000 },
+  () => {
+    // The declarations before the gap keep the small input above the CPU timer's millisecond resolution on CI.
+    const [short, long] = [2000, 20_000].map(
+      (count) => `${'int y;\n'.repeat(count)}using T = int;\nT\n${'#\n// note\n'.repeat(count)}x;\n`
+    );
+    expectLinearParseTime(short!, long!, false);
+  }
+);
 
 test('parses conditional initializer branches in linear time', { timeout: 60_000 }, () => {
   const block = '{ int value =\n#if FEATURE\n#if EMPTY\n#endif\n1\n#else\n2\n#endif\n; }\n';
