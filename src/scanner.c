@@ -14,17 +14,13 @@ enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, 
 /// C++ [lex.string] limits raw-string d-char-sequences to 16 characters.
 #define MAX_DELIMITER_LENGTH 16
 
-/// The range of a null directive that a lookahead consumed.
-typedef struct {
-    bool found;
-    TSLexerCheckpoint start, end;
-} NullDirective;
-
 typedef struct {
     EmptyDirectives directives;
     InitializerConditionals initializer_conditionals;
     bool pending_template_close;
     uint32_t pending_macro_identifiers;
+    /// The byte after the last null directive scanned, which ends a line like a newline; zero when none.
+    uint32_t null_directive_end;
     uint8_t delimiter_length;
     int32_t delimiter[MAX_DELIMITER_LENGTH];
 } Scanner;
@@ -38,10 +34,9 @@ static bool scan_raw_string_token(Scanner *scanner, TSLexer *lexer, const bool *
 static bool scan_raw_string_delimiter(Scanner *scanner, TSLexer *lexer);
 static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer);
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
-static bool scan_macro_boundary(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, NullDirective *directive);
 static inline bool is_macro_call_continuation(int32_t c);
 static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer);
-static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline, NullDirective *first);
+static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline);
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols);
 static bool scan_extras(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_extras_pragma(EmptyDirectives *state, TSLexer *lexer, const TSLexerCheckpoint *start, bool skipped);
@@ -78,34 +73,37 @@ void tree_sitter_cpp_external_scanner_destroy(void *payload) {
     ts_free(scanner);
 }
 
-enum { SERIALIZED_READY = 1, SERIALIZED_PENDING_TEMPLATE_CLOSE = 2 };
+enum { SERIALIZED_READY = 1, SERIALIZED_PENDING_TEMPLATE_CLOSE = 2, SERIALIZED_PREFIX = 1 + 2 * sizeof(uint32_t) };
 
 unsigned tree_sitter_cpp_external_scanner_serialize(void *payload, char *buffer) {
     Scanner *scanner = (Scanner *)payload;
-    _Static_assert(1 + sizeof(scanner->pending_macro_identifiers) + MAX_DELIMITER_LENGTH * sizeof(int32_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
+    _Static_assert(SERIALIZED_PREFIX + MAX_DELIMITER_LENGTH * sizeof(int32_t) < TREE_SITTER_SERIALIZATION_BUFFER_SIZE,
                    "Serialized scanner state is too long!");
-    if (!scanner->pending_template_close && !scanner->pending_macro_identifiers && !scanner->delimiter_length) {
+    if (!scanner->pending_template_close && !scanner->pending_macro_identifiers && !scanner->null_directive_end &&
+        !scanner->delimiter_length) {
         buffer[0] = scanner->directives.ready ? SERIALIZED_READY : 0;
         return 1;
     }
     size_t size = scanner->delimiter_length * sizeof(int32_t);
     buffer[0] = (scanner->directives.ready ? SERIALIZED_READY : 0) |
         (scanner->pending_template_close ? SERIALIZED_PENDING_TEMPLATE_CLOSE : 0);
-    memcpy(buffer + 1, &scanner->pending_macro_identifiers, sizeof(scanner->pending_macro_identifiers));
-    memcpy(buffer + 1 + sizeof(scanner->pending_macro_identifiers), scanner->delimiter, size);
-    return (unsigned)(size + 1 + sizeof(scanner->pending_macro_identifiers));
+    memcpy(buffer + 1, &scanner->pending_macro_identifiers, sizeof(uint32_t));
+    memcpy(buffer + 1 + sizeof(uint32_t), &scanner->null_directive_end, sizeof(uint32_t));
+    memcpy(buffer + SERIALIZED_PREFIX, scanner->delimiter, size);
+    return (unsigned)(size + SERIALIZED_PREFIX);
 }
 
 void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
     Scanner *scanner = (Scanner *)payload;
     reset(scanner);
     scanner->directives.ready = length && (buffer[0] & SERIALIZED_READY);
-    size_t prefix = 1 + sizeof(scanner->pending_macro_identifiers);
+    size_t prefix = SERIALIZED_PREFIX;
     if (length < prefix || length - prefix > sizeof(scanner->delimiter) ||
         (length - prefix) % sizeof(int32_t) != 0 ||
         (unsigned char)buffer[0] > (SERIALIZED_READY | SERIALIZED_PENDING_TEMPLATE_CLOSE)) return;
     scanner->pending_template_close = buffer[0] & SERIALIZED_PENDING_TEMPLATE_CLOSE;
-    memcpy(&scanner->pending_macro_identifiers, buffer + 1, sizeof(scanner->pending_macro_identifiers));
+    memcpy(&scanner->pending_macro_identifiers, buffer + 1, sizeof(uint32_t));
+    memcpy(&scanner->null_directive_end, buffer + 1 + sizeof(uint32_t), sizeof(uint32_t));
     scanner->delimiter_length = (length - prefix) / sizeof(int32_t);
     memcpy(scanner->delimiter, buffer + prefix, length - prefix);
 }
@@ -113,23 +111,28 @@ void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buf
 bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     Scanner *scanner = (Scanner *)payload;
     bool found = scan_token(scanner, lexer, valid_symbols);
-    if (found) {
-        if (lexer->result_symbol != MACRO_IDENTIFIER_END) scanner->pending_macro_identifiers = 0;
-        else scanner->pending_template_close = false;
+    if (!found) return false;
+    if (lexer->result_symbol == PREPROC_EMPTY) {
+        // A macro-identifier count already looked past this directive.
+        TSLexerPosition end;
+        lexer->get_mark_end(lexer, &end);
+        scanner->null_directive_end = end.bytes;
+        return true;
     }
-    return found;
+    if (lexer->result_symbol != MACRO_IDENTIFIER_END) scanner->pending_macro_identifiers = 0;
+    else scanner->pending_template_close = false;
+    return true;
 }
 
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     EmptyDirectives *state = &scanner->directives;
     if (only_extras_valid(state, valid_symbols)) return scan_extras(state, lexer, valid_symbols);
-    // A macro line ends at its newline, which a null directive on the next line would otherwise consume.
-    if (valid_symbols[MACRO_CALL_END] || valid_symbols[MACRO_IDENTIFIER_END]) {
-        return scan_macro_statement_end(scanner, lexer, valid_symbols);
-    }
     if (scan_directive_context(state, lexer, valid_symbols)) return true;
     if (valid_symbols[RAW_STRING_DELIMITER] || valid_symbols[RAW_STRING_CONTENT]) {
         return scan_raw_string_token(scanner, lexer, valid_symbols);
+    }
+    if (valid_symbols[MACRO_CALL_END] || valid_symbols[MACRO_IDENTIFIER_END]) {
+        return scan_macro_statement_end(scanner, lexer, valid_symbols);
     }
     bool pending_close = scanner->pending_template_close;
     scanner->pending_template_close = false;
@@ -290,22 +293,12 @@ static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer) {
     return true;
 }
 
-// When no boundary follows, a null directive that the lookahead crossed right after the macro line is still returned,
-// since this scan runs before the extras that would otherwise consume it.
 static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
-    NullDirective directive = {0};
-    if (scan_macro_boundary(scanner, lexer, valid_symbols, &directive)) return true;
-    if (!directive.found || !valid_symbols[PREPROC_EMPTY]) return false;
-    lexer->mark_start(lexer, &directive.start);
-    lexer->mark_end_at(lexer, &directive.end);
-    lexer->result_symbol = PREPROC_EMPTY;
-    return true;
-}
-
-static bool scan_macro_boundary(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, NullDirective *directive) {
+    TSLexerPosition position;
+    lexer->get_position(lexer, &position);
+    bool newline = scanner->null_directive_end && position.bytes == scanner->null_directive_end;
     lexer->mark_end(lexer);
-    bool newline = false;
-    if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline, directive)) return false;
+    if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline)) return false;
     if (at_eof(lexer)) {
         scanner->pending_macro_identifiers = 0;
         lexer->result_symbol = valid_symbols[MACRO_CALL_END] ? MACRO_CALL_END : MACRO_IDENTIFIER_END;
@@ -349,26 +342,19 @@ static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer) {
         static const char *const starters[] = {"class", "concept", "decltype", "enum", "export", "namespace", "struct", "template", "union", "using"};
         if (name.ascii && function_macro_word_in(word, starters, sizeof(starters) / sizeof(starters[0]))) break;
         bool newline = false;
-        if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline, NULL) || (!newline && !at_eof(lexer))) return false;
+        if (!skip_macro_line_trivia(&scanner->directives, lexer, &newline) || (!newline && !at_eof(lexer))) return false;
         remaining++;
     }
     scanner->pending_macro_identifiers = remaining;
     return true;
 }
 
-// Null directives end a line like the newline they contain, so a macro line's boundary looks past them; `first`, when
-// given, receives the range of the first one.
-static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline, NullDirective *first) {
+// Null directives end a line like the newline they contain, so a macro line's boundary looks past them.
+static bool skip_macro_line_trivia(EmptyDirectives *state, TSLexer *lexer, bool *newline) {
     for (;;) {
         if (!skip_cpp_trivia(lexer, newline)) return false;
-        TSLexerCheckpoint start;
-        if (first && !first->found) lexer->get_checkpoint(lexer, &start);
         if (!empty_directives_consume(lexer, state, false)) return true;
         *newline = true;
-        if (first && !first->found) {
-            *first = (NullDirective){.found = true, .start = start};
-            lexer->get_checkpoint(lexer, &first->end);
-        }
     }
 }
 
@@ -558,6 +544,7 @@ static bool scan_macro_name_rest(TSLexer *lexer, MacroName *name, bool has_name)
 static inline void reset(Scanner *scanner) {
     scanner->pending_template_close = false;
     scanner->pending_macro_identifiers = 0;
+    scanner->null_directive_end = 0;
     scanner->delimiter_length = 0;
 }
 

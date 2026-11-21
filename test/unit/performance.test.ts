@@ -21,15 +21,26 @@ test('recovers from an error on each line in linear time', { timeout: 60_000 }, 
   expectLinearParseTime('$ a\n'.repeat(2000), '$ a\n'.repeat(20_000), true);
 });
 
-test.each(['plain', 'conditional'])('parses %s bare-marker chains in linear time', { timeout: 60_000 }, (context) => {
-  const input = (count: number): string => {
-    const body = 'marker\n'.repeat(count) + 'template<class T, class U> class Channel {};\n';
-    return (
-      '#define marker\n' +
-      (context === 'conditional' ? '#if defined(ACTIVE)\nmarker\n#include "marker.h"\n' + body + '#endif\n' : body)
-    );
-  };
-  expectLinearParseTime(input(2000), input(20_000), false);
+test.each(['plain', 'conditional', 'null-directive'])(
+  'parses %s bare-marker chains in linear time',
+  { timeout: 60_000 },
+  (context) => {
+    const input = (count: number): string => {
+      const body =
+        (context === 'null-directive' ? 'marker\n#\n' : 'marker\n').repeat(count) +
+        'template<class T, class U> class Channel {};\n';
+      return (
+        '#define marker\n' +
+        (context === 'conditional' ? '#if defined(ACTIVE)\nmarker\n#include "marker.h"\n' + body + '#endif\n' : body)
+      );
+    };
+    expectLinearParseTime(input(2000), input(20_000), false);
+  }
+);
+
+test('parses null directives between a declaration type and its declarator in linear time', { timeout: 60_000 }, () => {
+  const [short, long] = [2000, 20_000].map((count) => `using T = int;\nT\n${'#\n'.repeat(count)}x;\n`);
+  expectLinearParseTime(short!, long!, false);
 });
 
 test('parses conditional initializer branches in linear time', { timeout: 60_000 }, () => {

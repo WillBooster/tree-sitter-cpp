@@ -109,14 +109,14 @@ template<class T> struct S{};
   (expression_statement
     (call_expression
       (identifier)
-      (argument_list)))
-  (preproc_empty)
+      (argument_list))
+    (preproc_empty))
   (declaration
     (primitive_type)
     (identifier))
   (expression_statement
-    (identifier))
-  (preproc_empty)
+    (identifier)
+    (preproc_empty))
   (template_declaration
     (template_parameter_list
       (type_parameter_declaration
