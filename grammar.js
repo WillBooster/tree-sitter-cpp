@@ -676,12 +676,25 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           '}'
         ),
 
-      ...preprocIf('_in_if_block', () => sym('_if_conditional_item')),
+      // Unlike the inherited conditionals, each directive line must end before the branch, so that a seam written on the
+      // directive line stays an error.
+      preproc_if_in_if_block: () => initializerIf(ifBlockBranch(true)),
+      preproc_ifdef_in_if_block: () => initializerIfdef(ifBlockBranch(true)),
+      preproc_else_in_if_block: () => initializerElse(ifBlockBranch(false)),
+      preproc_elif_in_if_block: () => initializerElif(ifBlockBranch(true)),
+      preproc_elifdef_in_if_block: () => initializerElifdef(ifBlockBranch(true)),
 
       _if_conditional_item: ($) => choice($._block_item, $.else_continuation),
 
+      // The `else` and `if` heads are those of `if_statement` and `else_clause`, whose bodies may be attributed.
       else_continuation: ($) =>
-        seq('}', 'else', optional(seq('if', optional('constexpr'), field('condition', $.condition_clause))), '{'),
+        seq(
+          '}',
+          'else',
+          optional(seq('if', choice(ifConditionHead($), constevalHead()))),
+          repeat($.attribute_declaration),
+          '{'
+        ),
 
       placeholder_type_specifier: ($) =>
         prec(
@@ -2450,8 +2463,7 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
             'if',
             choice(
               seq(
-                optional('constexpr'),
-                field('condition', $.condition_clause),
+                ifConditionHead($),
                 field(
                   'consequence',
                   choice(
@@ -2462,9 +2474,8 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
                 optional(field('alternative', $.else_clause))
               ),
               seq(
-                optional(choice('!', 'not')),
-                'consteval',
-                field('consequence', $.compound_statement),
+                constevalHead(),
+                field('consequence', alias($._if_block, $.compound_statement)),
                 optional(field('alternative', alias($._consteval_else_clause, $.else_clause)))
               )
             )
@@ -3571,6 +3582,28 @@ function cppTypeSpecifier($, sized) {
     ),
     alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(2)), sym('type_identifier'))
   );
+}
+
+/** @param {NoInfer<GrammarSymbols<'condition_clause'>>} $ */
+function ifConditionHead($) {
+  return seq(optional('constexpr'), field('condition', $.condition_clause));
+}
+
+function constevalHead() {
+  return seq(optional(choice('!', 'not')), 'consteval');
+}
+
+/**
+ * The items of a conditional branch in the block of an `if` statement, then its next branch if `hasAlternative`.
+ * @param {boolean} hasAlternative
+ */
+function ifBlockBranch(hasAlternative) {
+  const items = repeat(sym('_if_conditional_item'));
+  if (!hasAlternative) return items;
+  const alternative = choice(
+    ...['preproc_else', 'preproc_elif', 'preproc_elifdef'].map((name) => alias(sym(`${name}_in_if_block`), sym(name)))
+  );
+  return seq(items, field('alternative', optional(alternative)));
 }
 
 /** @param {RuleOrLiteral} body */

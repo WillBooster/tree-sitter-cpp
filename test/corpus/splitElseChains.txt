@@ -251,3 +251,78 @@ void f() {
 --------------------------------------------------------------------------------
 
 (translation_unit)
+
+================================================================================
+Consteval and attributed else continuations
+================================================================================
+
+constexpr int f(int x) {
+  if (x == 0) {
+    return 0;
+#ifdef USE_CONSTEVAL
+  } else if consteval {
+    return 1;
+#elifdef USE_RUNTIME
+  } else if !consteval {
+    return 2;
+#endif
+  } else [[unlikely]] {
+    return 3;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (type_qualifier)
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (binary_expression
+            (identifier)
+            (number_literal)))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation)
+            (return_statement
+              (number_literal))
+            (preproc_elifdef
+              (identifier)
+              (else_continuation)
+              (return_statement
+                (number_literal)))))
+        (else_clause
+          (attributed_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (compound_statement
+              (return_statement
+                (number_literal)))))))))
+
+================================================================================
+Else continuations on a directive line
+:error
+================================================================================
+
+void f(bool x) {
+  if (x) {
+#ifdef FEATURE } else {
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit)
