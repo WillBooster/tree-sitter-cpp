@@ -473,3 +473,63 @@ void f(bool x) {
 --------------------------------------------------------------------------------
 
 (translation_unit)
+
+================================================================================
+Attributed else continuations
+================================================================================
+
+int f(int x) {
+  if (x < 0) {
+    return -1;
+#ifdef A
+  } else if (x == 0) [[likely]] {
+    return 0;
+#else
+  } else [[unlikely]] {
+    return 1;
+#endif
+  }
+  return 2;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (binary_expression
+            (identifier)
+            (number_literal)))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (condition_clause
+                (binary_expression
+                  (identifier)
+                  (number_literal)))
+              (attribute_declaration
+                (attribute
+                  (identifier))))
+            (return_statement
+              (number_literal))
+            (preproc_else
+              (else_continuation
+                (attribute_declaration
+                  (attribute
+                    (identifier))))
+              (return_statement
+                (number_literal))))))
+      (return_statement
+        (number_literal)))))
