@@ -681,10 +681,29 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
 
       // Unlike the inherited conditionals, each directive line must end before the branch, so that a seam written on the
       // directive line stays an error.
-      preproc_if_in_if_block: () => initializerIf(ifBlockBranch(true)),
+      preproc_if_in_if_block: () =>
+        prec(
+          1,
+          seq(
+            preprocessor('if'),
+            field('condition', sym('_preproc_expression')),
+            preprocExpressionNewline(),
+            ifBlockBranch(true),
+            preprocessor('endif')
+          )
+        ),
       preproc_ifdef_in_if_block: () => initializerIfdef(ifBlockBranch(true)),
       preproc_else_in_if_block: () => initializerElse(ifBlockBranch(false)),
-      preproc_elif_in_if_block: () => initializerElif(ifBlockBranch(true)),
+      preproc_elif_in_if_block: () =>
+        prec(
+          1,
+          seq(
+            preprocessor('elif'),
+            field('condition', sym('_preproc_expression')),
+            preprocExpressionNewline(),
+            ifBlockBranch(true)
+          )
+        ),
       preproc_elifdef_in_if_block: () => initializerElifdef(ifBlockBranch(true)),
 
       // A branch continues the chain with any number of `else if` seams and at most one plain `else` after them (see
@@ -3586,6 +3605,11 @@ function cppTypeSpecifier($, sized) {
 /** @param {NoInfer<GrammarSymbols<'condition_clause'>>} $ */
 function ifConditionHead($) {
   return seq(optional('constexpr'), field('condition', $.condition_clause));
+}
+
+/** The line end after a directive's expression, as the inherited conditionals spell it. */
+function preprocExpressionNewline() {
+  return alias(token(/\r\n?|\n\r?/), '\n');
 }
 
 function constevalHead() {

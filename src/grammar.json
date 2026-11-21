@@ -69035,551 +69035,511 @@
       }
     },
     "preproc_if_in_if_block": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "TOKEN",
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "ALIAS",
                 "content": {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "STRING",
-                          "value": "#"
-                        },
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "CHOICE",
-                            "members": [
-                              {
-                                "type": "PATTERN",
-                                "value": "[ \\t\\v\\f]"
-                              },
-                              {
-                                "type": "PATTERN",
-                                "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                              },
-                              {
-                                "type": "SEQ",
-                                "members": [
-                                  {
-                                    "type": "STRING",
-                                    "value": "/"
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": "#"
+                          },
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "PATTERN",
+                                  "value": "[ \\t\\v\\f]"
+                                },
+                                {
+                                  "type": "PATTERN",
+                                  "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                                },
+                                {
+                                  "type": "SEQ",
+                                  "members": [
+                                    {
+                                      "type": "STRING",
+                                      "value": "/"
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "PATTERN",
+                                        "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                                      }
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "*"
+                                    },
+                                    {
                                       "type": "PATTERN",
-                                      "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                                    }
-                                  },
-                                  {
-                                    "type": "STRING",
-                                    "value": "*"
-                                  },
-                                  {
-                                    "type": "PATTERN",
-                                    "value": "[^*]*"
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
-                                      "type": "SEQ",
-                                      "members": [
-                                        {
-                                          "type": "SEQ",
-                                          "members": [
-                                            {
-                                              "type": "STRING",
-                                              "value": "*"
-                                            },
-                                            {
-                                              "type": "REPEAT",
-                                              "content": {
-                                                "type": "CHOICE",
-                                                "members": [
-                                                  {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
+                                      "value": "[^*]*"
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "SEQ",
+                                        "members": [
+                                          {
+                                            "type": "SEQ",
+                                            "members": [
+                                              {
+                                                "type": "STRING",
+                                                "value": "*"
+                                              },
+                                              {
+                                                "type": "REPEAT",
+                                                "content": {
+                                                  "type": "CHOICE",
+                                                  "members": [
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "CHOICE",
                                                           "members": [
                                                             {
                                                               "type": "STRING",
-                                                              "value": "\\"
+                                                              "value": "*"
                                                             },
                                                             {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
+                                                              "type": "STRING",
+                                                              "value": "\\*"
                                                             }
                                                           ]
                                                         }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\\r"
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\n"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\\n"
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\r"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "CHOICE",
+                                            "members": [
+                                              {
+                                                "type": "PATTERN",
+                                                "value": "[^/*\\\\]"
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\"
+                                                  },
+                                                  {
+                                                    "type": "PATTERN",
+                                                    "value": "[^\\r\\n*]"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\r"
+                                                  },
+                                                  {
+                                                    "type": "CHOICE",
+                                                    "members": [
+                                                      {
+                                                        "type": "PATTERN",
+                                                        "value": "[^/*\\\\\\n]"
                                                       },
                                                       {
-                                                        "type": "CHOICE",
+                                                        "type": "SEQ",
                                                         "members": [
                                                           {
                                                             "type": "STRING",
-                                                            "value": "*"
+                                                            "value": "\\"
                                                           },
                                                           {
-                                                            "type": "STRING",
-                                                            "value": "\\*"
+                                                            "type": "PATTERN",
+                                                            "value": "[^\\r\\n*]"
                                                           }
                                                         ]
                                                       }
                                                     ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
                                                   },
                                                   {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
-                                                          "members": [
-                                                            {
-                                                              "type": "STRING",
-                                                              "value": "\\"
-                                                            },
-                                                            {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
-                                                            }
-                                                          ]
-                                                        }
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\\r"
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\n"
-                                                      }
-                                                    ]
+                                                    "type": "STRING",
+                                                    "value": "\\\n"
                                                   },
                                                   {
-                                                    "type": "SEQ",
+                                                    "type": "CHOICE",
                                                     "members": [
                                                       {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
-                                                          "members": [
-                                                            {
-                                                              "type": "STRING",
-                                                              "value": "\\"
-                                                            },
-                                                            {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
-                                                            }
-                                                          ]
-                                                        }
+                                                        "type": "PATTERN",
+                                                        "value": "[^/*\\\\\\r]"
                                                       },
                                                       {
-                                                        "type": "STRING",
-                                                        "value": "\\\n"
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\r"
+                                                        "type": "SEQ",
+                                                        "members": [
+                                                          {
+                                                            "type": "STRING",
+                                                            "value": "\\"
+                                                          },
+                                                          {
+                                                            "type": "PATTERN",
+                                                            "value": "[^\\r\\n*]"
+                                                          }
+                                                        ]
                                                       }
                                                     ]
                                                   }
                                                 ]
                                               }
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "CHOICE",
-                                          "members": [
-                                            {
-                                              "type": "PATTERN",
-                                              "value": "[^/*\\\\]"
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\"
-                                                },
-                                                {
-                                                  "type": "PATTERN",
-                                                  "value": "[^\\r\\n*]"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\r"
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "PATTERN",
-                                                      "value": "[^/*\\\\\\n]"
-                                                    },
-                                                    {
-                                                      "type": "SEQ",
-                                                      "members": [
-                                                        {
-                                                          "type": "STRING",
-                                                          "value": "\\"
-                                                        },
-                                                        {
-                                                          "type": "PATTERN",
-                                                          "value": "[^\\r\\n*]"
-                                                        }
-                                                      ]
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\n"
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "PATTERN",
-                                                      "value": "[^/*\\\\\\r]"
-                                                    },
-                                                    {
-                                                      "type": "SEQ",
-                                                      "members": [
-                                                        {
-                                                          "type": "STRING",
-                                                          "value": "\\"
-                                                        },
-                                                        {
-                                                          "type": "PATTERN",
-                                                          "value": "[^\\r\\n*]"
-                                                        }
-                                                      ]
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "PATTERN",
-                                          "value": "[^*]*"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "type": "SEQ",
-                                    "members": [
-                                      {
-                                        "type": "STRING",
-                                        "value": "*"
-                                      },
-                                      {
-                                        "type": "REPEAT",
-                                        "content": {
-                                          "type": "CHOICE",
-                                          "members": [
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "STRING",
-                                                      "value": "*"
-                                                    },
-                                                    {
-                                                      "type": "STRING",
-                                                      "value": "\\*"
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\r"
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\n"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\n"
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\r"
-                                                }
-                                              ]
-                                            }
-                                          ]
-                                        }
+                                            ]
+                                          },
+                                          {
+                                            "type": "PATTERN",
+                                            "value": "[^*]*"
+                                          }
+                                        ]
                                       }
-                                    ]
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
+                                    },
+                                    {
                                       "type": "SEQ",
                                       "members": [
                                         {
                                           "type": "STRING",
-                                          "value": "\\"
+                                          "value": "*"
                                         },
                                         {
-                                          "type": "PATTERN",
-                                          "value": "[\\r\\n]"
+                                          "type": "REPEAT",
+                                          "content": {
+                                            "type": "CHOICE",
+                                            "members": [
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "CHOICE",
+                                                    "members": [
+                                                      {
+                                                        "type": "STRING",
+                                                        "value": "*"
+                                                      },
+                                                      {
+                                                        "type": "STRING",
+                                                        "value": "\\*"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\r"
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\n"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\n"
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\r"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
                                         }
                                       ]
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "SEQ",
+                                        "members": [
+                                          {
+                                            "type": "STRING",
+                                            "value": "\\"
+                                          },
+                                          {
+                                            "type": "PATTERN",
+                                            "value": "[\\r\\n]"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "/"
                                     }
-                                  },
-                                  {
-                                    "type": "STRING",
-                                    "value": "/"
-                                  }
-                                ]
-                              }
-                            ]
+                                  ]
+                                }
+                              ]
+                            }
                           }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "STRING",
-                      "value": "i"
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                          }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "f"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              },
-              "named": false,
-              "value": "#if"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_preproc_directive_start"
-            }
-          ]
-        },
-        {
-          "type": "FIELD",
-          "name": "condition",
-          "content": {
-            "type": "SYMBOL",
-            "name": "_preproc_expression"
-          }
-        },
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "comment"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "pragma_operator"
-                  }
-                ]
-              }
-            },
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "_preproc_newline"
-              },
-              "named": false,
-              "value": "\n"
-            }
-          ]
-        },
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "_if_block_item"
-                  }
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SEQ",
-                    "members": [
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "_else_if_continuation"
-                        },
-                        "named": true,
-                        "value": "else_continuation"
+                        ]
                       },
                       {
-                        "type": "REPEAT",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "_if_block_item"
-                        }
+                        "type": "STRING",
+                        "value": "i"
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "f"
+                          }
+                        ]
                       }
                     ]
                   }
                 },
-                {
-                  "type": "CHOICE",
-                  "members": [
-                    {
+                "named": false,
+                "value": "#if"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_preproc_directive_start"
+              }
+            ]
+          },
+          {
+            "type": "FIELD",
+            "name": "condition",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_preproc_expression"
+            }
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "\\r\\n?|\\n\\r?"
+              }
+            },
+            "named": false,
+            "value": "\n"
+          },
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_if_block_item"
+                    }
+                  },
+                  {
+                    "type": "REPEAT",
+                    "content": {
                       "type": "SEQ",
                       "members": [
                         {
                           "type": "ALIAS",
                           "content": {
                             "type": "SYMBOL",
-                            "name": "_else_continuation"
+                            "name": "_else_if_continuation"
                           },
                           "named": true,
                           "value": "else_continuation"
@@ -69592,596 +69552,592 @@
                           }
                         }
                       ]
+                    }
+                  },
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "ALIAS",
+                            "content": {
+                              "type": "SYMBOL",
+                              "name": "_else_continuation"
+                            },
+                            "named": true,
+                            "value": "else_continuation"
+                          },
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "SYMBOL",
+                              "name": "_if_block_item"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "FIELD",
+                "name": "alternative",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "ALIAS",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "preproc_else_in_if_block"
+                          },
+                          "named": true,
+                          "value": "preproc_else"
+                        },
+                        {
+                          "type": "ALIAS",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "preproc_elif_in_if_block"
+                          },
+                          "named": true,
+                          "value": "preproc_elif"
+                        },
+                        {
+                          "type": "ALIAS",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "preproc_elifdef_in_if_block"
+                          },
+                          "named": true,
+                          "value": "preproc_elifdef"
+                        }
+                      ]
                     },
                     {
                       "type": "BLANK"
                     }
                   ]
                 }
-              ]
-            },
-            {
-              "type": "FIELD",
-              "name": "alternative",
-              "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "CHOICE",
+              }
+            ]
+          },
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "SEQ",
                     "members": [
                       {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "preproc_else_in_if_block"
-                        },
-                        "named": true,
-                        "value": "preproc_else"
-                      },
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "preproc_elif_in_if_block"
-                        },
-                        "named": true,
-                        "value": "preproc_elif"
-                      },
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "preproc_elifdef_in_if_block"
-                        },
-                        "named": true,
-                        "value": "preproc_elifdef"
-                      }
-                    ]
-                  },
-                  {
-                    "type": "BLANK"
-                  }
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "TOKEN",
-                "content": {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "STRING",
-                          "value": "#"
-                        },
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "CHOICE",
-                            "members": [
-                              {
-                                "type": "PATTERN",
-                                "value": "[ \\t\\v\\f]"
-                              },
-                              {
-                                "type": "PATTERN",
-                                "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                              },
-                              {
-                                "type": "SEQ",
-                                "members": [
-                                  {
-                                    "type": "STRING",
-                                    "value": "/"
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": "#"
+                          },
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "PATTERN",
+                                  "value": "[ \\t\\v\\f]"
+                                },
+                                {
+                                  "type": "PATTERN",
+                                  "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                                },
+                                {
+                                  "type": "SEQ",
+                                  "members": [
+                                    {
+                                      "type": "STRING",
+                                      "value": "/"
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "PATTERN",
+                                        "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                                      }
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "*"
+                                    },
+                                    {
                                       "type": "PATTERN",
-                                      "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                                    }
-                                  },
-                                  {
-                                    "type": "STRING",
-                                    "value": "*"
-                                  },
-                                  {
-                                    "type": "PATTERN",
-                                    "value": "[^*]*"
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
-                                      "type": "SEQ",
-                                      "members": [
-                                        {
-                                          "type": "SEQ",
-                                          "members": [
-                                            {
-                                              "type": "STRING",
-                                              "value": "*"
-                                            },
-                                            {
-                                              "type": "REPEAT",
-                                              "content": {
-                                                "type": "CHOICE",
-                                                "members": [
-                                                  {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
+                                      "value": "[^*]*"
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "SEQ",
+                                        "members": [
+                                          {
+                                            "type": "SEQ",
+                                            "members": [
+                                              {
+                                                "type": "STRING",
+                                                "value": "*"
+                                              },
+                                              {
+                                                "type": "REPEAT",
+                                                "content": {
+                                                  "type": "CHOICE",
+                                                  "members": [
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "CHOICE",
                                                           "members": [
                                                             {
                                                               "type": "STRING",
-                                                              "value": "\\"
+                                                              "value": "*"
                                                             },
                                                             {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
+                                                              "type": "STRING",
+                                                              "value": "\\*"
                                                             }
                                                           ]
                                                         }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\\r"
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\n"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\\n"
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\r"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "CHOICE",
+                                            "members": [
+                                              {
+                                                "type": "PATTERN",
+                                                "value": "[^/*\\\\]"
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\"
+                                                  },
+                                                  {
+                                                    "type": "PATTERN",
+                                                    "value": "[^\\r\\n*]"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\r"
+                                                  },
+                                                  {
+                                                    "type": "CHOICE",
+                                                    "members": [
+                                                      {
+                                                        "type": "PATTERN",
+                                                        "value": "[^/*\\\\\\n]"
                                                       },
                                                       {
-                                                        "type": "CHOICE",
+                                                        "type": "SEQ",
                                                         "members": [
                                                           {
                                                             "type": "STRING",
-                                                            "value": "*"
+                                                            "value": "\\"
                                                           },
                                                           {
-                                                            "type": "STRING",
-                                                            "value": "\\*"
+                                                            "type": "PATTERN",
+                                                            "value": "[^\\r\\n*]"
                                                           }
                                                         ]
                                                       }
                                                     ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
                                                   },
                                                   {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
-                                                          "members": [
-                                                            {
-                                                              "type": "STRING",
-                                                              "value": "\\"
-                                                            },
-                                                            {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
-                                                            }
-                                                          ]
-                                                        }
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\\r"
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\n"
-                                                      }
-                                                    ]
+                                                    "type": "STRING",
+                                                    "value": "\\\n"
                                                   },
                                                   {
-                                                    "type": "SEQ",
+                                                    "type": "CHOICE",
                                                     "members": [
                                                       {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
-                                                          "members": [
-                                                            {
-                                                              "type": "STRING",
-                                                              "value": "\\"
-                                                            },
-                                                            {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
-                                                            }
-                                                          ]
-                                                        }
+                                                        "type": "PATTERN",
+                                                        "value": "[^/*\\\\\\r]"
                                                       },
                                                       {
-                                                        "type": "STRING",
-                                                        "value": "\\\n"
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\r"
+                                                        "type": "SEQ",
+                                                        "members": [
+                                                          {
+                                                            "type": "STRING",
+                                                            "value": "\\"
+                                                          },
+                                                          {
+                                                            "type": "PATTERN",
+                                                            "value": "[^\\r\\n*]"
+                                                          }
+                                                        ]
                                                       }
                                                     ]
                                                   }
                                                 ]
                                               }
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "CHOICE",
-                                          "members": [
-                                            {
-                                              "type": "PATTERN",
-                                              "value": "[^/*\\\\]"
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\"
-                                                },
-                                                {
-                                                  "type": "PATTERN",
-                                                  "value": "[^\\r\\n*]"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\r"
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "PATTERN",
-                                                      "value": "[^/*\\\\\\n]"
-                                                    },
-                                                    {
-                                                      "type": "SEQ",
-                                                      "members": [
-                                                        {
-                                                          "type": "STRING",
-                                                          "value": "\\"
-                                                        },
-                                                        {
-                                                          "type": "PATTERN",
-                                                          "value": "[^\\r\\n*]"
-                                                        }
-                                                      ]
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\n"
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "PATTERN",
-                                                      "value": "[^/*\\\\\\r]"
-                                                    },
-                                                    {
-                                                      "type": "SEQ",
-                                                      "members": [
-                                                        {
-                                                          "type": "STRING",
-                                                          "value": "\\"
-                                                        },
-                                                        {
-                                                          "type": "PATTERN",
-                                                          "value": "[^\\r\\n*]"
-                                                        }
-                                                      ]
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "PATTERN",
-                                          "value": "[^*]*"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "type": "SEQ",
-                                    "members": [
-                                      {
-                                        "type": "STRING",
-                                        "value": "*"
-                                      },
-                                      {
-                                        "type": "REPEAT",
-                                        "content": {
-                                          "type": "CHOICE",
-                                          "members": [
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "STRING",
-                                                      "value": "*"
-                                                    },
-                                                    {
-                                                      "type": "STRING",
-                                                      "value": "\\*"
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\r"
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\n"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\n"
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\r"
-                                                }
-                                              ]
-                                            }
-                                          ]
-                                        }
+                                            ]
+                                          },
+                                          {
+                                            "type": "PATTERN",
+                                            "value": "[^*]*"
+                                          }
+                                        ]
                                       }
-                                    ]
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
+                                    },
+                                    {
                                       "type": "SEQ",
                                       "members": [
                                         {
                                           "type": "STRING",
-                                          "value": "\\"
+                                          "value": "*"
                                         },
                                         {
-                                          "type": "PATTERN",
-                                          "value": "[\\r\\n]"
+                                          "type": "REPEAT",
+                                          "content": {
+                                            "type": "CHOICE",
+                                            "members": [
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "CHOICE",
+                                                    "members": [
+                                                      {
+                                                        "type": "STRING",
+                                                        "value": "*"
+                                                      },
+                                                      {
+                                                        "type": "STRING",
+                                                        "value": "\\*"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\r"
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\n"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\n"
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\r"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
                                         }
                                       ]
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "SEQ",
+                                        "members": [
+                                          {
+                                            "type": "STRING",
+                                            "value": "\\"
+                                          },
+                                          {
+                                            "type": "PATTERN",
+                                            "value": "[\\r\\n]"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "/"
                                     }
-                                  },
-                                  {
-                                    "type": "STRING",
-                                    "value": "/"
-                                  }
-                                ]
-                              }
-                            ]
+                                  ]
+                                }
+                              ]
+                            }
                           }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "STRING",
-                      "value": "e"
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                        ]
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "e"
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "n"
                           }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "n"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                        ]
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "d"
                           }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "d"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                        ]
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "i"
                           }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "i"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                        ]
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "f"
                           }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "f"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              },
-              "named": false,
-              "value": "#endif"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_preproc_directive_start"
-            }
-          ]
-        },
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "comment"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "pragma_operator"
+                        ]
+                      }
+                    ]
                   }
-                ]
-              }
-            },
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "_preproc_newline"
+                },
+                "named": false,
+                "value": "#endif"
               },
-              "named": false,
-              "value": "\n"
-            }
-          ]
-        }
-      ]
+              {
+                "type": "SYMBOL",
+                "name": "_preproc_directive_start"
+              }
+            ]
+          }
+        ]
+      }
     },
     "preproc_ifdef_in_if_block": {
       "type": "SEQ",
@@ -72496,583 +72452,543 @@
       ]
     },
     "preproc_elif_in_if_block": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "TOKEN",
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "ALIAS",
                 "content": {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "STRING",
-                          "value": "#"
-                        },
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "CHOICE",
-                            "members": [
-                              {
-                                "type": "PATTERN",
-                                "value": "[ \\t\\v\\f]"
-                              },
-                              {
-                                "type": "PATTERN",
-                                "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                              },
-                              {
-                                "type": "SEQ",
-                                "members": [
-                                  {
-                                    "type": "STRING",
-                                    "value": "/"
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": "#"
+                          },
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "PATTERN",
+                                  "value": "[ \\t\\v\\f]"
+                                },
+                                {
+                                  "type": "PATTERN",
+                                  "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                                },
+                                {
+                                  "type": "SEQ",
+                                  "members": [
+                                    {
+                                      "type": "STRING",
+                                      "value": "/"
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "PATTERN",
+                                        "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                                      }
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "*"
+                                    },
+                                    {
                                       "type": "PATTERN",
-                                      "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                                    }
-                                  },
-                                  {
-                                    "type": "STRING",
-                                    "value": "*"
-                                  },
-                                  {
-                                    "type": "PATTERN",
-                                    "value": "[^*]*"
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
-                                      "type": "SEQ",
-                                      "members": [
-                                        {
-                                          "type": "SEQ",
-                                          "members": [
-                                            {
-                                              "type": "STRING",
-                                              "value": "*"
-                                            },
-                                            {
-                                              "type": "REPEAT",
-                                              "content": {
-                                                "type": "CHOICE",
-                                                "members": [
-                                                  {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
+                                      "value": "[^*]*"
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "SEQ",
+                                        "members": [
+                                          {
+                                            "type": "SEQ",
+                                            "members": [
+                                              {
+                                                "type": "STRING",
+                                                "value": "*"
+                                              },
+                                              {
+                                                "type": "REPEAT",
+                                                "content": {
+                                                  "type": "CHOICE",
+                                                  "members": [
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "CHOICE",
                                                           "members": [
                                                             {
                                                               "type": "STRING",
-                                                              "value": "\\"
+                                                              "value": "*"
                                                             },
                                                             {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
+                                                              "type": "STRING",
+                                                              "value": "\\*"
                                                             }
                                                           ]
                                                         }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\\r"
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\n"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "REPEAT",
+                                                          "content": {
+                                                            "type": "SEQ",
+                                                            "members": [
+                                                              {
+                                                                "type": "STRING",
+                                                                "value": "\\"
+                                                              },
+                                                              {
+                                                                "type": "PATTERN",
+                                                                "value": "[\\r\\n]"
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\\n"
+                                                        },
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\r"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "CHOICE",
+                                            "members": [
+                                              {
+                                                "type": "PATTERN",
+                                                "value": "[^/*\\\\]"
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\"
+                                                  },
+                                                  {
+                                                    "type": "PATTERN",
+                                                    "value": "[^\\r\\n*]"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\r"
+                                                  },
+                                                  {
+                                                    "type": "CHOICE",
+                                                    "members": [
+                                                      {
+                                                        "type": "PATTERN",
+                                                        "value": "[^/*\\\\\\n]"
                                                       },
                                                       {
-                                                        "type": "CHOICE",
+                                                        "type": "SEQ",
                                                         "members": [
                                                           {
                                                             "type": "STRING",
-                                                            "value": "*"
+                                                            "value": "\\"
                                                           },
                                                           {
-                                                            "type": "STRING",
-                                                            "value": "\\*"
+                                                            "type": "PATTERN",
+                                                            "value": "[^\\r\\n*]"
                                                           }
                                                         ]
                                                       }
                                                     ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
                                                   },
                                                   {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
-                                                          "members": [
-                                                            {
-                                                              "type": "STRING",
-                                                              "value": "\\"
-                                                            },
-                                                            {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
-                                                            }
-                                                          ]
-                                                        }
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\\r"
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\n"
-                                                      }
-                                                    ]
+                                                    "type": "STRING",
+                                                    "value": "\\\n"
                                                   },
                                                   {
-                                                    "type": "SEQ",
+                                                    "type": "CHOICE",
                                                     "members": [
                                                       {
-                                                        "type": "REPEAT",
-                                                        "content": {
-                                                          "type": "SEQ",
-                                                          "members": [
-                                                            {
-                                                              "type": "STRING",
-                                                              "value": "\\"
-                                                            },
-                                                            {
-                                                              "type": "PATTERN",
-                                                              "value": "[\\r\\n]"
-                                                            }
-                                                          ]
-                                                        }
+                                                        "type": "PATTERN",
+                                                        "value": "[^/*\\\\\\r]"
                                                       },
                                                       {
-                                                        "type": "STRING",
-                                                        "value": "\\\n"
-                                                      },
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\r"
+                                                        "type": "SEQ",
+                                                        "members": [
+                                                          {
+                                                            "type": "STRING",
+                                                            "value": "\\"
+                                                          },
+                                                          {
+                                                            "type": "PATTERN",
+                                                            "value": "[^\\r\\n*]"
+                                                          }
+                                                        ]
                                                       }
                                                     ]
                                                   }
                                                 ]
                                               }
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "CHOICE",
-                                          "members": [
-                                            {
-                                              "type": "PATTERN",
-                                              "value": "[^/*\\\\]"
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\"
-                                                },
-                                                {
-                                                  "type": "PATTERN",
-                                                  "value": "[^\\r\\n*]"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\r"
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "PATTERN",
-                                                      "value": "[^/*\\\\\\n]"
-                                                    },
-                                                    {
-                                                      "type": "SEQ",
-                                                      "members": [
-                                                        {
-                                                          "type": "STRING",
-                                                          "value": "\\"
-                                                        },
-                                                        {
-                                                          "type": "PATTERN",
-                                                          "value": "[^\\r\\n*]"
-                                                        }
-                                                      ]
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\n"
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "PATTERN",
-                                                      "value": "[^/*\\\\\\r]"
-                                                    },
-                                                    {
-                                                      "type": "SEQ",
-                                                      "members": [
-                                                        {
-                                                          "type": "STRING",
-                                                          "value": "\\"
-                                                        },
-                                                        {
-                                                          "type": "PATTERN",
-                                                          "value": "[^\\r\\n*]"
-                                                        }
-                                                      ]
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "PATTERN",
-                                          "value": "[^*]*"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "type": "SEQ",
-                                    "members": [
-                                      {
-                                        "type": "STRING",
-                                        "value": "*"
-                                      },
-                                      {
-                                        "type": "REPEAT",
-                                        "content": {
-                                          "type": "CHOICE",
-                                          "members": [
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "CHOICE",
-                                                  "members": [
-                                                    {
-                                                      "type": "STRING",
-                                                      "value": "*"
-                                                    },
-                                                    {
-                                                      "type": "STRING",
-                                                      "value": "\\*"
-                                                    }
-                                                  ]
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\r"
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\n"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "SEQ",
-                                              "members": [
-                                                {
-                                                  "type": "REPEAT",
-                                                  "content": {
-                                                    "type": "SEQ",
-                                                    "members": [
-                                                      {
-                                                        "type": "STRING",
-                                                        "value": "\\"
-                                                      },
-                                                      {
-                                                        "type": "PATTERN",
-                                                        "value": "[\\r\\n]"
-                                                      }
-                                                    ]
-                                                  }
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\\\n"
-                                                },
-                                                {
-                                                  "type": "STRING",
-                                                  "value": "\r"
-                                                }
-                                              ]
-                                            }
-                                          ]
-                                        }
+                                            ]
+                                          },
+                                          {
+                                            "type": "PATTERN",
+                                            "value": "[^*]*"
+                                          }
+                                        ]
                                       }
-                                    ]
-                                  },
-                                  {
-                                    "type": "REPEAT",
-                                    "content": {
+                                    },
+                                    {
                                       "type": "SEQ",
                                       "members": [
                                         {
                                           "type": "STRING",
-                                          "value": "\\"
+                                          "value": "*"
                                         },
                                         {
-                                          "type": "PATTERN",
-                                          "value": "[\\r\\n]"
+                                          "type": "REPEAT",
+                                          "content": {
+                                            "type": "CHOICE",
+                                            "members": [
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "CHOICE",
+                                                    "members": [
+                                                      {
+                                                        "type": "STRING",
+                                                        "value": "*"
+                                                      },
+                                                      {
+                                                        "type": "STRING",
+                                                        "value": "\\*"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\r"
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\n"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "SEQ",
+                                                "members": [
+                                                  {
+                                                    "type": "REPEAT",
+                                                    "content": {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "STRING",
+                                                          "value": "\\"
+                                                        },
+                                                        {
+                                                          "type": "PATTERN",
+                                                          "value": "[\\r\\n]"
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\\\n"
+                                                  },
+                                                  {
+                                                    "type": "STRING",
+                                                    "value": "\r"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
                                         }
                                       ]
+                                    },
+                                    {
+                                      "type": "REPEAT",
+                                      "content": {
+                                        "type": "SEQ",
+                                        "members": [
+                                          {
+                                            "type": "STRING",
+                                            "value": "\\"
+                                          },
+                                          {
+                                            "type": "PATTERN",
+                                            "value": "[\\r\\n]"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "STRING",
+                                      "value": "/"
                                     }
-                                  },
-                                  {
-                                    "type": "STRING",
-                                    "value": "/"
-                                  }
-                                ]
-                              }
-                            ]
+                                  ]
+                                }
+                              ]
+                            }
                           }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "STRING",
-                      "value": "e"
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                          }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "l"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                          }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "i"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "SEQ",
-                      "members": [
-                        {
-                          "type": "REPEAT",
-                          "content": {
-                            "type": "PATTERN",
-                            "value": "\\\\(?:\\r\\n?|\\n\\r?)"
-                          }
-                        },
-                        {
-                          "type": "STRING",
-                          "value": "f"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              },
-              "named": false,
-              "value": "#elif"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_preproc_directive_start"
-            }
-          ]
-        },
-        {
-          "type": "FIELD",
-          "name": "condition",
-          "content": {
-            "type": "SYMBOL",
-            "name": "_preproc_expression"
-          }
-        },
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "comment"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "pragma_operator"
-                  }
-                ]
-              }
-            },
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "_preproc_newline"
-              },
-              "named": false,
-              "value": "\n"
-            }
-          ]
-        },
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "_if_block_item"
-                  }
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SEQ",
-                    "members": [
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "_else_if_continuation"
-                        },
-                        "named": true,
-                        "value": "else_continuation"
+                        ]
                       },
                       {
-                        "type": "REPEAT",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "_if_block_item"
-                        }
+                        "type": "STRING",
+                        "value": "e"
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "l"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "i"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "PATTERN",
+                              "value": "\\\\(?:\\r\\n?|\\n\\r?)"
+                            }
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "f"
+                          }
+                        ]
                       }
                     ]
                   }
                 },
-                {
-                  "type": "CHOICE",
-                  "members": [
-                    {
+                "named": false,
+                "value": "#elif"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_preproc_directive_start"
+              }
+            ]
+          },
+          {
+            "type": "FIELD",
+            "name": "condition",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_preproc_expression"
+            }
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "\\r\\n?|\\n\\r?"
+              }
+            },
+            "named": false,
+            "value": "\n"
+          },
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_if_block_item"
+                    }
+                  },
+                  {
+                    "type": "REPEAT",
+                    "content": {
                       "type": "SEQ",
                       "members": [
                         {
                           "type": "ALIAS",
                           "content": {
                             "type": "SYMBOL",
-                            "name": "_else_continuation"
+                            "name": "_else_if_continuation"
                           },
                           "named": true,
                           "value": "else_continuation"
@@ -73085,61 +73001,87 @@
                           }
                         }
                       ]
+                    }
+                  },
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "ALIAS",
+                            "content": {
+                              "type": "SYMBOL",
+                              "name": "_else_continuation"
+                            },
+                            "named": true,
+                            "value": "else_continuation"
+                          },
+                          {
+                            "type": "REPEAT",
+                            "content": {
+                              "type": "SYMBOL",
+                              "name": "_if_block_item"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "FIELD",
+                "name": "alternative",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "ALIAS",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "preproc_else_in_if_block"
+                          },
+                          "named": true,
+                          "value": "preproc_else"
+                        },
+                        {
+                          "type": "ALIAS",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "preproc_elif_in_if_block"
+                          },
+                          "named": true,
+                          "value": "preproc_elif"
+                        },
+                        {
+                          "type": "ALIAS",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "preproc_elifdef_in_if_block"
+                          },
+                          "named": true,
+                          "value": "preproc_elifdef"
+                        }
+                      ]
                     },
                     {
                       "type": "BLANK"
                     }
                   ]
                 }
-              ]
-            },
-            {
-              "type": "FIELD",
-              "name": "alternative",
-              "content": {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "CHOICE",
-                    "members": [
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "preproc_else_in_if_block"
-                        },
-                        "named": true,
-                        "value": "preproc_else"
-                      },
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "preproc_elif_in_if_block"
-                        },
-                        "named": true,
-                        "value": "preproc_elif"
-                      },
-                      {
-                        "type": "ALIAS",
-                        "content": {
-                          "type": "SYMBOL",
-                          "name": "preproc_elifdef_in_if_block"
-                        },
-                        "named": true,
-                        "value": "preproc_elifdef"
-                      }
-                    ]
-                  },
-                  {
-                    "type": "BLANK"
-                  }
-                ]
               }
-            }
-          ]
-        }
-      ]
+            ]
+          }
+        ]
+      }
     },
     "preproc_elifdef_in_if_block": {
       "type": "SEQ",
