@@ -9,20 +9,23 @@ typedef struct {
     // Excludes unknown type aliases and marker names; recognized C type/modifier prefixes are unchanged.
     const char *const *reserved_words;
     unsigned reserved_word_count;
+    bool (*skip_empty)(TSLexer *, void *);
+    void *empty_context;
 } ConditionalMacroSymbols;
 
 static bool conditional_macro_body(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 static bool conditional_macro_word(TSLexer *lexer, MacroName *name, bool escaped);
-static bool conditional_macro_spacing(TSLexer *lexer, bool *separated, bool *escaped);
-static bool conditional_macro_next_line(TSLexer *lexer, bool *escaped);
+static bool conditional_macro_spacing(TSLexer *lexer, bool *separated, bool *escaped, bool directive);
+static bool conditional_macro_space(int32_t c, bool directive);
+static bool conditional_macro_next_line(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 static bool conditional_macro_directive(TSLexer *lexer, MacroName *name);
 static bool conditional_macro_marker_line(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 static bool conditional_macro_closing(TSLexer *lexer);
 static bool conditional_macro_type_prefix(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool escaped);
-static bool conditional_macro_skip_lines(TSLexer *lexer, bool *escaped);
+static bool conditional_macro_skip_lines(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 static bool conditional_macro_reserved_word(const ConditionalMacroSymbols *symbols, const char *word);
-static bool conditional_macro_modifier_group(TSLexer *lexer, const char *word, bool *escaped);
-static bool conditional_macro_attribute_declaration(TSLexer *lexer, bool *escaped);
+static bool conditional_macro_modifier_group(TSLexer *lexer, const ConditionalMacroSymbols *symbols, const char *word, bool *escaped);
+static bool conditional_macro_attribute_declaration(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 
 static bool scan_conditional_macro(TSLexer *lexer, const ConditionalMacroSymbols *symbols, const bool *valid_symbols) {
     char directive[7] = {0};
@@ -50,10 +53,10 @@ static bool scan_conditional_macro(TSLexer *lexer, const ConditionalMacroSymbols
 static bool conditional_macro_body(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     bool separated = false;
     MacroName condition = {.ascii = true};
-    if (!conditional_macro_spacing(lexer, &separated, escaped) || !separated ||
-        !conditional_macro_word(lexer, &condition, *escaped) || !conditional_macro_next_line(lexer, escaped)) return false;
+    if (!conditional_macro_spacing(lexer, &separated, escaped, false) || !separated ||
+        !conditional_macro_word(lexer, &condition, *escaped) || !conditional_macro_next_line(lexer, symbols, escaped)) return false;
     if (!conditional_macro_marker_line(lexer, symbols, escaped) || !conditional_macro_closing(lexer)) return false;
-    return conditional_macro_skip_lines(lexer, escaped) && !lexer->eof(lexer) && lexer->lookahead != '#';
+    return conditional_macro_skip_lines(lexer, symbols, escaped) && !pragma_eof(lexer) && lexer->lookahead != '#';
 }
 
 static bool conditional_macro_closing(TSLexer *lexer) {
@@ -63,8 +66,8 @@ static bool conditional_macro_closing(TSLexer *lexer) {
         return false;
     bool separated = false;
     bool escaped = false;
-    if (!conditional_macro_spacing(lexer, &separated, &escaped)) return false;
-    return !escaped && (lexer->eof(lexer) || lexer->lookahead == '\n' || lexer->lookahead == '\r');
+    if (!conditional_macro_spacing(lexer, &separated, &escaped, false)) return false;
+    return !escaped && (pragma_eof(lexer) || lexer->lookahead == '\n' || lexer->lookahead == '\r');
 }
 
 
@@ -91,17 +94,17 @@ static bool conditional_macro_type_prefix(TSLexer *lexer, const ConditionalMacro
 
 static ConditionalMacroPrefix conditional_macro_prefix(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     if (lexer->lookahead == '[') {
-        return conditional_macro_attribute_declaration(lexer, escaped) ? CONDITIONAL_MODIFIER : CONDITIONAL_INVALID;
+        return conditional_macro_attribute_declaration(lexer, symbols, escaped) ? CONDITIONAL_MODIFIER : CONDITIONAL_INVALID;
     }
     char word[FUNCTION_MACRO_KEYWORD_MAX_LENGTH + 1] = {0};
     MacroName type = {.word = word, .capacity = sizeof(word) - 1, .ascii = true};
     if (!conditional_macro_word(lexer, &type, *escaped)) return CONDITIONAL_INVALID;
     ConditionalMacroPrefix kind = conditional_macro_prefix_kind(symbols, &type, word);
     if (kind == CONDITIONAL_TYPE) return kind;
-    if (!conditional_macro_skip_lines(lexer, escaped)) return CONDITIONAL_INVALID;
+    if (!conditional_macro_skip_lines(lexer, symbols, escaped)) return CONDITIONAL_INVALID;
     if (kind == CONDITIONAL_TYPE_MODIFIER && lexer->lookahead == '(') return CONDITIONAL_TYPE;
     if (kind == CONDITIONAL_MODIFIER || kind == CONDITIONAL_TYPE_MODIFIER) {
-        return conditional_macro_modifier_group(lexer, word, escaped) ? CONDITIONAL_MODIFIER : CONDITIONAL_INVALID;
+        return conditional_macro_modifier_group(lexer, symbols, word, escaped) ? CONDITIONAL_MODIFIER : CONDITIONAL_INVALID;
     }
     return kind;
 }
@@ -129,29 +132,30 @@ static bool conditional_macro_reserved_word(const ConditionalMacroSymbols *symbo
     return false;
 }
 
-static bool conditional_macro_modifier_group(TSLexer *lexer, const char *word, bool *escaped) {
+static bool conditional_macro_modifier_group(TSLexer *lexer, const ConditionalMacroSymbols *symbols, const char *word, bool *escaped) {
     bool grouped = strcmp(word, pragma_word) == 0 || function_macro_word_in(word, function_macro_group_modifiers,
         sizeof(function_macro_group_modifiers) / sizeof(function_macro_group_modifiers[0]));
     if (!grouped || lexer->lookahead != '(') return true;
     bool literal = false;
-    return function_macro_balanced(lexer, '(', ')', &literal) && conditional_macro_skip_lines(lexer, escaped);
+    return function_macro_balanced(lexer, '(', ')', &literal, NULL, &(PragmaTrivia){symbols->skip_empty, symbols->empty_context}) && conditional_macro_skip_lines(lexer, symbols, escaped);
 }
 
-static bool conditional_macro_attribute_declaration(TSLexer *lexer, bool *escaped) {
+static bool conditional_macro_attribute_declaration(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     lexer->advance(lexer, false);
-    if (!conditional_macro_skip_lines(lexer, escaped) || lexer->lookahead != '[') return false;
+    if (!conditional_macro_skip_lines(lexer, symbols, escaped) || lexer->lookahead != '[') return false;
     bool literal = false;
-    if (!function_macro_balanced(lexer, '[', ']', &literal) ||
-        !conditional_macro_skip_lines(lexer, escaped) || lexer->lookahead != ']') return false;
+    if (!function_macro_balanced(lexer, '[', ']', &literal, NULL, &(PragmaTrivia){symbols->skip_empty, symbols->empty_context}) ||
+        !conditional_macro_skip_lines(lexer, symbols, escaped) || lexer->lookahead != ']') return false;
     lexer->advance(lexer, false);
-    return conditional_macro_skip_lines(lexer, escaped);
+    return conditional_macro_skip_lines(lexer, symbols, escaped);
 }
 
-static bool conditional_macro_skip_lines(TSLexer *lexer, bool *escaped) {
+static bool conditional_macro_skip_lines(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     bool separated = false;
     for (;;) {
         *escaped = false;
-        if (!conditional_macro_spacing(lexer, &separated, escaped)) return false;
+        if (!conditional_macro_spacing(lexer, &separated, escaped, false)) return false;
+        if (symbols->skip_empty && symbols->skip_empty(lexer, symbols->empty_context)) continue;
         if (*escaped || !scan_preproc_newline(lexer, false)) return true;
     }
 }
@@ -161,31 +165,34 @@ static bool conditional_macro_marker_line(TSLexer *lexer, const ConditionalMacro
     MacroName marker = {.word = word, .capacity = sizeof(word) - 1, .ascii = true};
     if (!conditional_macro_word(lexer, &marker, *escaped) ||
         (marker.ascii && (function_macro_keyword(word) || conditional_macro_reserved_word(symbols, word)))) return false;
-    return conditional_macro_next_line(lexer, escaped);
+    return conditional_macro_next_line(lexer, symbols, escaped);
 }
 
 static bool conditional_macro_directive(TSLexer *lexer, MacroName *name) {
     if (lexer->lookahead != '#') return false;
     lexer->advance(lexer, false);
-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') lexer->advance(lexer, false);
-    return conditional_macro_word(lexer, name, false);
+    bool separated = false;
+    bool escaped = false;
+    return conditional_macro_spacing(lexer, &separated, &escaped, true) && !escaped &&
+        conditional_macro_word(lexer, name, false);
 }
 
-static bool conditional_macro_next_line(TSLexer *lexer, bool *escaped) {
+static bool conditional_macro_next_line(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped) {
     bool separated = false;
     *escaped = false;
-    if (!conditional_macro_spacing(lexer, &separated, escaped) || *escaped ||
+    if (!conditional_macro_spacing(lexer, &separated, escaped, false) || *escaped ||
         !scan_preproc_newline(lexer, false)) return false;
     for (;;) {
-        if (!conditional_macro_spacing(lexer, &separated, escaped) || lexer->eof(lexer)) return false;
+        if (!conditional_macro_spacing(lexer, &separated, escaped, false) || pragma_eof(lexer)) return false;
+        if (symbols->skip_empty && symbols->skip_empty(lexer, symbols->empty_context)) continue;
         if (*escaped || !scan_preproc_newline(lexer, false)) return true;
     }
 }
 
-static bool conditional_macro_spacing(TSLexer *lexer, bool *separated, bool *escaped) {
+static bool conditional_macro_spacing(TSLexer *lexer, bool *separated, bool *escaped, bool directive) {
     while (lexer->lookahead != '\n' && lexer->lookahead != '\r') {
         int32_t c = lexer->lookahead;
-        if (pragma_space(c)) {
+        if (conditional_macro_space(c, directive)) {
             *separated = true;
             lexer->advance(lexer, false);
             continue;
@@ -204,6 +211,10 @@ static bool conditional_macro_spacing(TSLexer *lexer, bool *separated, bool *esc
     return true;
 }
 
+static bool conditional_macro_space(int32_t c, bool directive) {
+    return directive ? c == ' ' || c == '\t' || c == '\v' || c == '\f' : pragma_space(c);
+}
+
 static bool conditional_macro_word(TSLexer *lexer, MacroName *name, bool escaped) {
     bool has_name = escaped;
     if (escaped) {
@@ -213,9 +224,7 @@ static bool conditional_macro_word(TSLexer *lexer, MacroName *name, bool escaped
     for (;;) {
         MacroNameCharacter character = scan_macro_name_character(lexer, has_name, name);
         if (character == MACRO_NAME_END) return has_name;
-        if (character == MACRO_NAME_SPLICE) {
-            return has_name && lexer->lookahead != '\\' && !preproc_word(lexer->lookahead, true);
-        }
+        if (character == MACRO_NAME_SPLICE) continue;
         if (character != MACRO_NAME_CHARACTER) return false;
         has_name = true;
     }

@@ -51,7 +51,16 @@ function scannerDependencies(): string[] {
 }
 
 test('keeps vendored C scanner headers synchronized with the installed dependency', () => {
-  for (const file of ['pragma.h', 'identifier.h', 'keywords.h', 'functionMacro.h', 'conditionalMacro.h']) {
+  for (const file of [
+    'pragma.h',
+    'identifier.h',
+    'keywords.h',
+    'functionMacro.h',
+    'macroProof.h',
+    'conditionalMacro.h',
+    'emptyDirectives.h',
+    'gnuRawString.h',
+  ]) {
     expect(fs.readFileSync(path.join(Root, 'src', file)), `${file} differs; run script/copy-c-scanner`).toEqual(
       fs.readFileSync(path.join(Root, 'node_modules/@willbooster/tree-sitter-c/src', file))
     );

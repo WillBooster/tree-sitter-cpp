@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-for header in pragma.h identifier.h keywords.h functionMacro.h conditionalMacro.h; do
+for header in pragma.h identifier.h keywords.h functionMacro.h macroProof.h conditionalMacro.h emptyDirectives.h gnuRawString.h; do
   cp "node_modules/@willbooster/tree-sitter-c/src/$header" src/
 done
