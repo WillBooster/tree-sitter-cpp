@@ -91296,10 +91296,6 @@
           "members": [
             {
               "type": "STRING",
-              "value": "_Bool"
-            },
-            {
-              "type": "STRING",
               "value": "size_t"
             },
             {

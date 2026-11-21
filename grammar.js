@@ -1154,8 +1154,9 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       _typedef_primitive_type: () => {
         const original = C.grammar.rules.primitive_type;
         if (original.type !== 'TOKEN') throw new Error('Expected an inherited primitive type token.');
+        // C's `_Bool` is a reserved identifier in C++, where implementations may define it as a macro.
         const typedefNames = ruleMembers(original.content, 'CHOICE').filter(
-          (rule) => rule.type !== 'STRING' || !BUILTIN_TYPE_KEYWORDS.includes(rule.value)
+          (rule) => rule.type !== 'STRING' || ![...BUILTIN_TYPE_KEYWORDS, '_Bool'].includes(rule.value)
         );
         return token(prec(1, choice(...typedefNames)));
       },
