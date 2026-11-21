@@ -137,64 +137,8 @@ const BUILTIN_TYPE_KEYWORDS = [
 const preprocIf = C.preprocIf;
 const preprocessor = C.preprocessor;
 
-// Every keyword of the grammar that `MACRO_CASE_IDENTIFIER` would otherwise spell.
-const MACRO_CASE_KEYWORDS = [
-  'NULL',
-  '__alignof',
-  '__alignof__',
-  '__asm',
-  '__asm__',
-  '__attribute',
-  '__attribute__',
-  '__based',
-  '__builtin_available',
-  '__builtin_va_arg',
-  '__cdecl',
-  '__clrcall',
-  '__complex__',
-  '__declspec',
-  '__except',
-  '__extension__',
-  '__fastcall',
-  '__finally',
-  '__forceinline',
-  '__inline',
-  '__inline__',
-  '__leave',
-  '__ptr32',
-  '__ptr64',
-  '__restrict',
-  '__restrict__',
-  '__sptr',
-  '__stdcall',
-  '__thiscall',
-  '__thread',
-  '__try',
-  '__typeof',
-  '__typeof__',
-  '__typeof_unqual',
-  '__typeof_unqual__',
-  '__unaligned',
-  '__uptr',
-  '__vectorcall',
-  '__volatile__',
-];
-const UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const IDENTIFIER_CHARACTERS = `${UPPER_CASE}abcdefghijklmnopqrstuvwxyz0123456789_`;
-const MACRO_CASE_IDENTIFIER = new RegExp(
-  `${identifierExcept(
-    ['', ...MACRO_CASE_KEYWORDS.filter((keyword) => !keyword.startsWith('__'))],
-    `${UPPER_CASE}_`,
-    `${UPPER_CASE}0123456789_`
-  )}|__${identifierExcept(
-    MACRO_CASE_KEYWORDS.filter((keyword) => keyword.startsWith('__')).map((keyword) => keyword.slice(2)),
-    IDENTIFIER_CHARACTERS,
-    IDENTIFIER_CHARACTERS
-  )}`
-);
-
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
-module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
+module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
   grammar(C, {
     name: 'cpp',
 
@@ -585,10 +529,6 @@ module.exports = assertMacroCaseIdentifierSpellsNoKeyword(
     reserved: { global: () => [], marker: ($) => [$._typedef_primitive_type, $._non_pack_builtin_type] },
 
     rules: {
-      // The C grammar declares this rule right before `identifier`, so overriding it keeps the rule order that settles
-      // names both match in full; keywords lex through `identifier`, the word token.
-      _macro_case_identifier: () => MACRO_CASE_IDENTIFIER,
-
       _top_level_expression_statement: ($, original = missingOriginalRule()) =>
         choice(
           original,
@@ -3427,65 +3367,6 @@ function callArgumentList($, extra) {
     ),
     ')'
   );
-}
-
-/**
- * Returns a regular expression source that matches every string of a character in `first` followed by characters in
- * `rest`, the empty string included, except the given words.
- * @param {string[]} words
- * @param {string} first
- * @param {string} rest
- * @returns {string}
- */
-function identifierExcept(words, first, rest) {
-  /** @type {Map<string, string[]>} */
-  const byFirst = new Map();
-  let excludesEmpty = false;
-  for (const word of words) {
-    if (word === '') {
-      excludesEmpty = true;
-      continue;
-    }
-    const character = word.charAt(0);
-    byFirst.set(character, [...(byFirst.get(character) ?? []), word.slice(1)]);
-  }
-  const others = first
-    .split('')
-    .filter((character) => !byFirst.has(character))
-    .join('');
-  const alternatives = [`[${others}][${rest}]*`];
-  for (const [character, rests] of byFirst) alternatives.push(`${character}${identifierExcept(rests, rest, rest)}`);
-  return `(?:${alternatives.join('|')})${excludesEmpty ? '' : '?'}`;
-}
-
-/**
- * Throws when `_macro_case_identifier` matches a keyword of the grammar in full, since it would take the keyword's place
- * wherever both are valid. Returns the grammar unchanged.
- * @template T
- * @param {T} grammar
- * @returns {T}
- */
-function assertMacroCaseIdentifierSpellsNoKeyword(grammar) {
-  const whole = new RegExp(`^(?:${MACRO_CASE_IDENTIFIER.source})$`);
-  for (const keyword of keywordStrings(grammar)) {
-    if (whole.test(keyword)) {
-      throw new Error(`_macro_case_identifier spells the keyword ${keyword}; add it to MACRO_CASE_KEYWORDS`);
-    }
-  }
-  return grammar;
-}
-
-/**
- * Yields the string literals of a grammar outside `token(...)`, which are the candidates for keywords.
- * @param {unknown} node
- * @returns {Generator<string>}
- */
-function* keywordStrings(node) {
-  if (!node || typeof node !== 'object') return;
-  const record = /** @type {Record<string, unknown>} */ (node);
-  if (record.type === 'TOKEN' || record.type === 'IMMEDIATE_TOKEN') return;
-  if (record.type === 'STRING' && typeof record.value === 'string') yield record.value;
-  for (const child of Object.values(record)) yield* keywordStrings(child);
 }
 
 /**
