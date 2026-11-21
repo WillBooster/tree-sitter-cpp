@@ -4577,3 +4577,20 @@ struct Following { int member; };
       (field_declaration
         (primitive_type)
         (field_identifier)))))
+
+================================================================================
+Identifiers exclude characters outside XID_Continue
+================================================================================
+
+int x​ = 1;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (ERROR
+        (UNEXPECTED 8203))
+      (number_literal))))

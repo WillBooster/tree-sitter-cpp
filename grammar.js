@@ -529,6 +529,10 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
     reserved: { global: () => [], marker: ($) => [$._typedef_primitive_type, $._non_pack_builtin_type] },
 
     rules: {
+      // C++ ([lex.name]) admits only XID characters, while the C grammar also admits C17 Annex D ranges such as U+200B.
+      identifier: () =>
+        /(\p{XID_Start}|\$|_|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8})(\p{XID_Continue}|\$|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8})*/u,
+
       _top_level_expression_statement: ($, original = missingOriginalRule()) =>
         choice(
           original,
