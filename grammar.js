@@ -2494,7 +2494,8 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
               ),
               seq(
                 constevalHead(),
-                field('consequence', alias($._if_block, $.compound_statement)),
+                // Seams stay out of consteval blocks, whose only alternative is a braced `else` ([stmt.if]).
+                field('consequence', $.compound_statement),
                 optional(field('alternative', alias($._consteval_else_clause, $.else_clause)))
               )
             )

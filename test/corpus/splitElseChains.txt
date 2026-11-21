@@ -533,3 +533,22 @@ int f(int x) {
                 (number_literal))))))
       (return_statement
         (number_literal)))))
+
+================================================================================
+Else-if continuations in a consteval if block
+:error
+================================================================================
+
+void f(bool x, bool y) {
+  if consteval {
+#ifdef FEATURE
+  } else if (x) {
+#else
+  } else if (y) {
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit)

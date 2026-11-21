@@ -50203,13 +50203,8 @@
                     "type": "FIELD",
                     "name": "consequence",
                     "content": {
-                      "type": "ALIAS",
-                      "content": {
-                        "type": "SYMBOL",
-                        "name": "_if_block"
-                      },
-                      "named": true,
-                      "value": "compound_statement"
+                      "type": "SYMBOL",
+                      "name": "compound_statement"
                     }
                   },
                   {
