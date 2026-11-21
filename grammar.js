@@ -706,10 +706,11 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
         ),
       preproc_elifdef_in_if_block: () => initializerElifdef(ifBlockBranch(true)),
 
-      // A branch continues the chain with any number of `else if` seams and at most one plain `else` after them (see
-      // `ifBlockBranch`); the heads are those of `if_statement`, whose bodies may be attributed.
-      _else_if_continuation: ($) =>
-        seq('}', 'else', 'if', choice(ifConditionHead($), constevalHead()), repeat($.attribute_declaration), '{'),
+      // A branch continues the chain with `else if` seams in the order `ifBlockBranch` allows; the heads are those of
+      // `if_statement`, whose bodies may be attributed except after `consteval`.
+      _else_if_continuation: ($) => seq('}', 'else', 'if', ifConditionHead($), repeat($.attribute_declaration), '{'),
+
+      _else_if_consteval_continuation: () => seq('}', 'else', 'if', constevalHead(), '{'),
 
       _else_continuation: ($) => seq('}', 'else', repeat($.attribute_declaration), '{'),
 
@@ -3626,6 +3627,10 @@ function ifBlockBranch(hasAlternative) {
   const items = seq(
     repeat(sym('_if_block_item')),
     repeat(seq(alias(sym('_else_if_continuation'), sym('else_continuation')), repeat(sym('_if_block_item')))),
+    // A consteval head takes only a braced `else` after it ([stmt.if]).
+    optional(
+      seq(alias(sym('_else_if_consteval_continuation'), sym('else_continuation')), repeat(sym('_if_block_item')))
+    ),
     optional(seq(alias(sym('_else_continuation'), sym('else_continuation')), repeat(sym('_if_block_item'))))
   );
   if (!hasAlternative) return items;

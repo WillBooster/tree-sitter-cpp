@@ -455,3 +455,21 @@ int f(int x) { if (x < 0) [[unlikely]] { return -1;
           (compound_statement
             (return_statement
               (number_literal))))))))
+
+================================================================================
+Else-if continuations after a consteval continuation in one branch
+:error
+================================================================================
+
+void f(bool x) {
+  if (x) {
+#if 1
+  } else if consteval {
+  } else if (x) {
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit)
