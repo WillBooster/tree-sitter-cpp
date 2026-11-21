@@ -38,13 +38,13 @@ test.each(['plain', 'conditional', 'null-directive'])(
   }
 );
 
-test(
-  'parses null directives and comments between a declaration type and its declarator in linear time',
+test.each(['x', String.raw`\u00e9`])(
+  'parses null directives and comments between a declaration type and its declarator %s in linear time',
   { timeout: 60_000 },
-  () => {
+  (declarator) => {
     // The declarations before the gap keep the small input above the CPU timer's millisecond resolution on CI.
     const [short, long] = [2000, 20_000].map(
-      (count) => `${'int y;\n'.repeat(count)}using T = int;\nT\n${'#\n// note\n'.repeat(count)}x;\n`
+      (count) => `${'int y;\n'.repeat(count)}using T = int;\nT\n${'#\n// note\n'.repeat(count)}${declarator};\n`
     );
     expectLinearParseTime(short!, long!, false);
   }

@@ -147,7 +147,7 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
 static bool initializer_conditional_trivia(InitializerConditionals *state, TSLexer *lexer) {
     for (;;) {
         bool newline = false;
-        if (!skip_cpp_trivia(lexer, &newline, state->directives)) return false;
+        if (!skip_cpp_trivia(lexer, &newline, state->directives, NULL)) return false;
         if (lexer->lookahead != '_') return true;
         if (!scan_pragma_with(lexer, &(PragmaTrivia){empty_directives_skip, state->directives})) return false;
     }

@@ -7,24 +7,30 @@
 #include <wctype.h>
 
 static bool skip_cpp_comment(TSLexer *lexer, bool *newline);
-static bool skip_cpp_space(TSLexer *lexer, bool *newline);
+static bool skip_cpp_space(TSLexer *lexer, bool *newline, uint32_t *failure);
 static inline bool is_unicode_whitespace(int32_t c);
 static inline bool at_eof(const TSLexer *lexer);
 
 /// Skips the trivia a lookahead crosses, null directives included, which end a line like the newline they contain.
-static bool skip_cpp_trivia(TSLexer *lexer, bool *newline, EmptyDirectives *directives) {
+/// Returns false at a `\\` or `/` that starts no trivia, setting `*failure` (when given) to its byte.
+static bool skip_cpp_trivia(TSLexer *lexer, bool *newline, EmptyDirectives *directives, uint32_t *failure) {
     for (;;) {
-        if (!skip_cpp_space(lexer, newline)) return false;
+        if (!skip_cpp_space(lexer, newline, failure)) return false;
         if (!empty_directives_consume(lexer, directives, false)) return true;
         *newline = true;
     }
 }
 
-static bool skip_cpp_space(TSLexer *lexer, bool *newline) {
+static bool skip_cpp_space(TSLexer *lexer, bool *newline, uint32_t *failure) {
     for (;;) {
         while (is_unicode_whitespace(lexer->lookahead)) {
             *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
             lexer->advance(lexer, false);
+        }
+        if (failure && (lexer->lookahead == '\\' || lexer->lookahead == '/')) {
+            TSLexerPosition position;
+            lexer->get_position(lexer, &position);
+            *failure = position.bytes;
         }
         if (lexer->lookahead == '\\') {
             lexer->advance(lexer, false);

@@ -316,11 +316,11 @@ static bool scan_macro_statement_end(Scanner *scanner, TSLexer *lexer, const boo
     return false;
 }
 
-// Sets `*end` to the byte of the token after the trivia when the trivia is well formed.
+// Sets `*end` to the byte of the first character after the trivia.
 static bool scan_macro_line_end(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, uint32_t start, uint32_t *end) {
     bool newline = scanner->null_directive_end && start == scanner->null_directive_end;
     lexer->mark_end(lexer);
-    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives)) return false;
+    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives, end)) return false;
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
     *end = position.bytes;
@@ -367,7 +367,7 @@ static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer) {
         static const char *const starters[] = {"class", "concept", "decltype", "enum", "export", "namespace", "struct", "template", "union", "using"};
         if (name.ascii && function_macro_word_in(word, starters, sizeof(starters) / sizeof(starters[0]))) break;
         bool newline = false;
-        if (!skip_cpp_trivia(lexer, &newline, &scanner->directives) || (!newline && !at_eof(lexer))) return false;
+        if (!skip_cpp_trivia(lexer, &newline, &scanner->directives, NULL) || (!newline && !at_eof(lexer))) return false;
         remaining++;
     }
     scanner->pending_macro_identifiers = remaining;
@@ -441,9 +441,9 @@ static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer) {
         advance(lexer);
     }
     lexer->mark_end(lexer);
-    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives) || lexer->lookahead != '[') return false;
+    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives, NULL) || lexer->lookahead != '[') return false;
     advance(lexer);
-    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives) || lexer->lookahead == ']' || at_eof(lexer)) return false;
+    if (!skip_cpp_trivia(lexer, &newline, &scanner->directives, NULL) || lexer->lookahead == ']' || at_eof(lexer)) return false;
     lexer->result_symbol = PACK_INDEX_OPERATOR;
     return true;
 }
