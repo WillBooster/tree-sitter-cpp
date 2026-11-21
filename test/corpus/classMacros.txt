@@ -187,3 +187,36 @@ f(), g();
     (function_declarator
       (identifier)
       (parameter_list))))
+
+================================================================================
+Conditionally annotated direct initializers before prototypes
+================================================================================
+
+#define ANN
+const int
+#ifdef FEATURE
+ANN
+#endif
+x(3), f(int);
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_def
+    (identifier))
+  (declaration
+    (type_qualifier)
+    (primitive_type)
+    (preproc_ifdef
+      (identifier)
+      (macro_specifier
+        (identifier)))
+    (init_declarator
+      (identifier)
+      (argument_list
+        (number_literal)))
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))))

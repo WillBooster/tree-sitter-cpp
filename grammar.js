@@ -815,6 +815,17 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
 
       // The C grammar shares its declarator list across declaration forms, which lacks the C++ declarators and their
       // preference for a parameter list over an initializer.
+      // As in `function_definition`, without the C grammar's guarded post-type annotations, whose lookahead reads a
+      // direct initializer followed by a prototype (`x(3), f(int);`) as an annotation.
+      _conditional_function_definition: ($) =>
+        seq(
+          optional($.ms_call_modifier),
+          sym('_conditional_function_specifiers'),
+          optional($.ms_call_modifier),
+          field('declarator', $._declarator),
+          field('body', choice($.compound_statement, $.try_statement))
+        ),
+
       _conditional_declaration: ($) =>
         seq(
           prec.dynamic(1, sym('_conditional_function_specifiers')),
