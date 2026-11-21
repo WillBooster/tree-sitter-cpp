@@ -50131,6 +50131,15 @@
                           "type": "ALIAS",
                           "content": {
                             "type": "SYMBOL",
+                            "name": "_attributed_if_block"
+                          },
+                          "named": true,
+                          "value": "attributed_statement"
+                        },
+                        {
+                          "type": "ALIAS",
+                          "content": {
+                            "type": "SYMBOL",
                             "name": "_single_noncompound_statement"
                           },
                           "named": true,
@@ -68973,32 +68982,57 @@
         }
       ]
     },
-    "_if_block_item": {
-      "type": "CHOICE",
+    "_attributed_if_block": {
+      "type": "SEQ",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "_block_statement_item"
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_declaration"
+          }
         },
         {
           "type": "ALIAS",
           "content": {
             "type": "SYMBOL",
-            "name": "preproc_if_in_if_block"
+            "name": "_if_block"
           },
           "named": true,
-          "value": "preproc_if"
-        },
-        {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "preproc_ifdef_in_if_block"
-          },
-          "named": true,
-          "value": "preproc_ifdef"
+          "value": "compound_statement"
         }
       ]
+    },
+    "_if_block_item": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "_block_statement_item"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "preproc_if_in_if_block"
+            },
+            "named": true,
+            "value": "preproc_if"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "preproc_ifdef_in_if_block"
+            },
+            "named": true,
+            "value": "preproc_ifdef"
+          }
+        ]
+      }
     },
     "preproc_if_in_if_block": {
       "type": "SEQ",

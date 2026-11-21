@@ -665,12 +665,18 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       // `else_continuation`.
       _if_block: ($) => seq('{', repeat($._if_block_item), '}'),
 
+      _attributed_if_block: ($) => seq(repeat1($.attribute_declaration), alias($._if_block, $.compound_statement)),
+
       // Conditionals nest in the same family, so a seam may sit at any depth of conditionals inside the block.
+      // Outranks `_block_item` where an attributed consequence also reads as an attributed compound statement.
       _if_block_item: ($) =>
-        choice(
-          $._block_statement_item,
-          alias(sym('preproc_if_in_if_block'), sym('preproc_if')),
-          alias(sym('preproc_ifdef_in_if_block'), sym('preproc_ifdef'))
+        prec(
+          1,
+          choice(
+            $._block_statement_item,
+            alias(sym('preproc_if_in_if_block'), sym('preproc_if')),
+            alias(sym('preproc_ifdef_in_if_block'), sym('preproc_ifdef'))
+          )
         ),
 
       // Unlike the inherited conditionals, each directive line must end before the branch, so that a seam written on the
@@ -2460,6 +2466,7 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
                   'consequence',
                   choice(
                     alias($._if_block, $.compound_statement),
+                    alias($._attributed_if_block, $.attributed_statement),
                     alias(sym('_single_noncompound_statement'), sym('statement'))
                   )
                 ),

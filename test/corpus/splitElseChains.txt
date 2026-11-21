@@ -407,3 +407,51 @@ return 2;
           (compound_statement
             (return_statement
               (number_literal))))))))
+
+================================================================================
+Else-if continuations in attributed if blocks
+================================================================================
+
+int f(int x) { if (x < 0) [[unlikely]] { return -1;
+#if A
+} else if (x == 0) { return 0;
+#endif
+} else { return 1; } }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (binary_expression
+            (identifier)
+            (number_literal)))
+        (attributed_statement
+          (attribute_declaration
+            (attribute
+              (identifier)))
+          (compound_statement
+            (return_statement
+              (number_literal))
+            (preproc_if
+              (identifier)
+              (else_continuation
+                (condition_clause
+                  (binary_expression
+                    (identifier)
+                    (number_literal))))
+              (return_statement
+                (number_literal)))))
+        (else_clause
+          (compound_statement
+            (return_statement
+              (number_literal))))))))
