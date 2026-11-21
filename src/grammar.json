@@ -49809,10 +49809,6 @@
             },
             {
               "type": "SYMBOL",
-              "name": "defer_statement"
-            },
-            {
-              "type": "SYMBOL",
               "name": "switch_statement"
             },
             {
@@ -49913,10 +49909,6 @@
             {
               "type": "SYMBOL",
               "name": "if_statement"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "defer_statement"
             },
             {
               "type": "SYMBOL",
@@ -50453,10 +50445,6 @@
             {
               "type": "SYMBOL",
               "name": "if_statement"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "defer_statement"
             },
             {
               "type": "SYMBOL",

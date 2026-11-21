@@ -708,3 +708,26 @@ constexpr int h() { if not consteval { return 1; } else { return 2; } }
           (compound_statement
             (return_statement
               (number_literal))))))))
+
+================================================================================
+Calls to the reserved identifier _Defer
+================================================================================
+
+void f() { _Defer(g()); }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (call_expression
+              (identifier)
+              (argument_list))))))))

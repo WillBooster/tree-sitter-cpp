@@ -3868,7 +3868,8 @@ function packIndex($, pack) {
  */
 function withCppStatements($, original) {
   return choice(
-    original,
+    // C2y's `_Defer` is a reserved identifier in C++, where implementations may define it as a macro.
+    withoutAlternativesNeeding(original, ['defer_statement']),
     $.co_return_statement,
     $.co_yield_statement,
     $.for_range_loop,
