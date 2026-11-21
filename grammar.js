@@ -663,17 +663,14 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       // A conditional branch in the block of an `if` statement may close that block and open the next one of its `else`
       // chain, as in libc++'s `#ifdef X` / `} else if (c) {` / `#endif`; the branch keeps that seam as an
       // `else_continuation`.
-      _if_block: ($) =>
-        seq(
-          '{',
-          repeat(
-            choice(
-              $._block_statement_item,
-              alias(sym('preproc_if_in_if_block'), sym('preproc_if')),
-              alias(sym('preproc_ifdef_in_if_block'), sym('preproc_ifdef'))
-            )
-          ),
-          '}'
+      _if_block: ($) => seq('{', repeat($._if_block_item), '}'),
+
+      // Conditionals nest in the same family, so a seam may sit at any depth of conditionals inside the block.
+      _if_block_item: ($) =>
+        choice(
+          $._block_statement_item,
+          alias(sym('preproc_if_in_if_block'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_if_block'), sym('preproc_ifdef'))
         ),
 
       // Unlike the inherited conditionals, each directive line must end before the branch, so that a seam written on the
@@ -3596,9 +3593,9 @@ function constevalHead() {
  */
 function ifBlockBranch(hasAlternative) {
   const items = seq(
-    repeat(sym('_block_item')),
-    repeat(seq(alias(sym('_else_if_continuation'), sym('else_continuation')), repeat(sym('_block_item')))),
-    optional(seq(alias(sym('_else_continuation'), sym('else_continuation')), repeat(sym('_block_item'))))
+    repeat(sym('_if_block_item')),
+    repeat(seq(alias(sym('_else_if_continuation'), sym('else_continuation')), repeat(sym('_if_block_item')))),
+    optional(seq(alias(sym('_else_continuation'), sym('else_continuation')), repeat(sym('_if_block_item'))))
   );
   if (!hasAlternative) return items;
   const alternative = choice(
