@@ -519,7 +519,7 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       [$.type_specifier, $._type_name_specifier, $.call_expression],
     ],
 
-    inline: ($, original) => [...original, $._namespace_identifier, $._contextual_identifier],
+    inline: ($, original) => [...original, $._namespace_identifier, $._contextual_identifier, $._block_statement_item],
 
     precedences: ($) => [
       [$.argument_list, $.type_qualifier],
@@ -579,9 +579,16 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           alias($.operator_cast_declaration, $.declaration)
         ),
 
-      _block_item: ($, original = missingOriginalRule()) =>
+      _block_item: ($) =>
         choice(
-          ...ruleMembers(original, 'CHOICE').filter(
+          $._block_statement_item,
+          alias(sym('preproc_if_in_block'), sym('preproc_if')),
+          alias(sym('preproc_ifdef_in_block'), sym('preproc_ifdef'))
+        ),
+
+      _block_statement_item: ($) =>
+        choice(
+          ...ruleMembers(C.grammar.rules._block_item, 'CHOICE').filter(
             (member) =>
               !isOldStyleFunctionDefinition(member) &&
               !isContextualCItem(member) &&
@@ -605,8 +612,6 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           $.template_instantiation,
           $.export_declaration,
           $.import_declaration,
-          alias(sym('preproc_if_in_block'), sym('preproc_if')),
-          alias(sym('preproc_ifdef_in_block'), sym('preproc_ifdef')),
           alias($.constructor_or_destructor_definition, $.function_definition),
           alias($.operator_cast_definition, $.function_definition),
           alias($.operator_cast_declaration, $.declaration)
@@ -653,11 +658,27 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       _preproc_include_token: ($, original = missingOriginalRule()) => choice(original, $.raw_string_literal),
 
       ...preprocIf('', () => sym('_top_level_item')),
-      // A conditional branch may close the block of an `if` statement and open the next one of its `else` chain, as in
-      // libc++'s `#ifdef X` / `} else if (c) {` / `#endif`; the branch keeps that seam as an `else_continuation`.
-      ...preprocIf('_in_block', () => sym('_conditional_block_item')),
+      ...preprocIf('_in_block', () => sym('_block_item')),
 
-      _conditional_block_item: ($) => choice($._block_item, $.else_continuation),
+      // A conditional branch in the block of an `if` statement may close that block and open the next one of its `else`
+      // chain, as in libc++'s `#ifdef X` / `} else if (c) {` / `#endif`; the branch keeps that seam as an
+      // `else_continuation`.
+      _if_block: ($) =>
+        seq(
+          '{',
+          repeat(
+            choice(
+              $._block_statement_item,
+              alias(sym('preproc_if_in_if_block'), sym('preproc_if')),
+              alias(sym('preproc_ifdef_in_if_block'), sym('preproc_ifdef'))
+            )
+          ),
+          '}'
+        ),
+
+      ...preprocIf('_in_if_block', () => sym('_if_conditional_item')),
+
+      _if_conditional_item: ($) => choice($._block_item, $.else_continuation),
 
       else_continuation: ($) =>
         seq('}', 'else', optional(seq('if', optional('constexpr'), field('condition', $.condition_clause))), '{'),
@@ -2431,7 +2452,13 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
               seq(
                 optional('constexpr'),
                 field('condition', $.condition_clause),
-                field('consequence', $._single_statement),
+                field(
+                  'consequence',
+                  choice(
+                    alias($._if_block, $.compound_statement),
+                    alias(sym('_single_noncompound_statement'), sym('statement'))
+                  )
+                ),
                 optional(field('alternative', $.else_clause))
               ),
               seq(

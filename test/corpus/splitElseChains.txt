@@ -234,3 +234,20 @@ template <class T> int pick(T value) {
                   (number_literal))))))
         (return_statement
           (identifier))))))
+
+================================================================================
+Else continuations outside an if block
+:error
+================================================================================
+
+void f() {
+  while (a) {
+#if X
+  } else {
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit)
