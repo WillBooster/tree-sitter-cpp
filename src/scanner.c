@@ -1,4 +1,4 @@
-// code-gauge-allow-file fileNcss 437 -- The C scanner's extras and directive dispatch index this grammar's external-token enum, so they live beside the C++ tokens.
+// code-gauge-allow-file fileNcss -- The C scanner's extras and directive dispatch index this grammar's external-token enum, so they live beside the C++ tokens.
 #include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
 #include "conditionalMacro.h"
@@ -374,8 +374,8 @@ static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer) {
     return true;
 }
 
-// code-gauge-allow functionCognitiveComplexity 28 -- External-token validity selects one preprocessor lexing mode and preserves its token range.
-// code-gauge-allow functionNcss 34 -- External-token validity selects one preprocessor lexing mode and preserves its token range.
+// code-gauge-allow functionCognitiveComplexity -- External-token validity selects one preprocessor lexing mode and preserves its token range.
+// code-gauge-allow functionNcss -- External-token validity selects one preprocessor lexing mode and preserves its token range.
 static bool scan_preproc_tokens(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols) {
     bool directive_text = !valid_symbols[PREPROC_ARG] && valid_symbols[PREPROC_DIRECTIVE_ARG];
     PreprocArgumentMode argument_mode = preproc_argument_mode(

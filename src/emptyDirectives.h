@@ -1,4 +1,4 @@
-// code-gauge-allow-file fileNcss 735 -- One source-fact pass shares compact character storage, directive lexing and physical-position conversion.
+// code-gauge-allow-file fileNcss -- One source-fact pass shares compact character storage, directive lexing and physical-position conversion.
 #ifndef TREE_SITTER_C_EMPTY_DIRECTIVES_H_
 #define TREE_SITTER_C_EMPTY_DIRECTIVES_H_
 
@@ -170,7 +170,7 @@ static void empty_directives_consume_started(TSLexer *lexer, EmptyDirectives *st
         !(state->ends[position.bytes / 8] & (1u << (position.bytes % 8))));
 }
 
-// code-gauge-allow functionNcss 35 -- The source-fact buffers are allocated and released together so initialization fails atomically.
+// code-gauge-allow functionNcss -- The source-fact buffers are allocated and released together so initialization fails atomically.
 static bool empty_directives_build(EmptyDirectives *state, TSLexer *lexer) {
     TSLexerPosition start;
     lexer->get_position(lexer, &start);
@@ -225,7 +225,7 @@ static void empty_directives_prune(EmptyDirectives *state, DirectiveInput *input
     else free(input->prefix_barriers);
 }
 
-// code-gauge-allow functionCognitiveComplexity 29 -- The reverse lexical pass applies sparse physical-position corrections while carrying null-prefix and line-end facts.
+// code-gauge-allow functionCognitiveComplexity -- The reverse lexical pass applies sparse physical-position corrections while carrying null-prefix and line-end facts.
 static void directive_prefixes(EmptyDirectives *state, DirectiveInput *input) {
     bool prefix = false, line_end = false;
     uint32_t byte = input->end, position = input->position_count;
@@ -390,7 +390,7 @@ static void directive_line_character(EmptyDirectives *state, DirectiveInput *inp
     else directive_code(state, input, line, c);
 }
 
-// code-gauge-allow functionCognitiveComplexity 19 -- Header names, quoted tokens and distinct keyword boundaries update one logical directive's lexical state.
+// code-gauge-allow functionCognitiveComplexity -- Header names, quoted tokens and distinct keyword boundaries update one logical directive's lexical state.
 static void directive_code(EmptyDirectives *state, DirectiveInput *input, DirectiveLine *line, int32_t c) {
     bool name = line->pending;
     bool header = directive_header_ready(line, c);
