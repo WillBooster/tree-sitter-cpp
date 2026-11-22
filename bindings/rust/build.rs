@@ -36,6 +36,8 @@ fn main() {
         "conditionalMacro.h",
         "emptyDirectives.h",
         "directiveScan.h",
+        "directiveUnits.h",
+        "directiveBuffer.h",
         "gnuRawString.h",
         "initializerConditional.h",
         "cppTrivia.h",

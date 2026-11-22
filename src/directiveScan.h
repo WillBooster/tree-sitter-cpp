@@ -24,13 +24,17 @@ typedef struct {
 typedef enum { SCAN_CODE, SCAN_SLASH, SCAN_LINE_COMMENT, SCAN_BLOCK_COMMENT, SCAN_QUOTE, SCAN_WORD, SCAN_RAW_DELIMITER, SCAN_RAW_BODY } DirectiveScanMode;
 
 // The line-state pass of `emptyDirectives.h` in the state it has on ordinary code, before the first directive and after
-// each directive line that ends with no directive state left, fed one physical character at a time so that the code is
-// never stored. It also tracks the run of spaces and backslashes before the next character, which a null directive's
-// prefix covers: the first `run_spans` spans in `run` and the current one, from `run_start` to before `run_end`.
+// each directive line that ends with no directive state left. It is fed one physical character at a time
+// (`directive_scan_feed`), from the lexer or from the characters that a directive segment's lookahead stored past its
+// end, or over a stretch of the lexer's code units (`directive_scan_units`), which leaves it as those characters fed
+// one by one would; no other ordinary code is stored. It also tracks the run of spaces and backslashes before the next
+// character, which a null directive's prefix covers: the first `run_spans` spans in `run` and the current one, from
+// `run_start` to before `run_end`.
 typedef struct {
     DirectiveScanMode mode;
     GnuRawStringPrefix raw;
     DirectiveSpans *run;
+    const uint8_t *classes;
     // Set when the characters read hold `pragma_word`, also in a comment or a literal: a scan starts inside a literal
     // after an escape sequence, and the lexer ends some comments earlier than this pass does.
     bool *pragma;
@@ -46,6 +50,7 @@ typedef struct {
 
 static bool directive_scan_leading_comment(DirectiveScan *scan, TSLexer *lexer);
 static bool directive_scan_feed(DirectiveScan *scan, int32_t c);
+static bool directive_scan_view(DirectiveScan *scan, TSLexer *lexer);
 static inline bool directive_scan_plain_mode(DirectiveScan *scan, TSLexer *lexer);
 static inline bool directive_scan_plain_word(DirectiveScan *scan, TSLexer *lexer);
 static inline void directive_scan_word_characters(DirectiveScan *scan, uint64_t recent, uint32_t count);
@@ -74,6 +79,8 @@ static void directive_scan_close_run(DirectiveScan *scan, uint32_t limit, bool s
 static void directive_scan_push(DirectiveScan *scan, uint32_t start, uint32_t end);
 static inline void directive_scan_extend(DirectiveScan *scan, uint32_t start, bool skipped);
 
+#include "directiveUnits.h"
+
 // Feeds the spaces at the lexer's position, and a `/` after them with the character that follows it. Returns true when
 // they open a comment. It reads no further than that one `/`, so that the scans after a postponed build, which start
 // where this one's tokens end, do not read the same characters again and again.
@@ -99,7 +106,28 @@ static void directive_scan_plain_run(DirectiveScan *scan, TSLexer *lexer) {
     // Only another newline can belong to the newline before it.
     if (scan->pair && directive_newline(lexer->lookahead)) return;
     scan->pair = 0;
+    while (directive_scan_view(scan, lexer)) {}
     while (directive_scan_plain_mode(scan, lexer)) {}
+}
+
+// Reads ordinary code from the units the lexer hands out, a stretch at a time. Returns false where the character path
+// has to go on: the units do not see a `pragma_word` that started before them, nor the bytes that an included range
+// leaves out before its first character.
+static bool directive_scan_view(DirectiveScan *scan, TSLexer *lexer) {
+    DirectiveScanMode mode = scan->mode;
+    bool readable = mode == SCAN_CODE || mode == SCAN_WORD || mode == SCAN_LINE_COMMENT || mode == SCAN_BLOCK_COMMENT ||
+        (mode == SCAN_QUOTE && !scan->escape);
+    if (!readable || (mode != SCAN_CODE && directive_pragma_pending(scan->recent))) return false;
+    uint32_t count, size;
+    const char *units = lexer->peek_units(lexer, &count, &size);
+    if (count < 2 || lexer->is_at_included_range_start(lexer)) return false;
+    TSLexerPosition position;
+    lexer->get_position(lexer, &position);
+    DirectiveUnits run = size == 1
+        ? directive_scan_units(scan, units, count, 1, position.bytes, true)
+        : directive_scan_units(scan, units, count, 2, position.bytes, true);
+    lexer->advance_units(lexer, run.consumed, run.line_feeds, run.tail);
+    return run.consumed == count;
 }
 
 // Consumes the plain characters of the current mode. Returns true when those of another mode may follow.
