@@ -128,8 +128,8 @@ void drain() {
                 (parameter_list
                   (variadic_parameter))
                 (compound_statement
-                  (throw_statement)))))
-          (comment))))))
+                  (throw_statement)))
+              (comment))))))))
 
 ================================================================================
 Try block guarded by #ifdef in an if block next to an else continuation
@@ -198,6 +198,123 @@ int load(int x) {
                 (argument_list))))))
       (return_statement
         (number_literal)))))
+
+================================================================================
+Else continuation of the enclosing if between the guards of a try block
+================================================================================
+
+void process(bool ready) {
+  if (ready) {
+#ifdef EXCEPTIONS
+    try {
+#endif
+#ifndef EXCEPTIONS
+  } else {
+#endif
+      record();
+#ifdef EXCEPTIONS
+    } catch (...) {
+      record();
+    }
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (try_statement
+            (preproc_ifdef
+              (identifier))
+            (preproc_ifdef
+              (identifier)
+              (else_continuation))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (preproc_ifdef
+              (identifier)
+              (catch_clause
+                (parameter_list
+                  (variadic_parameter))
+                (compound_statement
+                  (expression_statement
+                    (call_expression
+                      (identifier)
+                      (argument_list))))))))))))
+
+================================================================================
+Else continuation in a conditional between the guards of a try block in a loop
+================================================================================
+
+void drain(bool more) {
+  while (more) {
+#if EXCEPTIONS
+    try {
+#endif
+#if !EXCEPTIONS
+    } else {
+#endif
+      step();
+#if EXCEPTIONS
+    } catch (...) {
+      report();
+    }
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (while_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (try_statement
+            (preproc_if
+              (identifier))
+            (preproc_if
+              (unary_expression
+                (identifier))
+              (else_continuation))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (preproc_if
+              (identifier)
+              (catch_clause
+                (parameter_list
+                  (variadic_parameter))
+                (compound_statement
+                  (expression_statement
+                    (call_expression
+                      (identifier)
+                      (argument_list))))))))))))
 
 ================================================================================
 Guarded try block without a guarded handler

@@ -730,19 +730,26 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       // A conditional may open a `try` block that a later conditional closes with its handlers, as libc++ guards
       // `try {` and `} catch (...) { ... }` by `#if _LIBCPP_HAS_EXCEPTIONS`; the statements between them are the
       // children of the `try_statement`, which has no `body`. Whether both conditionals are enabled together is left to
-      // a preprocessor.
+      // a preprocessor. The statements are `_if_block_item`s, so that a conditional between the two may hold an
+      // `else_continuation`: one of an enclosing `if` whose block the `try` starts, or one in a disabled branch.
       _split_try_statement: () => splitTryStatement('_try_opening_ifdef'),
 
       // In the block of an `if` statement the `#ifdef` line of the opening ends as that of `preproc_ifdef_in_if_block`
       // does, which reads the same directive. Outranks `_split_try_statement` as `_if_block_item` does `_block_item`.
       _split_try_statement_in_if_block: () => prec(1, splitTryStatement('_try_opening_ifdef_in_if_block')),
 
-      _try_opening_if: () => seamIf(seq('try', '{')),
-      _try_opening_ifdef: () => seamIfdef(seq('try', '{')),
-      _try_opening_ifdef_in_if_block: () => initializerIfdef(seq('try', '{')),
+      _try_opening_if: () => seamIf(tryOpening()),
+      _try_opening_ifdef: () =>
+        seq(
+          choice(preprocessor('ifdef'), preprocessor('ifndef')),
+          field('name', sym('identifier')),
+          tryOpening(),
+          preprocessor('endif')
+        ),
+      _try_opening_ifdef_in_if_block: () => initializerIfdef(tryOpening()),
 
-      _try_closing_if: ($) => seamIf(seq('}', repeat1($.catch_clause))),
-      _try_closing_ifdef: ($) => seamIfdef(seq('}', repeat1($.catch_clause))),
+      _try_closing_if: () => seamIf(seq('}', repeat1(sym('catch_clause')))),
+      _try_closing_ifdef: () => initializerIfdef(seq('}', repeat1(sym('catch_clause')))),
 
       placeholder_type_specifier: ($) =>
         prec(
@@ -3638,13 +3645,17 @@ function cppTypeSpecifier($, sized) {
 function splitTryStatement(ifdefOpening) {
   return seq(
     choice(alias(sym('_try_opening_if'), sym('preproc_if')), alias(sym(ifdefOpening), sym('preproc_ifdef'))),
-    repeat(sym('_block_item')),
+    repeat(sym('_if_block_item')),
     choice(alias(sym('_try_closing_if'), sym('preproc_if')), alias(sym('_try_closing_ifdef'), sym('preproc_ifdef')))
   );
 }
 
+function tryOpening() {
+  return seq('try', '{');
+}
+
 /**
- * A conditional without alternatives whose directives are spelled as those of the inherited conditionals.
+ * A conditional without alternatives whose `#if` line ends before `body`, as those of the inherited conditionals do.
  * @param {RuleOrLiteral} body
  */
 function seamIf(body) {
@@ -3652,16 +3663,6 @@ function seamIf(body) {
     preprocessor('if'),
     field('condition', sym('_preproc_expression')),
     preprocExpressionNewline(),
-    body,
-    preprocessor('endif')
-  );
-}
-
-/** @param {RuleOrLiteral} body */
-function seamIfdef(body) {
-  return seq(
-    choice(preprocessor('ifdef'), preprocessor('ifndef')),
-    field('name', sym('identifier')),
     body,
     preprocessor('endif')
   );
