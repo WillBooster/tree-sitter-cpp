@@ -91,7 +91,7 @@ namespace math {
               argument: (identifier))))))))
 
 ==================
-Unexpanded macros after parameter lists before each continuation of the declarator
+Unexpanded macros after parameter lists before continuations of the declarator
 ==================
 
 API int declared(int x) NOEXCEPT;

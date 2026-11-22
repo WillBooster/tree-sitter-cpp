@@ -76,7 +76,8 @@ static bool scan_declarator_macro_name(Scanner *scanner, TSLexer *lexer, const b
 static inline bool starts_declarator_macro_scan(int32_t c);
 static bool scan_ascii_word(TSLexer *lexer, AsciiWord *word);
 static bool ascii_word_is(const AsciiWord *word, const char *text);
-static bool scan_declarator_continuation(TSLexer *lexer, bool newline);
+static bool scan_declarator_continuation(Scanner *scanner, TSLexer *lexer, bool newline);
+static bool scan_function_clause(Scanner *scanner, TSLexer *lexer);
 static bool scan_declaration_macro(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_declaration_attribute(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_macro_name_rest(TSLexer *lexer, MacroName *name, bool has_name);
@@ -239,7 +240,7 @@ static bool scan_declarator_macro_name(Scanner *scanner, TSLexer *lexer, const b
     lexer->mark_end(lexer);
     lexer->result_symbol = DECLARATOR_MACRO_NAME;
     bool line_end = false;
-    return skip_cpp_trivia(lexer, &line_end, &scanner->directives, NULL) && scan_declarator_continuation(lexer, newline);
+    return skip_cpp_trivia(lexer, &line_end, &scanner->directives, NULL) && scan_declarator_continuation(scanner, lexer, newline);
 }
 
 /// A macro name's first character, or the start of a comment that may put the name on a later line.
@@ -266,17 +267,33 @@ static bool ascii_word_is(const AsciiWord *word, const char *text) {
     return word->length == strlen(text) && strcmp(word->start, text) == 0;
 }
 
-static bool scan_declarator_continuation(TSLexer *lexer, bool newline) {
+static bool scan_declarator_continuation(Scanner *scanner, TSLexer *lexer, bool newline) {
     int32_t c = lexer->lookahead;
     if (c == '{' || c == ';') return true;
     if (newline) return false;
-    if (c == '=' || c == ':' || c == '-') {
+    if (c == ':' || c == '-') {
         advance(lexer);
         return c == '-' ? lexer->lookahead == '>' : lexer->lookahead != c;
+    }
+    if (c == '=') {
+        advance(lexer);
+        return scan_function_clause(scanner, lexer);
     }
     AsciiWord word = {0};
     return scan_ascii_word(lexer, &word) &&
         (ascii_word_is(&word, "final") || ascii_word_is(&word, "override") || ascii_word_is(&word, "try"));
+}
+
+/// Scans what follows the `=` of `= default`, `= delete`, or `= 0;`. Any other value is the default argument of a
+/// parameter, whose trailing name annotates the parameter, as in `void f(int (*callback)(int) UNUSED = nullptr)` and
+/// `(*callback)(int) UNUSED = 0)`.
+static bool scan_function_clause(Scanner *scanner, TSLexer *lexer) {
+    bool line_end = false;
+    AsciiWord word = {0};
+    if (!skip_cpp_trivia(lexer, &line_end, &scanner->directives, NULL) || !scan_ascii_word(lexer, &word)) return false;
+    if (ascii_word_is(&word, "default") || ascii_word_is(&word, "delete")) return true;
+    return ascii_word_is(&word, "0") && skip_cpp_trivia(lexer, &line_end, &scanner->directives, NULL) &&
+        lexer->lookahead == ';';
 }
 
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols) {
