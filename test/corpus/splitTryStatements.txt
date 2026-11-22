@@ -326,7 +326,6 @@ int f() {
   try {
 #endif
     return 1;
-  }
   return 0;
 }
 
