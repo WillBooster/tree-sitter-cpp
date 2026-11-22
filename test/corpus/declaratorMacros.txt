@@ -1,0 +1,243 @@
+==================
+Unexpanded macros after the parameter lists of definitions in a namespace
+==================
+
+#define API
+#define NOEXCEPT noexcept
+namespace math {
+[[nodiscard]] inline API float first(float x) NOEXCEPT { return x; }
+[[nodiscard]] API double second(double x) NOEXCEPT { return x; }
+[[nodiscard]] API long double third(long double x) NOEXCEPT {
+  if (x > 1) return x;
+  return -x;
+}
+}
+
+---
+
+(translation_unit
+  (preproc_def
+    name: (identifier))
+  (preproc_def
+    name: (identifier)
+    value: (preproc_arg))
+  (namespace_definition
+    name: (namespace_identifier)
+    body: (declaration_list
+      (function_definition
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (storage_class_specifier)
+        (macro_specifier
+          name: (identifier))
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)))
+          (macro_specifier
+            name: (identifier)))
+        body: (compound_statement
+          (return_statement
+            (identifier))))
+      (function_definition
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (macro_specifier
+          name: (identifier))
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)))
+          (macro_specifier
+            name: (identifier)))
+        body: (compound_statement
+          (return_statement
+            (identifier))))
+      (function_definition
+        (attribute_declaration
+          (attribute
+            name: (identifier)))
+        (macro_specifier
+          name: (identifier))
+        type: (sized_type_specifier
+          type: (primitive_type))
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (sized_type_specifier
+                type: (primitive_type))
+              declarator: (identifier)))
+          (macro_specifier
+            name: (identifier)))
+        body: (compound_statement
+          (if_statement
+            condition: (condition_clause
+              value: (binary_expression
+                left: (identifier)
+                right: (number_literal)))
+            consequence: (return_statement
+              (identifier)))
+          (return_statement
+            (unary_expression
+              argument: (identifier))))))))
+
+==================
+Unexpanded macros after parameter lists before continuations of the declarator
+==================
+
+API int declared(int x) NOEXCEPT;
+struct Value {
+  Value() NOEXCEPT : value(1) {}
+  Value(const Value &) NOEXCEPT = default;
+  ~Value() _NOEXCEPT {}
+  API int get() const NOEXCEPT override { return value; }
+  operator bool() const NOEXCEPT
+  {
+    return true;
+  }
+  int value;
+};
+auto trailing(int x) NOEXCEPT -> int { return x; }
+int guarded(int x) NOEXCEPT try { return x; } catch (...) { return 0; }
+auto lambda = [](int x) NOEXCEPT { return x; };
+
+---
+
+(translation_unit
+  (declaration
+    (macro_specifier
+      name: (identifier))
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)))
+      (macro_specifier
+        name: (identifier))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (function_definition
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list)
+          (macro_specifier
+            name: (identifier)))
+        (field_initializer_list
+          (field_initializer
+            (field_identifier)
+            (argument_list
+              (number_literal))))
+        body: (compound_statement))
+      (function_definition
+        declarator: (function_declarator
+          declarator: (identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              (type_qualifier)
+              type: (type_identifier)
+              declarator: (abstract_reference_declarator)))
+          (macro_specifier
+            name: (identifier)))
+        (default_method_clause))
+      (function_definition
+        declarator: (function_declarator
+          declarator: (destructor_name
+            (identifier))
+          parameters: (parameter_list)
+          (macro_specifier
+            name: (identifier)))
+        body: (compound_statement))
+      (function_definition
+        (macro_specifier
+          name: (identifier))
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)
+          (type_qualifier)
+          (macro_specifier
+            name: (identifier))
+          (virtual_specifier))
+        body: (compound_statement
+          (return_statement
+            (identifier))))
+      (function_definition
+        declarator: (operator_cast
+          type: (primitive_type)
+          declarator: (abstract_function_declarator
+            parameters: (parameter_list)
+            (type_qualifier)
+            (macro_specifier
+              name: (identifier))))
+        body: (compound_statement
+          (return_statement
+            (true))))
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))))
+  (function_definition
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)))
+      (macro_specifier
+        name: (identifier))
+      (trailing_return_type
+        (type_descriptor
+          type: (primitive_type))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)))
+      (macro_specifier
+        name: (identifier)))
+    body: (try_statement
+      body: (compound_statement
+        (return_statement
+          (identifier)))
+      (catch_clause
+        parameters: (parameter_list
+          (variadic_parameter))
+        body: (compound_statement
+          (return_statement
+            (number_literal))))))
+  (declaration
+    type: (placeholder_type_specifier
+      (auto))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (lambda_expression
+        captures: (lambda_capture_specifier)
+        declarator: (lambda_declarator
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)))
+          (macro_specifier
+            name: (identifier)))
+        body: (compound_statement
+          (return_statement
+            (identifier)))))))

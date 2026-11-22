@@ -611,6 +611,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "noexcept",
           "named": true
         },
@@ -4247,6 +4251,10 @@
           "named": true
         },
         {
+          "type": "macro_specifier",
+          "named": true
+        },
+        {
           "type": "noexcept",
           "named": true
         },
@@ -5046,6 +5054,10 @@
         },
         {
           "type": "lambda_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_specifier",
           "named": true
         },
         {

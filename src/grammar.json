@@ -127589,8 +127589,34 @@
         {
           "type": "SYMBOL",
           "name": "throw_specifier"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_declarator_macro_specifier"
+          },
+          "named": true,
+          "value": "macro_specifier"
         }
       ]
+    },
+    "_declarator_macro_specifier": {
+      "type": "PREC_DYNAMIC",
+      "value": -2,
+      "content": {
+        "type": "FIELD",
+        "name": "name",
+        "content": {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_declarator_macro_name"
+          },
+          "named": true,
+          "value": "identifier"
+        }
+      }
     },
     "_function_attributes_end": {
       "type": "PREC_RIGHT",
@@ -139377,6 +139403,10 @@
     {
       "type": "SYMBOL",
       "name": "_initializer_directive_name"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_declarator_macro_name"
     }
   ],
   "inline": [

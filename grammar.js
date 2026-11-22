@@ -153,6 +153,7 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       sym('_macro_identifier_end'),
       sym('_empty_initializer_start'),
       sym('_initializer_directive_name'),
+      sym('_declarator_macro_name'),
     ],
 
     conflicts: ($, original) => [
@@ -2142,7 +2143,14 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           )
         ),
 
-      _function_exception_specification: ($) => choice($.noexcept, $.throw_specifier),
+      _function_exception_specification: ($) =>
+        choice($.noexcept, $.throw_specifier, alias($._declarator_macro_specifier, $.macro_specifier)),
+
+      // An unexpanded macro in place of the exception specification, as in `int f() NOEXCEPT {}`. The scanner admits only
+      // a name that what follows shows to belong to the declarator (see `scan_declarator_macro_name`); it ranks below
+      // any reading without the macro.
+      _declarator_macro_specifier: ($) =>
+        prec.dynamic(-2, field('name', alias(sym('_declarator_macro_name'), $.identifier))),
 
       _function_attributes_end: ($) =>
         prec.right(
