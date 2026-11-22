@@ -17,6 +17,8 @@
         "src/conditionalMacro.h",
         "src/emptyDirectives.h",
         "src/directiveScan.h",
+        "src/directiveUnits.h",
+        "src/directiveBuffer.h",
         "src/gnuRawString.h",
         "src/initializerConditional.h",
         "src/cppTrivia.h"

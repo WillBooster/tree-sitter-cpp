@@ -49,8 +49,8 @@ may change; such changes are released as new major versions.
 
 The npm package ships `tree-sitter-cpp.wasm` for
 [@willbooster/web-tree-sitter](https://www.npmjs.com/package/@willbooster/web-tree-sitter), which runs in Node.js, Bun,
-browsers, and Cloudflare Workers. Use `@willbooster/web-tree-sitter` 23.0.0 or later in the 23.x series. The parser uses
-WillBooster/tree-sitter ABI `0x5742000d`, which upstream Tree-sitter runtimes reject; upgrade
+browsers, and Cloudflare Workers. Use `@willbooster/web-tree-sitter` 23.1.0 or later in the 23.x series. The parser uses
+WillBooster/tree-sitter ABI `0x5742000e`, which upstream Tree-sitter runtimes reject; upgrade
 the grammar and runtime together. Install both:
 
 ```sh
@@ -99,11 +99,11 @@ The package also ships the node types in `src/node-types.json`.
 
 In Rust, depend on the [crate](https://crates.io/crates/willbooster-tree-sitter-cpp) and on
 [willbooster-tree-sitter](https://crates.io/crates/willbooster-tree-sitter), the runtime this package is tested and
-fuzzed with. Use `willbooster-tree-sitter` 23.0.0 or later in the 23.x series; upstream Tree-sitter runtimes reject ABI
-`0x5742000d`:
+fuzzed with. Use `willbooster-tree-sitter` 23.1.0 or later in the 23.x series; upstream Tree-sitter runtimes reject ABI
+`0x5742000e`:
 
 ```sh
-cargo add --rename tree-sitter willbooster-tree-sitter@23.0.0
+cargo add --rename tree-sitter willbooster-tree-sitter@23.1.0
 cargo add --rename tree-sitter-cpp willbooster-tree-sitter-cpp
 ```
 
