@@ -584,7 +584,8 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
         choice(
           $._block_statement_item,
           alias(sym('preproc_if_in_block'), sym('preproc_if')),
-          alias(sym('preproc_ifdef_in_block'), sym('preproc_ifdef'))
+          alias(sym('preproc_ifdef_in_block'), sym('preproc_ifdef')),
+          alias($._split_try_statement, $.try_statement)
         ),
 
       _block_statement_item: ($) =>
@@ -676,7 +677,8 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           choice(
             $._block_statement_item,
             alias(sym('preproc_if_in_if_block'), sym('preproc_if')),
-            alias(sym('preproc_ifdef_in_if_block'), sym('preproc_ifdef'))
+            alias(sym('preproc_ifdef_in_if_block'), sym('preproc_ifdef')),
+            alias($._split_try_statement_in_if_block, $.try_statement)
           )
         ),
 
@@ -725,6 +727,30 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
         seq('}', 'else', repeat($.attribute_declaration), 'if', constevalHead(), '{'),
 
       _else_continuation: ($) => seq('}', 'else', repeat($.attribute_declaration), '{'),
+
+      // A conditional may open a `try` block that a later conditional closes with its handlers, as libc++ guards
+      // `try {` and `} catch (...) { ... }` by `#if _LIBCPP_HAS_EXCEPTIONS`; the statements between them are the
+      // children of the `try_statement`, which has no `body`. Whether both conditionals are enabled together is left to
+      // a preprocessor. The statements are `_if_block_item`s, so that a conditional between the two may hold an
+      // `else_continuation`: one of an enclosing `if` whose block the `try` starts, or one in a disabled branch.
+      _split_try_statement: () => splitTryStatement('_try_opening_ifdef'),
+
+      // In the block of an `if` statement the `#ifdef` line of the opening ends as that of `preproc_ifdef_in_if_block`
+      // does, which reads the same directive. Outranks `_split_try_statement` as `_if_block_item` does `_block_item`.
+      _split_try_statement_in_if_block: () => prec(1, splitTryStatement('_try_opening_ifdef_in_if_block')),
+
+      _try_opening_if: () => seamIf(tryOpening()),
+      _try_opening_ifdef: () =>
+        seq(
+          choice(preprocessor('ifdef'), preprocessor('ifndef')),
+          field('name', sym('identifier')),
+          tryOpening(),
+          preprocessor('endif')
+        ),
+      _try_opening_ifdef_in_if_block: () => initializerIfdef(tryOpening()),
+
+      _try_closing_if: () => seamIf(seq('}', repeat1(sym('catch_clause')))),
+      _try_closing_ifdef: () => initializerIfdef(seq('}', repeat1(sym('catch_clause')))),
 
       placeholder_type_specifier: ($) =>
         prec(
@@ -3620,6 +3646,33 @@ function cppTypeSpecifier($, sized) {
       )
     ),
     alias(choice(...CONTEXTUAL_IDENTIFIER_NAMES.slice(2)), sym('type_identifier'))
+  );
+}
+
+/** @param {string} ifdefOpening */
+function splitTryStatement(ifdefOpening) {
+  return seq(
+    choice(alias(sym('_try_opening_if'), sym('preproc_if')), alias(sym(ifdefOpening), sym('preproc_ifdef'))),
+    repeat(sym('_if_block_item')),
+    choice(alias(sym('_try_closing_if'), sym('preproc_if')), alias(sym('_try_closing_ifdef'), sym('preproc_ifdef')))
+  );
+}
+
+function tryOpening() {
+  return seq('try', '{');
+}
+
+/**
+ * A conditional without alternatives whose `#if` line ends before `body`, as those of the inherited conditionals do.
+ * @param {RuleOrLiteral} body
+ */
+function seamIf(body) {
+  return seq(
+    preprocessor('if'),
+    field('condition', sym('_preproc_expression')),
+    preprocExpressionNewline(),
+    body,
+    preprocessor('endif')
   );
 }
 

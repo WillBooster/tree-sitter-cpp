@@ -1,0 +1,349 @@
+================================================================================
+Nested try blocks opened and closed by matching conditionals
+================================================================================
+
+int f(int x) {
+#if EXCEPTIONS
+  try {
+#endif
+    if (x) {
+#if EXCEPTIONS
+      try {
+#endif
+        return x + 1;
+#if EXCEPTIONS
+      } catch (...) {
+        return -1;
+      }
+#endif
+    }
+#if EXCEPTIONS
+  } catch (...) {
+    return -2;
+  }
+#endif
+  return 0;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (try_statement
+        (preproc_if
+          (identifier))
+        (if_statement
+          (condition_clause
+            (identifier))
+          (compound_statement
+            (try_statement
+              (preproc_if
+                (identifier))
+              (return_statement
+                (binary_expression
+                  (identifier)
+                  (number_literal)))
+              (preproc_if
+                (identifier)
+                (catch_clause
+                  (parameter_list
+                    (variadic_parameter))
+                  (compound_statement
+                    (return_statement
+                      (number_literal))))))))
+        (preproc_if
+          (identifier)
+          (catch_clause
+            (parameter_list
+              (variadic_parameter))
+            (compound_statement
+              (return_statement
+                (number_literal))))))
+      (return_statement
+        (number_literal)))))
+
+================================================================================
+Try block with several handlers guarded by #ifndef in a loop
+================================================================================
+
+void drain() {
+  for (;;) {
+#ifndef NO_EXCEPTIONS
+    try {
+#endif // NO_EXCEPTIONS
+      step();
+#ifndef NO_EXCEPTIONS
+    } catch (const Error& error) {
+      report(error);
+    } catch (...) {
+      throw;
+    }
+#endif // NO_EXCEPTIONS
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (for_statement
+        (compound_statement
+          (try_statement
+            (preproc_ifdef
+              (identifier))
+            (comment)
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (preproc_ifdef
+              (identifier)
+              (catch_clause
+                (parameter_list
+                  (parameter_declaration
+                    (type_qualifier)
+                    (type_identifier)
+                    (reference_declarator
+                      (identifier))))
+                (compound_statement
+                  (expression_statement
+                    (call_expression
+                      (identifier)
+                      (argument_list
+                        (identifier))))))
+              (catch_clause
+                (parameter_list
+                  (variadic_parameter))
+                (compound_statement
+                  (throw_statement)))
+              (comment))))))))
+
+================================================================================
+Try block guarded by #ifdef in an if block next to an else continuation
+================================================================================
+
+int load(int x) {
+  if (x) {
+#ifdef EXCEPTIONS
+    try {
+#endif
+      read();
+#ifdef EXCEPTIONS
+    } catch (...) {
+      return -1;
+    }
+#endif
+#ifdef RETRY
+  } else if (x == 0) {
+    retry();
+#endif
+  }
+  return 0;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (try_statement
+            (preproc_ifdef
+              (identifier))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (preproc_ifdef
+              (identifier)
+              (catch_clause
+                (parameter_list
+                  (variadic_parameter))
+                (compound_statement
+                  (return_statement
+                    (number_literal))))))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (condition_clause
+                (binary_expression
+                  (identifier)
+                  (number_literal))))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (return_statement
+        (number_literal)))))
+
+================================================================================
+Else continuation of the enclosing if between the guards of a try block
+================================================================================
+
+void process(bool ready) {
+  if (ready) {
+#ifdef EXCEPTIONS
+    try {
+#endif
+#ifndef EXCEPTIONS
+  } else {
+#endif
+      record();
+#ifdef EXCEPTIONS
+    } catch (...) {
+      record();
+    }
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (try_statement
+            (preproc_ifdef
+              (identifier))
+            (preproc_ifdef
+              (identifier)
+              (else_continuation))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (preproc_ifdef
+              (identifier)
+              (catch_clause
+                (parameter_list
+                  (variadic_parameter))
+                (compound_statement
+                  (expression_statement
+                    (call_expression
+                      (identifier)
+                      (argument_list))))))))))))
+
+================================================================================
+Else continuation in a conditional between the guards of a try block in a loop
+================================================================================
+
+void drain(bool more) {
+  while (more) {
+#if EXCEPTIONS
+    try {
+#endif
+#if !EXCEPTIONS
+    } else {
+#endif
+      step();
+#if EXCEPTIONS
+    } catch (...) {
+      report();
+    }
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (while_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (try_statement
+            (preproc_if
+              (identifier))
+            (preproc_if
+              (unary_expression
+                (identifier))
+              (else_continuation))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))
+            (preproc_if
+              (identifier)
+              (catch_clause
+                (parameter_list
+                  (variadic_parameter))
+                (compound_statement
+                  (expression_statement
+                    (call_expression
+                      (identifier)
+                      (argument_list))))))))))))
+
+================================================================================
+Guarded try block without a guarded handler
+:error
+================================================================================
+
+int f() {
+#if EXCEPTIONS
+  try {
+#endif
+    return 1;
+  return 0;
+}
+
+--------------------------------------------------------------------------------
+
+================================================================================
+Guarded handler without a guarded try block
+:error
+================================================================================
+
+int f() {
+    g();
+#if EXCEPTIONS
+  } catch (...) {
+    return -1;
+  }
+#endif
+  return 0;
+}
+
+--------------------------------------------------------------------------------
