@@ -23,8 +23,11 @@ typedef struct {
     // The lexer's byte position, which follows the last stored character.
     uint32_t fill_byte;
     uint32_t conditional_depth;
-    // Whether the current segment recorded a null directive or a line-end barrier, which the reverse pass carries.
-    bool utf16, encoding_known, failed, carries;
+    // The characters stored last, as `DirectiveScan` keeps those it reads.
+    uint64_t recent;
+    // Whether the current segment recorded a null directive or a line-end barrier, which the reverse pass carries, and
+    // whether the characters stored or scanned hold `pragma_word`.
+    bool utf16, encoding_known, failed, carries, pragma;
 } DirectiveBuffer;
 
 // A position in a `DirectiveBuffer`; copies share the buffer, so a lookahead copy reads what the original will.
@@ -45,7 +48,10 @@ typedef struct {
 typedef struct {
     uint8_t **starts, **ends, **comments, **line_ends, **directive_starts, **directive_ends;
     uint32_t pages;
-    bool built, ready;
+    // `anchored` and `ready` belong to the scanner state: whether the token at the start of the input is out, and
+    // whether the facts, which `built` says exist, are in use. `pragmas` is the fact that the input read for them holds
+    // `pragma_word`, without which no scan has to look for a `_Pragma` operator.
+    bool built, anchored, ready, pragmas;
 } EmptyDirectives;
 
 typedef enum { DIRECTIVE_ORDINARY, DIRECTIVE_CONDITION, DIRECTIVE_DIAGNOSTIC, DIRECTIVE_REQUIRED, DIRECTIVE_UNDEF, DIRECTIVE_LINE, DIRECTIVE_PRAGMA, DIRECTIVE_HEADER } DirectiveKind;
@@ -73,7 +79,7 @@ static bool directive_segment_ends(const DirectiveInput *input);
 static bool directive_short_line_comment(const DirectiveInput *input, uint32_t index, uint32_t limit);
 static bool directive_line_clean(const DirectiveLine *line);
 static void directive_shift(DirectiveBuffer *buffer, uint32_t start);
-static bool directive_finish(EmptyDirectives *state, DirectiveBuffer *buffer);
+static void directive_finish(EmptyDirectives *state, DirectiveBuffer *buffer, DirectiveSpans *run, DirectiveSpans *tail);
 static void directive_prefixes(EmptyDirectives *state, const DirectiveInput *input, const DirectiveSpans *prefix, DirectiveSpans *tail);
 static bool directive_step_back(const DirectiveInput *input, uint32_t *index, uint32_t *position, uint32_t *byte, int32_t *c, uint32_t *width);
 static void directive_carry(EmptyDirectives *state, DirectiveBuffer *buffer, DirectiveCarry *carry, int32_t c, uint32_t byte);
@@ -85,6 +91,7 @@ static inline bool directive_has(const DirectiveInput *input, uint32_t index);
 static bool directive_fill(DirectiveBuffer *buffer, uint32_t index);
 static bool directive_append(DirectiveBuffer *buffer);
 static bool directive_append_ascii(DirectiveBuffer *buffer, uint16_t c);
+static inline void directive_note(DirectiveBuffer *buffer, uint32_t c);
 static bool directive_reserve(DirectiveBuffer *buffer, unsigned width);
 static bool directive_position(DirectiveBuffer *buffer, uint32_t index, uint32_t byte, uint32_t width);
 static void directive_encode(DirectiveBuffer *buffer, uint32_t c);
@@ -147,16 +154,19 @@ static void directive_word_role(DirectiveLine *line, DirectiveKind kind, bool na
 static uint32_t directive_byte(const DirectiveInput *input);
 static void directive_record(EmptyDirectives *state, DirectiveInput *input, const DirectiveLine *line, uint32_t end);
 
-static bool empty_directives_initialize(EmptyDirectives *state, TSLexer *lexer) {
+// Scans the zero-width token `symbol` that starts the directive context: once at the start of the input, where it
+// anchors the tree, and, when comments lead the input, once more where the facts are built after them. Returns false
+// while a comment is still ahead, having consumed characters.
+static bool empty_directives_initialize(EmptyDirectives *state, TSLexer *lexer, TSSymbol symbol) {
     TSLexerCheckpoint start;
     lexer->get_checkpoint(lexer, &start);
-    if (!state->built) {
-        state->built = true;
-        empty_directives_build(state, lexer);
-    }
-    state->ready = true;
+    lexer->result_symbol = symbol;
+    bool anchored = state->anchored;
+    state->anchored = true;
+    if (!state->built) state->built = empty_directives_build(state, lexer);
+    state->ready = state->built;
     lexer->mark_end_at(lexer, &start);
-    return true;
+    return state->ready || !anchored;
 }
 
 static bool empty_directives_after_keyword(const EmptyDirectives *state, TSLexer *lexer) {
@@ -164,6 +174,25 @@ static bool empty_directives_after_keyword(const EmptyDirectives *state, TSLexer
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
     return directive_bit(state, state->directive_ends, position.bytes);
+}
+
+// False only when the facts show that no `_Pragma` operator can follow any position.
+static bool empty_directives_pragma_possible(const EmptyDirectives *state) {
+    return !state || !state->built || state->pragmas;
+}
+
+// Whether none of the `count` tokens, at least eight, is valid but those whose byte in `extras` is 0xff.
+static inline bool empty_directives_only_valid(const bool *valid_symbols, const uint8_t *extras, unsigned count) {
+    _Static_assert(sizeof(bool) == 1, "valid_symbols is read as bytes");
+    uint64_t others = 0;
+    for (unsigned i = 0; i < count; i += 8) {
+        unsigned offset = i + 8 > count ? count - 8 : i;
+        uint64_t valid, extra;
+        memcpy(&valid, valid_symbols + offset, sizeof valid);
+        memcpy(&extra, extras + offset, sizeof extra);
+        others |= valid & ~extra;
+    }
+    return !others;
 }
 
 static bool empty_directives_at_start(const EmptyDirectives *state, TSLexer *lexer) {
@@ -224,6 +253,15 @@ static void empty_directives_consume_started(TSLexer *lexer, EmptyDirectives *st
 // Ordinary code goes through `DirectiveScan` without being stored, and only directive segments, each from a directive's
 // `#` to the end of the logical line where no directive state is left, are stored for the line-state pass and the
 // reverse prefix pass. The facts are stored as `EmptyDirectives` describes.
+//
+// Returns false without building when a comment follows the lexer's position after spaces only, which leaves the build
+// to the scan after the comment's token. That scan starts from the initial state where the lexer ends the comment: the
+// state this pass has there too, unless the lexer ends the comment earlier, as at a backslash that spaces separate
+// from its newline, and then what follows is read as the lexer's tokens take it and not as comment text.
+//
+// A build from the start of an input that begins with a block comment would read to the end of the input in a scan
+// that consumes nothing, which the runtime takes for a scanner stuck in an unterminated comment: it then reads the
+// whole input once more and guards every later scan.
 static bool empty_directives_build(EmptyDirectives *state, TSLexer *lexer) {
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
@@ -231,7 +269,11 @@ static bool empty_directives_build(EmptyDirectives *state, TSLexer *lexer) {
     DirectiveInput input = {.buffer = &buffer, .byte = position.bytes};
     // `run` holds the run before a segment's `#`, and `tail` the segment's trailing run.
     DirectiveSpans run = {0}, tail = {0};
-    DirectiveScan scan = {.beginning = true, .run = &run};
+    DirectiveScan scan = {.beginning = true, .run = &run, .pragma = &buffer.pragma};
+    if (directive_scan_leading_comment(&scan, lexer)) {
+        free(run.items);
+        return false;
+    }
     for (;;) {
         if (!directive_scan_buffered(&scan, &input)) {
             buffer.length = buffer.position_count = 0;
@@ -247,10 +289,8 @@ static bool empty_directives_build(EmptyDirectives *state, TSLexer *lexer) {
         if (!more || buffer.failed) break;
         directive_scan_resume(&scan, &run, &tail);
     }
-    if (run.failed || tail.failed) buffer.failed = true;
-    free(run.items);
-    free(tail.items);
-    return directive_finish(state, &buffer);
+    directive_finish(state, &buffer, &run, &tail);
+    return true;
 }
 
 // Restarts `scan` on ordinary code, continuing the run with a segment's trailing run, whose spans `tail` holds in byte
@@ -259,7 +299,7 @@ static void directive_scan_resume(DirectiveScan *scan, DirectiveSpans *run, Dire
     DirectiveSpans before = *run;
     *run = *tail;
     *tail = before;
-    *scan = (DirectiveScan){.beginning = true, .run = run};
+    *scan = (DirectiveScan){.beginning = true, .run = run, .pragma = scan->pragma};
     if (!run->count) return;
     DirectiveSpan last = run->items[--run->count];
     scan->run_spans = run->count;
@@ -379,11 +419,14 @@ static void directive_shift(DirectiveBuffer *buffer, uint32_t start) {
     buffer->position_count = count;
 }
 
-static bool directive_finish(EmptyDirectives *state, DirectiveBuffer *buffer) {
+// Without all the facts, none is kept, and a `_Pragma` operator may be anywhere.
+static void directive_finish(EmptyDirectives *state, DirectiveBuffer *buffer, DirectiveSpans *run, DirectiveSpans *tail) {
+    bool failed = buffer->failed || run->failed || tail->failed;
+    free(run->items);
+    free(tail->items);
     directive_release(buffer);
-    if (!buffer->failed) return true;
-    empty_directives_release(state);
-    return false;
+    state->pragmas = buffer->pragma || failed;
+    if (failed) empty_directives_release(state);
 }
 
 static void empty_directives_release(EmptyDirectives *state) {
@@ -523,6 +566,7 @@ static bool directive_append(DirectiveBuffer *buffer) {
     unsigned width = directive_utf8_width(c), utf16_width = c > 0xffff && c <= 0x10ffff ? 4 : 2;
     if (!directive_reserve(buffer, c > 0xffff && c <= 0x10ffff ? 2 : 1)) return false;
     directive_encode(buffer, c);
+    directive_note(buffer, c);
     TSLexerPosition end;
     lexer->advance(lexer, false);
     lexer->get_position(lexer, &end);
@@ -560,11 +604,17 @@ static bool directive_append_ascii(DirectiveBuffer *buffer, uint16_t c) {
     uint32_t index = buffer->length, start = buffer->fill_byte;
     buffer->characters[index >> DIRECTIVE_PAGE_SHIFT][index & (DIRECTIVE_PAGE_SIZE - 1)] = c;
     buffer->length = index + 1;
+    directive_note(buffer, c);
     TSLexerPosition end;
     lexer->advance(lexer, false);
     lexer->get_position(lexer, &end);
     buffer->fill_byte = end.bytes;
     return end.bytes - start == (buffer->utf16 ? 2u : 1u) || directive_position(buffer, index, start, end.bytes - start);
+}
+
+static inline void directive_note(DirectiveBuffer *buffer, uint32_t c) {
+    buffer->recent = buffer->recent << 8 | (c < 0x80 ? c : 0);
+    if (directive_pragma_word(buffer->recent)) buffer->pragma = true;
 }
 
 static bool directive_reserve(DirectiveBuffer *buffer, unsigned width) {
@@ -712,10 +762,12 @@ static void directive_code(EmptyDirectives *state, DirectiveInput *input, Direct
     directive_word_role(line, kind, name, pragma, operand, preproc_word(c, false));
 }
 
-// Outside a directive name, a line of no directive kind with no `_Pragma` or header operand in progress keeps that
-// state through every token, so its words need no classification.
+// Outside a directive name, a line with no `_Pragma` or header operand in progress keeps its state through every token
+// when it is of no directive kind, or of a kind that only waits for an operand it already has: its words need no
+// classification.
 static bool directive_neutral(const DirectiveLine *line) {
-    return !line->pending && line->kind == DIRECTIVE_ORDINARY && !line->pragma_depth && !line->pragma_pending && !line->header;
+    bool settled = line->kind == DIRECTIVE_ORDINARY || (line->operand && directive_requires_operand(line->kind));
+    return settled && !line->pending && !line->pragma_depth && !line->pragma_pending && !line->header;
 }
 
 // Also consumes the following characters that leave the line state as it is, which is every plain character but `/`.
