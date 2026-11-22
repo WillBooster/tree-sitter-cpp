@@ -139,6 +139,10 @@ static bool scan_unconsumed_spaced_token(Scanner *scanner, TSLexer *lexer, const
 static bool can_start_peeked_spaced_token(int32_t peeked, const Scanner *scanner, const bool *valid_symbols);
 static bool scan_preproc_tokens(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_cpp_hash_directive(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool error_recovery);
+static bool scan_cpp_directive_word(TSLexer *lexer, char *word, unsigned capacity, uint32_t *keyword_end);
+static bool scan_cpp_extended_directive_word(TSLexer *lexer, char *word, unsigned capacity, uint32_t *keyword_end);
+static bool scan_cpp_directive_word_tail(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, uint32_t *keyword_end);
+static bool has_extended_directive_suffix(int32_t next);
 static InitializerConditionalKind scan_cached_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, uint32_t *start_byte);
 static bool scan_cpp_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, const TSLexerCheckpoint *end, uint32_t start_byte, const char *word);
 static bool scan_cpp_conditional_marker(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols, const char *word, const TSLexerCheckpoint *end);
@@ -707,7 +711,7 @@ static bool scan_cpp_hash_directive(Scanner *scanner, TSLexer *lexer, const bool
     if (cached == INITIALIZER_EMPTY) return true;
     char word[10] = {0};
     uint32_t keyword_end = 0;
-    if (!empty_directives_scan_word(lexer, word, sizeof word, &keyword_end)) return false;
+    if (!scan_cpp_directive_word(lexer, word, sizeof word, &keyword_end)) return false;
     if (!at_start || !empty_directives_has_keyword_end(state, keyword_end)) {
         if (!error_recovery) return false;
         lexer->result_symbol = GNU_RAW_STRING_BODY;
@@ -721,6 +725,59 @@ static bool scan_cpp_hash_directive(Scanner *scanner, TSLexer *lexer, const bool
     }
     if (!error_recovery && scan_cpp_conditional_marker(state, lexer, valid_symbols, word, &end)) return true;
     return empty_directives_select_symbol(word, &directive_symbols, valid_symbols, &lexer->result_symbol);
+}
+
+static bool scan_cpp_directive_word(TSLexer *lexer, char *word, unsigned capacity, uint32_t *keyword_end) {
+    uint32_t count = 0, size = 0;
+    const char *units = lexer->peek_units(lexer, &count, &size);
+    if (count >= 2 && empty_directives_name_character(peek_unit_at(units, size, 1), false)) {
+        if (!empty_directives_scan_word(lexer, word, capacity, keyword_end)) return false;
+        if (has_extended_directive_suffix(lexer->lookahead)) word[0] = '\0';
+        return true;
+    }
+    return scan_cpp_extended_directive_word(lexer, word, capacity, keyword_end);
+}
+
+static bool scan_cpp_extended_directive_word(TSLexer *lexer, char *word, unsigned capacity, uint32_t *keyword_end) {
+    lexer->advance(lexer, false);
+    if (!empty_directives_skip_prefix(lexer)) return false;
+    int32_t first = lexer->lookahead;
+    if (!empty_directives_name_character(first, true) && !preproc_identifier_character(first, false)) return false;
+    unsigned length = 0;
+    if (first < 0x80) word[length++] = (char)first;
+    else capacity = 1;
+    lexer->advance(lexer, false);
+    lexer->mark_end(lexer);
+    bool extended = scan_cpp_directive_word_tail(lexer, word, capacity, &length, keyword_end);
+    word[length < capacity && !extended ? length : 0] = '\0';
+    return true;
+}
+
+static bool scan_cpp_directive_word_tail(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, uint32_t *keyword_end) {
+    bool trailing_splice = false;
+    TSLexerPosition position = {0};
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        if (empty_directives_name_character(c, true)) {
+            if (*length < capacity) word[(*length)++] = (char)c;
+            lexer->advance(lexer, false);
+            lexer->mark_end(lexer);
+            trailing_splice = false;
+            continue;
+        }
+        if (c != '\\') break;
+        if (!trailing_splice) lexer->get_position(lexer, &position);
+        trailing_splice = true;
+        lexer->advance(lexer, false);
+        if (!scan_preproc_newline(lexer, false)) break;
+    }
+    if (!trailing_splice) lexer->get_position(lexer, &position);
+    *keyword_end = position.bytes;
+    return has_extended_directive_suffix(lexer->lookahead);
+}
+
+static bool has_extended_directive_suffix(int32_t next) {
+    return (next >= 0x80 && preproc_word(next, true)) || next == 'u' || next == 'U' || next == 'N';
 }
 
 static InitializerConditionalKind scan_cached_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, uint32_t *start_byte) {

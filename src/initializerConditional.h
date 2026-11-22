@@ -228,9 +228,13 @@ static bool initializer_conditional_nonempty(InitializerConditionals *state) {
 
 static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     lexer->advance(lexer, false);
-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') lexer->advance(lexer, false);
+    if (!empty_directives_skip_prefix(lexer)) return INITIALIZER_INVALID;
+    int32_t first = lexer->lookahead;
+    if (!empty_directives_name_character(first, true) && !preproc_identifier_character(first, false)) {
+        return INITIALIZER_INVALID;
+    }
     char name[9] = {0};
-    MacroName word = {.word = name, .capacity = sizeof(name) - 1, .ascii = true, .lookahead_only = true};
+    MacroName word = {.word = name, .capacity = sizeof(name) - 1, .ascii = first < 0x80, .lookahead_only = true};
     if (!initializer_conditional_word(lexer, &word)) return INITIALIZER_INVALID;
     if (!word.ascii) return INITIALIZER_OTHER;
     if (!strcmp(name, "if") || !strcmp(name, "ifdef") || !strcmp(name, "ifndef")) return INITIALIZER_IF;
