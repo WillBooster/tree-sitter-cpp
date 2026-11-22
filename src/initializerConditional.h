@@ -269,7 +269,7 @@ static bool initializer_conditional_word(TSLexer *lexer, MacroName *word) {
     }
 }
 
-// code-gauge-allow functionCognitiveComplexity 16 -- The header loop keeps newline termination and token-role transitions together.
+// code-gauge-allow functionCognitiveComplexity -- The header loop keeps newline termination and token-role transitions together.
 static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode) {
     bool content = false;
     InitializerHeaderContext context = {.mode = mode, .argument_start = mode == INITIALIZER_HEADER};
@@ -343,7 +343,7 @@ static void initializer_conditional_header_punctuation(InitializerHeaderContext 
     context->after_identifier = false;
 }
 
-// code-gauge-allow functionCognitiveComplexity 20 -- The pp-number loop consumes continuations, separators and UCNs in one pass.
+// code-gauge-allow functionCognitiveComplexity -- The pp-number loop consumes continuations, separators and UCNs in one pass.
 static void initializer_conditional_pp_number(TSLexer *lexer) {
     int32_t previous = 0;
     while (!at_eof(lexer)) {
