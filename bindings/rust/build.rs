@@ -27,22 +27,15 @@ fn main() {
         println!("cargo:rerun-if-changed={}", scanner_path.to_str().unwrap());
     }
 
-    for header in [
-        "pragma.h",
-        "identifier.h",
-        "keywords.h",
-        "functionMacro.h",
-        "macroProof.h",
-        "conditionalMacro.h",
-        "emptyDirectives.h",
-        "directiveScan.h",
-        "directiveUnits.h",
-        "directiveBuffer.h",
-        "gnuRawString.h",
-        "initializerConditional.h",
-        "cppTrivia.h",
-    ] {
-        println!("cargo:rerun-if-changed={}", src_dir.join(header).display());
+    println!("cargo:rerun-if-changed={}", src_dir.display());
+    let mut headers: Vec<_> = std::fs::read_dir(src_dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("h"))
+        .collect();
+    headers.sort();
+    for header in headers {
+        println!("cargo:rerun-if-changed={}", header.display());
     }
 
     c_config.compile("tree-sitter-cpp");
