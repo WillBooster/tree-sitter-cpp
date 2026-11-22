@@ -116,18 +116,46 @@ static bool function_macro_first_word(TSLexer *lexer, const MacroName *name, con
     return false;
 }
 
+typedef enum {
+    PEEK_EXTRAS_NONE,
+    PEEK_EXTRAS_DIRECTIVE,
+    PEEK_EXTRAS_DECLARATION,
+    PEEK_EXTRAS_UNKNOWN,
+} PeekExtrasKind;
+
+typedef struct {
+    const char *units;
+    uint32_t count, size;
+} PeekUnitsView;
+
+static bool scan_function_attribute_guard_from(TSLexer *lexer, bool prototype, bool require_literal, bool trailing, bool consumed_backslash, const MacroAttributeSymbols *symbols);
+static PeekExtrasKind peek_extras_kind(const TSLexer *lexer, bool allow_directive, bool allow_object, bool allow_pragma);
+static PeekExtrasKind peek_extras_first(uint16_t first, bool allow_directive, bool allow_object, bool allow_pragma);
+static PeekExtrasKind peek_extras_word(PeekUnitsView view, uint32_t i, bool allow_object, bool allow_pragma);
+static bool peek_object_declarator_units(PeekUnitsView view, uint32_t i);
+static uint32_t peek_skip_ident(PeekUnitsView view, uint32_t i, bool *non_plain);
+static inline bool peek_object_starter(uint16_t c);
+static inline uint16_t peek_unit_at(const char *units, uint32_t size, uint32_t index);
+static inline bool peek_ascii_space(uint16_t c);
+static inline bool peek_ascii_ident(uint16_t c, bool continuation);
+
 // code-gauge-allow functionCognitiveComplexity -- Attribute roles share first-word dispatch, token ranges, and group results.
 // code-gauge-allow functionNcss -- Attribute roles share first-word dispatch, token ranges, and group results.
-static bool scan_function_attribute_guard(TSLexer *lexer, bool prototype, bool require_literal, bool trailing, const MacroAttributeSymbols *symbols) {
+static bool scan_function_attribute_guard_from(TSLexer *lexer, bool prototype, bool require_literal, bool trailing, bool consumed_backslash, const MacroAttributeSymbols *symbols) {
     const PragmaTrivia *trivia = &symbols->trivia;
     bool braced_only = symbols->allow_braced_start && lexer->result_symbol == symbols->braced_start;
     char word[FUNCTION_MACRO_KEYWORD_MAX_LENGTH + 1] = {0};
     MacroName name = {.word = word, .capacity = sizeof(word) - 1, .ascii = true, .lookahead_only = !trailing};
-    if (!scan_macro_name(lexer, &name)) return false;
+    if (!scan_macro_name_from(lexer, &name, consumed_backslash)) return false;
     bool handled;
     bool accepted = function_macro_first_word(lexer, &name, symbols, &handled);
     if (handled) return accepted;
     if (lexer->result_symbol == symbols->object_start) return false;
+    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') lexer->advance(lexer, false);
+    int32_t next = lexer->lookahead;
+    if (next != '(' && (uint32_t)next < 0x80u && next != '\\' && next != '/' && next != '#' && !pragma_space(next)) {
+        return false;
+    }
     if (name.ascii && function_macro_attribute_keyword(word, trailing)) return false;
     if (!scan_pragma_spacing_with(lexer, trivia) || lexer->lookahead != '(') return false;
     if (trailing) return function_macro_trailing_argument_prefix(lexer, trivia);
@@ -177,34 +205,47 @@ static MacroTypePrefix function_macro_macro_type_item(TSLexer *lexer, const Macr
 
 static MacroTypeResult function_macro_type_transition(MacroTypeState *state, MacroTypePrefix kind);
 static MacroTypeResult function_macro_type_group(TSLexer *lexer, MacroTypeState *state, const PragmaTrivia *trivia);
-static MacroTypeResult function_macro_type_word(TSLexer *lexer, const MacroAttributeSymbols *symbols,
+static MacroTypeResult function_macro_type_word(TSLexer *lexer, bool consumed_backslash, const MacroAttributeSymbols *symbols,
     const char *const *reserved_words, unsigned reserved_count, MacroTypeState *state);
 
-static bool function_macro_prove_braced_type(TSLexer *lexer, const MacroAttributeSymbols *symbols,
+static bool function_macro_prove_braced_type(TSLexer *lexer, bool consumed_backslash, const MacroAttributeSymbols *symbols,
     const char *const *reserved_words, unsigned reserved_count, MacroProofMemo *memo);
+static unsigned function_macro_type_trivia(TSLexer *lexer, const MacroTypeState *state, const PragmaTrivia *trivia, MacroProofMemo *memo);
 
-static bool scan_braced_macro_type_start(TSLexer *lexer, const MacroAttributeSymbols *symbols, const char *const *reserved_words, unsigned reserved_count) {
+static inline bool scan_braced_macro_type_start_from(TSLexer *lexer, bool consumed_backslash, const MacroAttributeSymbols *symbols, const char *const *reserved_words, unsigned reserved_count) {
     MacroProofMemo *memo = symbols->proof_memo;
     if (!macro_proof_begin(memo, reserved_words, reserved_count, &symbols->trivia)) memo = NULL;
-    bool accepted = function_macro_prove_braced_type(lexer, symbols, reserved_words, reserved_count, memo);
+    bool accepted = function_macro_prove_braced_type(lexer, consumed_backslash, symbols, reserved_words, reserved_count, memo);
     macro_proof_finish(memo, accepted);
     return accepted;
 }
 
-static bool function_macro_prove_braced_type(TSLexer *lexer, const MacroAttributeSymbols *symbols,
+static inline bool scan_braced_macro_type_start(TSLexer *lexer, const MacroAttributeSymbols *symbols, const char *const *reserved_words, unsigned reserved_count) {
+    return scan_braced_macro_type_start_from(lexer, false, symbols, reserved_words, reserved_count);
+}
+
+static bool function_macro_prove_braced_type(TSLexer *lexer, bool consumed_backslash, const MacroAttributeSymbols *symbols,
     const char *const *reserved_words, unsigned reserved_count, MacroProofMemo *memo) {
     const PragmaTrivia *trivia = &symbols->trivia;
     MacroTypeState state = {0};
     for (;;) {
-        while (pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
-        uint8_t key = state.marker | (state.known_type << 1) | (state.tag << 2) | (state.body << 3);
-        unsigned cached = state.started ? macro_proof_step(memo, lexer, key) : 0;
+        unsigned cached = consumed_backslash ? 0 : function_macro_type_trivia(lexer, &state, trivia, memo);
         if (cached) return cached == 2;
-        if (scan_pragma_empty(lexer, trivia)) continue;
-        MacroTypeResult result = lexer->lookahead == '[' || lexer->lookahead == '{'
+        bool escaped = consumed_backslash;
+        consumed_backslash = false;
+        MacroTypeResult result = !escaped && (lexer->lookahead == '[' || lexer->lookahead == '{')
             ? function_macro_type_group(lexer, &state, trivia)
-            : function_macro_type_word(lexer, symbols, reserved_words, reserved_count, &state);
+            : function_macro_type_word(lexer, escaped, symbols, reserved_words, reserved_count, &state);
         if (result != MACRO_TYPE_CONTINUE) return result == MACRO_TYPE_ACCEPT;
+    }
+}
+
+static unsigned function_macro_type_trivia(TSLexer *lexer, const MacroTypeState *state, const PragmaTrivia *trivia, MacroProofMemo *memo) {
+    uint8_t key = state->marker | (state->known_type << 1) | (state->tag << 2) | (state->body << 3);
+    for (;;) {
+        while (pragma_space(lexer->lookahead)) lexer->advance(lexer, !state->started);
+        unsigned cached = state->started ? macro_proof_step(memo, lexer, key) : 0;
+        if (cached || !scan_pragma_empty(lexer, trivia)) return cached;
     }
 }
 
@@ -219,11 +260,11 @@ static MacroTypeResult function_macro_type_group(TSLexer *lexer, MacroTypeState 
     return MACRO_TYPE_CONTINUE;
 }
 
-static MacroTypeResult function_macro_type_word(TSLexer *lexer, const MacroAttributeSymbols *symbols,
+static MacroTypeResult function_macro_type_word(TSLexer *lexer, bool consumed_backslash, const MacroAttributeSymbols *symbols,
     const char *const *reserved_words, unsigned reserved_count, MacroTypeState *state) {
     char word[FUNCTION_MACRO_KEYWORD_MAX_LENGTH + 1] = {0};
-    MacroName name = {.word = word, .capacity = sizeof(word) - 1, .ascii = true, .lookahead_only = true, .preserve_end = state->started};
-    if (!scan_macro_name(lexer, &name)) return MACRO_TYPE_REJECT;
+    MacroName name = {.word = word, .capacity = sizeof(word) - 1, .ascii = true, .lookahead_only = true, .preserve_end = state->started || consumed_backslash};
+    if (!scan_macro_name_from(lexer, &name, consumed_backslash)) return MACRO_TYPE_REJECT;
     if (!state->started) {
         bool handled;
         bool accepted = function_macro_first_word(lexer, &name, symbols, &handled);
@@ -358,6 +399,100 @@ static bool function_macro_object_word(TSLexer *lexer, MacroName *name, bool esc
 static bool function_macro_scalar_type_keyword(const char *word) {
     return function_macro_word_in(word, function_macro_scalar_type_keywords,
         sizeof(function_macro_scalar_type_keywords) / sizeof(function_macro_scalar_type_keywords[0]));
+}
+
+// Conservative lookahead: rules out `#` directives, `_Pragma`, and scalar-typed object declarations from
+// `lexer->lookahead` and buffered ASCII units without moving the lexer cursor.
+static PeekExtrasKind peek_extras_kind(const TSLexer *lexer, bool allow_directive, bool allow_object, bool allow_pragma) {
+    int32_t look = lexer->lookahead;
+    if (look > 0 && look < 0x80 && !peek_ascii_space((uint16_t)look) && look != '\\') {
+        PeekExtrasKind direct = peek_extras_first((uint16_t)look, allow_directive, allow_object, allow_pragma);
+        if (direct != PEEK_EXTRAS_UNKNOWN) return direct;
+    }
+    PeekUnitsView view = {0};
+    view.units = lexer->peek_units(lexer, &view.count, &view.size);
+    if (!view.count) return PEEK_EXTRAS_UNKNOWN;
+    uint32_t i = 0;
+    while (i < view.count && peek_ascii_space(peek_unit_at(view.units, view.size, i))) i++;
+    if (i >= view.count) return PEEK_EXTRAS_UNKNOWN;
+    uint16_t first = peek_unit_at(view.units, view.size, i);
+    if (first >= 0x80 || first == '\\') return PEEK_EXTRAS_UNKNOWN;
+    PeekExtrasKind direct = peek_extras_first(first, allow_directive, allow_object, allow_pragma);
+    if (direct != PEEK_EXTRAS_UNKNOWN) return direct;
+    return peek_extras_word(view, i, allow_object, allow_pragma);
+}
+
+static PeekExtrasKind peek_extras_first(uint16_t first, bool allow_directive, bool allow_object, bool allow_pragma) {
+    if (first == '#') return allow_directive ? PEEK_EXTRAS_DIRECTIVE : PEEK_EXTRAS_NONE;
+    bool pragma_possible = allow_pragma && first == '_';
+    bool object_possible = allow_object && peek_object_starter(first);
+    return object_possible || pragma_possible ? PEEK_EXTRAS_UNKNOWN : PEEK_EXTRAS_NONE;
+}
+
+static PeekExtrasKind peek_extras_word(PeekUnitsView view, uint32_t i, bool allow_object, bool allow_pragma) {
+    char word[12] = {0};
+    unsigned length = 0;
+    while (i < view.count) {
+        uint16_t c = peek_unit_at(view.units, view.size, i);
+        if (c >= 0x80 || c == '\\') return PEEK_EXTRAS_UNKNOWN;
+        if (!peek_ascii_ident(c, true)) break;
+        if (length < sizeof word - 1) word[length++] = (char)c;
+        else length = sizeof word;
+        i++;
+    }
+    if (i >= view.count) return PEEK_EXTRAS_UNKNOWN;
+    if (allow_pragma && length == sizeof pragma_word - 1 && strcmp(word, pragma_word) == 0) return PEEK_EXTRAS_DECLARATION;
+    if (!allow_object || length >= sizeof word || !function_macro_scalar_type_keyword(word)) return PEEK_EXTRAS_NONE;
+    return peek_object_declarator_units(view, i) ? PEEK_EXTRAS_DECLARATION : PEEK_EXTRAS_NONE;
+}
+
+static bool peek_object_declarator_units(PeekUnitsView view, uint32_t i) {
+    while (i < view.count && (peek_ascii_space(peek_unit_at(view.units, view.size, i)) || peek_unit_at(view.units, view.size, i) == '*')) i++;
+    if (i >= view.count) return true;
+    uint16_t decl = peek_unit_at(view.units, view.size, i);
+    if (decl >= 0x80 || decl == '\\' || decl == '/' || decl == '#') return true;
+    if (!peek_ascii_ident(decl, false)) return false;
+    bool non_plain = false;
+    i = peek_skip_ident(view, i + 1, &non_plain);
+    if (non_plain) return true;
+    while (i < view.count && peek_ascii_space(peek_unit_at(view.units, view.size, i))) i++;
+    if (i >= view.count) return true;
+    uint16_t after = peek_unit_at(view.units, view.size, i);
+    return after >= 0x80 || after == '\\' || after == '/' || after == '#' || peek_ascii_ident(after, false);
+}
+
+static uint32_t peek_skip_ident(PeekUnitsView view, uint32_t i, bool *non_plain) {
+    for (; i < view.count; i++) {
+        uint16_t c = peek_unit_at(view.units, view.size, i);
+        if (c >= 0x80 || c == '\\') {
+            *non_plain = true;
+            return i;
+        }
+        if (!peek_ascii_ident(c, true)) break;
+    }
+    return i;
+}
+
+static inline bool peek_object_starter(uint16_t c) {
+    static const uint64_t starter_hi = (1ULL << ('_' - 64)) | (1ULL << ('b' - 64)) | (1ULL << ('c' - 64)) |
+        (1ULL << ('d' - 64)) | (1ULL << ('f' - 64)) | (1ULL << ('i' - 64)) | (1ULL << ('m' - 64)) |
+        (1ULL << ('n' - 64)) | (1ULL << ('p' - 64)) | (1ULL << ('s' - 64)) | (1ULL << ('u' - 64)) | (1ULL << ('v' - 64));
+    return c >= 64 && ((starter_hi >> (c - 64)) & 1ULL) != 0;
+}
+
+static inline uint16_t peek_unit_at(const char *units, uint32_t size, uint32_t index) {
+    uint16_t c = (uint8_t)units[index * size];
+    if (size == 2) memcpy(&c, units + index * size, sizeof c);
+    return c;
+}
+
+static inline bool peek_ascii_space(uint16_t c) {
+    return c == ' ' || (uint32_t)(c - '\t') < 5;
+}
+
+static inline bool peek_ascii_ident(uint16_t c, bool continuation) {
+    return c < 0x80 && ((preproc_identifier_continue_ascii[c / 64] >> (c % 64)) & 1) &&
+        (continuation || c < '0' || c > '9');
 }
 
 static bool function_macro_object_prefix_keyword(const char *word) {

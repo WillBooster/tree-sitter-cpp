@@ -57,7 +57,7 @@ static void macro_proof_finish(MacroProofMemo *memo, bool accepted) {
     }
 }
 
-static void macro_proof_destroy(MacroProofMemo *memo) {
+static inline void macro_proof_destroy(MacroProofMemo *memo) {
     if (!memo) return;
     if (memo->root) {
         macro_proof_free_node(memo->root, 3);

@@ -9,7 +9,66 @@
 #include <stdint.h>
 #include <string.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, GNU_RAW_STRING_BODY, RAW_MACRO_TYPE_TAIL, BRACED_FUNCTION_ATTRIBUTE_START, BRACED_MACRO_TYPE_START, DIRECTIVE_CONTEXT, PREPROC_EMPTY, PREPROC_DIRECTIVE_START, MACRO_CALL_END, MACRO_IDENTIFIER_END, EMPTY_INITIALIZER_START, INITIALIZER_DIRECTIVE_NAME, DECLARATOR_MACRO_NAME, TOKEN_COUNT };
+enum TokenType {
+    RAW_STRING_DELIMITER,
+    RAW_STRING_CONTENT,
+    PACK_INDEX_OPERATOR,
+    TEMPLATE_CLOSE,
+    SPLIT_TEMPLATE_CLOSE,
+    PRAGMA_OPERATOR,
+    PREPROC_ARG,
+    PREPROC_NEWLINE,
+    PREPROC_LPAREN,
+    PREPROC_DIRECTIVE_ARG,
+    PREPROC_FUNCTION_NAME,
+    FUNCTION_ATTRIBUTE_START,
+    POST_TYPE_FUNCTION_ATTRIBUTE_START,
+    POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX,
+    TRAILING_MACRO_ATTRIBUTE_NAME,
+    TRAILING_OBJECT_DECLARATION_START,
+    CONDITIONAL_MARKER_IFDEF,
+    CONDITIONAL_MARKER_IFNDEF,
+    LEADING_CONDITIONAL_MARKER_IFDEF,
+    LEADING_CONDITIONAL_MARKER_IFNDEF,
+    GNU_RAW_STRING_BODY,
+    RAW_MACRO_TYPE_TAIL,
+    BRACED_FUNCTION_ATTRIBUTE_START,
+    BRACED_MACRO_TYPE_START,
+    DIRECTIVE_CONTEXT,
+    PREPROC_EMPTY,
+    PREPROC_INCLUDE,
+    PREPROC_DEFINE,
+    PREPROC_IF,
+    PREPROC_IFDEF,
+    PREPROC_IFNDEF,
+    PREPROC_ELSE,
+    PREPROC_ELIF,
+    PREPROC_ELIFDEF,
+    PREPROC_ELIFNDEF,
+    PREPROC_ENDIF,
+    PREPROC_PRAGMA,
+    PREPROC_DIRECTIVE,
+    MACRO_CALL_END,
+    MACRO_IDENTIFIER_END,
+    EMPTY_INITIALIZER_START,
+    DECLARATOR_MACRO_NAME,
+    TOKEN_COUNT
+};
+
+static const PreprocDirectiveSymbols directive_symbols = {
+    .include = PREPROC_INCLUDE,
+    .define = PREPROC_DEFINE,
+    .preproc_if = PREPROC_IF,
+    .ifdef = PREPROC_IFDEF,
+    .ifndef = PREPROC_IFNDEF,
+    .preproc_else = PREPROC_ELSE,
+    .elif = PREPROC_ELIF,
+    .elifdef = PREPROC_ELIFDEF,
+    .elifndef = PREPROC_ELIFNDEF,
+    .endif = PREPROC_ENDIF,
+    .pragma = PREPROC_PRAGMA,
+    .directive = PREPROC_DIRECTIVE,
+};
 
 /// C++ [lex.string] limits raw-string d-char-sequences to 16 characters.
 #define MAX_DELIMITER_LENGTH 16
@@ -49,7 +108,21 @@ typedef struct {
 static const char *const reserved_words[] = {"namespace", "using", "export", "module", "import"};
 #define RESERVED_WORD_COUNT (sizeof(reserved_words) / sizeof(reserved_words[0]))
 
+#if defined(__GNUC__) || defined(__clang__)
+#define SCANNER_NOINLINE __attribute__((noinline))
+#else
+#define SCANNER_NOINLINE
+#endif
+
+static inline bool has_unspaced_cpp_tokens(const bool *valid_symbols);
+static inline bool can_start_spaced_cpp_token(uint32_t c, const Scanner *scanner, const bool *valid_symbols);
+static SCANNER_NOINLINE bool scan_token_spaced_fast(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static SCANNER_NOINLINE bool scan_token_slow(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static inline bool any_preproc_body_valid(const bool *valid_symbols);
+static inline bool any_attribute_valid(const bool *valid_symbols);
+static bool in_error_recovery(const bool *valid_symbols);
+static bool scan_error_recovery_directive(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_raw_string_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_raw_string_delimiter(Scanner *scanner, TSLexer *lexer);
 static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer);
@@ -58,14 +131,19 @@ static bool scan_macro_line_end(Scanner *scanner, TSLexer *lexer, const bool *va
 static inline bool is_macro_call_continuation(int32_t c);
 static bool scan_macro_identifier_boundary(Scanner *scanner, TSLexer *lexer);
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols);
-static bool scan_extras(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
-static bool scan_directive_context(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
+static bool scan_extras(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static bool scan_empty_directive_extra(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols, bool error_recovery);
 static bool scan_preprocessor_token(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
+static bool scan_unconsumed_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close, bool newline);
+static bool can_start_peeked_spaced_token(int32_t peeked, const Scanner *scanner, const bool *valid_symbols);
 static bool scan_preproc_tokens(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
-static bool scan_initializer_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static bool scan_cpp_hash_directive(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool error_recovery);
+static InitializerConditionalKind scan_cached_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, uint32_t *start_byte);
+static bool scan_cpp_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, const TSLexerCheckpoint *end, uint32_t start_byte, const char *word);
+static bool scan_cpp_conditional_marker(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols, const char *word, const TSLexerCheckpoint *end);
 static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer);
-static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip, bool *newline);
+static bool is_cpp_space(int32_t c);
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
 static bool skip_template_splices(TSLexer *lexer, bool skip);
 static bool after_later_line_comment(const Scanner *scanner, TSLexer *lexer);
@@ -76,8 +154,8 @@ static bool scan_ascii_word(TSLexer *lexer, AsciiWord *word);
 static bool ascii_word_is(const AsciiWord *word, const char *text);
 static bool scan_declarator_continuation(Scanner *scanner, TSLexer *lexer, bool newline);
 static bool scan_function_clause(Scanner *scanner, TSLexer *lexer);
-static bool scan_declaration_macro(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
-static bool scan_declaration_attribute(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
+static bool scan_declaration_attribute(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool consumed_backslash);
+static bool starts_macro_scan(int32_t c, bool consumed_backslash);
 static bool scan_macro_name_rest(TSLexer *lexer, MacroName *name, bool has_name);
 static inline void reset(Scanner *scanner);
 static inline void advance(TSLexer *lexer);
@@ -138,6 +216,54 @@ void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buf
 
 bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     Scanner *scanner = (Scanner *)payload;
+    const EmptyDirectives *state = &scanner->directives;
+    int32_t look = lexer->lookahead;
+    if (look > 0 && look < 0x80 && look != '\\' && state->ready && !state->starts && !state->failed &&
+        !scanner->pending_template_close && !has_unspaced_cpp_tokens(valid_symbols)) {
+        if (look == ' ' || (uint32_t)(look - '\t') < 5) {
+            return scan_token_spaced_fast(scanner, lexer, valid_symbols);
+        }
+        if (!can_start_spaced_cpp_token((uint32_t)look, scanner, valid_symbols)) return false;
+    }
+    return scan_token_slow(scanner, lexer, valid_symbols);
+}
+
+static inline bool has_unspaced_cpp_tokens(const bool *valid_symbols) {
+    _Static_assert(RAW_STRING_DELIMITER == 0 && RAW_STRING_CONTENT == 1 &&
+        PREPROC_ARG == 6 && PREPROC_NEWLINE == 7 && PREPROC_LPAREN == 8 &&
+        PREPROC_DIRECTIVE_ARG == 9 && PREPROC_FUNCTION_NAME == 10 &&
+        GNU_RAW_STRING_BODY == 20 && RAW_MACRO_TYPE_TAIL == 21 &&
+        MACRO_CALL_END == 38 && MACRO_IDENTIFIER_END == 39,
+        "unspaced token layout");
+    uint16_t v0 = 0, v6 = 0, v20 = 0, v38 = 0;
+    uint32_t v7 = 0;
+    memcpy(&v0, valid_symbols, sizeof v0);
+    memcpy(&v6, valid_symbols + PREPROC_ARG, sizeof v6);
+    memcpy(&v7, valid_symbols + PREPROC_NEWLINE, sizeof v7);
+    memcpy(&v20, valid_symbols + GNU_RAW_STRING_BODY, sizeof v20);
+    memcpy(&v38, valid_symbols + MACRO_CALL_END, sizeof v38);
+    return (v0 | v6 | v7 | v20 | v38) != 0;
+}
+
+static inline bool can_start_spaced_cpp_token(uint32_t c, const Scanner *scanner, const bool *valid_symbols) {
+    if (c == '#') return scanner->directives.directive_starts.count > 0;
+    if (c == '.') return valid_symbols[PACK_INDEX_OPERATOR];
+    if (c == '>') return valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE];
+    if (c == '/') return valid_symbols[DECLARATOR_MACRO_NAME];
+    if (!((preproc_identifier_start_ascii[c / 64] >> (c % 64)) & 1)) return false;
+    return any_attribute_valid(valid_symbols) ||
+        (valid_symbols[DECLARATOR_MACRO_NAME] && ((c - 'A') < 26u || c == '_')) ||
+        (valid_symbols[TRAILING_OBJECT_DECLARATION_START] && peek_object_starter((uint16_t)c)) ||
+        (c == '_' && valid_symbols[PRAGMA_OPERATOR] && scanner->directives.pragmas);
+}
+
+static SCANNER_NOINLINE bool scan_token_spaced_fast(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+    int32_t peeked = peek_after_ascii_spaces(lexer);
+    if (peeked > 0 && !can_start_spaced_cpp_token((uint32_t)peeked, scanner, valid_symbols)) return false;
+    return scan_token_slow(scanner, lexer, valid_symbols);
+}
+
+static SCANNER_NOINLINE bool scan_token_slow(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     bool found = scan_token(scanner, lexer, valid_symbols);
     if (!found) return false;
     if (lexer->result_symbol == PREPROC_EMPTY) {
@@ -154,9 +280,11 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
 
 static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     EmptyDirectives *state = &scanner->directives;
-    if (only_extras_valid(state, valid_symbols)) return scan_extras(state, lexer, valid_symbols);
+    if (only_extras_valid(state, valid_symbols)) return scan_extras(scanner, lexer, valid_symbols);
     if (!state->ready && valid_symbols[DIRECTIVE_CONTEXT]) return empty_directives_initialize(state, lexer, DIRECTIVE_CONTEXT);
-    if (scan_directive_context(state, lexer, valid_symbols)) return true;
+    bool error_recovery = in_error_recovery(valid_symbols);
+    if (scan_empty_directive_extra(state, lexer, valid_symbols, error_recovery)) return true;
+    if (error_recovery) return scan_error_recovery_directive(scanner, lexer, valid_symbols);
     if (valid_symbols[RAW_STRING_DELIMITER] || valid_symbols[RAW_STRING_CONTENT]) {
         return scan_raw_string_token(scanner, lexer, valid_symbols);
     }
@@ -166,20 +294,50 @@ static bool scan_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbo
     bool pending_close = scanner->pending_template_close;
     scanner->pending_template_close = false;
     if (empty_directives_at_line_end(state, lexer)) return false;
-    bool raw_macro_type_tail = valid_symbols[RAW_MACRO_TYPE_TAIL] && !valid_symbols[PREPROC_LPAREN];
-    if (raw_macro_type_tail || valid_symbols[PREPROC_ARG] || valid_symbols[PREPROC_NEWLINE] ||
-        valid_symbols[PREPROC_LPAREN] || valid_symbols[PREPROC_DIRECTIVE_ARG] || valid_symbols[PREPROC_FUNCTION_NAME]) {
-        return scan_preprocessor_token(state, lexer, valid_symbols);
-    }
+    if (any_preproc_body_valid(valid_symbols)) return scan_preprocessor_token(state, lexer, valid_symbols);
     return scan_spaced_token(scanner, lexer, valid_symbols, pending_close);
 }
 
+static inline bool any_preproc_body_valid(const bool *valid_symbols) {
+    _Static_assert(PREPROC_FUNCTION_NAME - PREPROC_ARG == 4 && RAW_MACRO_TYPE_TAIL - GNU_RAW_STRING_BODY == 1,
+        "preproc body tokens are contiguous");
+    uint64_t head = 0;
+    uint16_t raw = 0;
+    memcpy(&head, valid_symbols + PREPROC_ARG, 5);
+    memcpy(&raw, valid_symbols + GNU_RAW_STRING_BODY, 2);
+    return (head | raw) != 0;
+}
+
+static inline bool any_attribute_valid(const bool *valid_symbols) {
+    _Static_assert(TRAILING_MACRO_ATTRIBUTE_NAME - FUNCTION_ATTRIBUTE_START == 3,
+        "attribute tokens are contiguous");
+    uint32_t bits = 0;
+    memcpy(&bits, valid_symbols + FUNCTION_ATTRIBUTE_START, 4);
+    return bits != 0;
+}
+
+static bool in_error_recovery(const bool *valid_symbols) {
+    return valid_symbols[RAW_STRING_DELIMITER] && valid_symbols[RAW_STRING_CONTENT];
+}
+
+static bool scan_error_recovery_directive(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+    scanner->pending_template_close = false;
+    bool consumed_backslash = false;
+    skip_leading_spaces_and_splices(lexer, is_cpp_space, NULL, &consumed_backslash);
+    return !consumed_backslash && lexer->lookahead == '#' &&
+        scan_cpp_hash_directive(scanner, lexer, valid_symbols, true);
+}
+
 static bool scan_preprocessor_token(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols) {
-    if (valid_symbols[RAW_MACRO_TYPE_TAIL] && !valid_symbols[PREPROC_LPAREN]) {
+    if (valid_symbols[GNU_RAW_STRING_BODY]) {
+        lexer->result_symbol = GNU_RAW_STRING_BODY;
+        return scan_gnu_raw_string_token(lexer);
+    }
+    if (valid_symbols[RAW_MACRO_TYPE_TAIL]) {
         lexer->result_symbol = RAW_MACRO_TYPE_TAIL;
         return scan_raw_macro_type_tail(lexer, &(PragmaTrivia){empty_directives_skip, state});
     }
-    if (valid_symbols[PREPROC_FUNCTION_NAME] && !valid_symbols[PREPROC_LPAREN]) {
+    if (valid_symbols[PREPROC_FUNCTION_NAME]) {
         lexer->result_symbol = PREPROC_FUNCTION_NAME;
         return scan_function_macro_name(lexer, valid_symbols[PRAGMA_OPERATOR], PRAGMA_OPERATOR);
     }
@@ -190,22 +348,39 @@ static bool scan_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *vali
     if (pending_close) {
         if (!skip_template_splices(lexer, true)) return false;
         pending_close = lexer->lookahead == '>';
+    } else if (!can_start_peeked_spaced_token(peek_after_ascii_spaces(lexer), scanner, valid_symbols)) {
+        return false;
     }
     bool newline = valid_symbols[DECLARATOR_MACRO_NAME] && after_later_line_comment(scanner, lexer);
-    if (!skip_pack_index_whitespace(lexer, true, &newline)) return false;
-    if ((valid_symbols[EMPTY_INITIALIZER_START] || valid_symbols[INITIALIZER_DIRECTIVE_NAME]) && lexer->lookahead == '#') {
-        return scan_initializer_token(scanner, lexer, valid_symbols);
-    }
-    if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') {
-        return scan_pack_index_operator(scanner, lexer);
-    }
+    bool consumed_backslash = false;
+    skip_leading_spaces_and_splices(lexer, is_cpp_space, &newline, &consumed_backslash);
+    if (!consumed_backslash) return scan_unconsumed_spaced_token(scanner, lexer, valid_symbols, pending_close, newline);
+    return scan_declaration_attribute(scanner, lexer, valid_symbols, true);
+}
+
+static bool scan_unconsumed_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close, bool newline) {
+    if (lexer->lookahead == '#') return scan_cpp_hash_directive(scanner, lexer, valid_symbols, false);
+    if (valid_symbols[PACK_INDEX_OPERATOR] && lexer->lookahead == '.') return scan_pack_index_operator(scanner, lexer);
     if ((valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE]) && lexer->lookahead == '>') {
         return scan_template_close(scanner, lexer, valid_symbols, pending_close);
     }
     if (valid_symbols[DECLARATOR_MACRO_NAME] && starts_declarator_macro_scan(lexer->lookahead)) {
         return scan_declarator_macro_name(scanner, lexer, valid_symbols, newline);
     }
-    return scan_declaration_macro(scanner, lexer, valid_symbols);
+    return scan_declaration_attribute(scanner, lexer, valid_symbols, false);
+}
+
+static bool can_start_peeked_spaced_token(int32_t peeked, const Scanner *scanner, const bool *valid_symbols) {
+    if (peeked < 0) return true;
+    if (peeked == '#') return empty_directives_has_directives(&scanner->directives);
+    if (peeked == '.') return valid_symbols[PACK_INDEX_OPERATOR];
+    if (peeked == '>') return valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE];
+    if (peeked == '/') return valid_symbols[DECLARATOR_MACRO_NAME];
+    if (!starts_macro_scan(peeked, false)) return false;
+    return any_attribute_valid(valid_symbols) ||
+        (valid_symbols[DECLARATOR_MACRO_NAME] && ((peeked >= 'A' && peeked <= 'Z') || peeked == '_')) ||
+        (valid_symbols[TRAILING_OBJECT_DECLARATION_START] && peek_object_starter((uint16_t)peeked)) ||
+        (peeked == '_' && valid_symbols[PRAGMA_OPERATOR] && empty_directives_pragma_possible(&scanner->directives));
 }
 
 static bool after_later_line_comment(const Scanner *scanner, TSLexer *lexer) {
@@ -302,34 +477,49 @@ static bool scan_function_clause(Scanner *scanner, TSLexer *lexer) {
 }
 
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols) {
-    static const uint8_t extras[TOKEN_COUNT] = {[PRAGMA_OPERATOR] = 0xff, [DIRECTIVE_CONTEXT] = 0xff, [PREPROC_EMPTY] = 0xff};
-    return state->ready && empty_directives_only_valid(valid_symbols, extras, TOKEN_COUNT);
+    static const uint8_t extras[24] = {
+        [PRAGMA_OPERATOR] = 0xff,
+        [TRAILING_OBJECT_DECLARATION_START] = 0xff,
+        [CONDITIONAL_MARKER_IFDEF] = 0xff, [CONDITIONAL_MARKER_IFNDEF] = 0xff,
+        [LEADING_CONDITIONAL_MARKER_IFDEF] = 0xff, [LEADING_CONDITIONAL_MARKER_IFNDEF] = 0xff,
+    };
+    _Static_assert(DIRECTIVE_CONTEXT == 24 && PREPROC_DIRECTIVE == 37 &&
+        MACRO_CALL_END == 38 && TOKEN_COUNT == 42, "extras layout");
+    if (!state->ready) return false;
+    uint32_t tail = 0;
+    memcpy(&tail, valid_symbols + MACRO_CALL_END, sizeof tail);
+    return !tail && empty_directives_only_valid(valid_symbols, extras, sizeof extras);
 }
 
-// Fails without consuming a character unless a null directive starts here or the input holds `pragma_word`, since
+// Fails without consuming a character unless a directive, pragma, or object-declaration guard can start here, since
 // the lexer rereads from the start what a failed scan consumed.
-static bool scan_extras(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols) {
+static bool scan_extras(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+    EmptyDirectives *state = &scanner->directives;
     if (valid_symbols[PREPROC_EMPTY] && empty_directives_consume(lexer, state, true)) {
         lexer->mark_end(lexer);
         lexer->result_symbol = PREPROC_EMPTY;
         return true;
     }
-    if (!valid_symbols[PRAGMA_OPERATOR] || !state->pragmas || empty_directives_at_line_end(state, lexer)) return false;
-    while (pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
-    if (!scan_pragma_word(lexer)) return false;
-    lexer->result_symbol = PRAGMA_OPERATOR;
-    return scan_pragma_suffix_end_with(lexer, true, &(PragmaTrivia){empty_directives_skip, state});
+    bool allow_directive = empty_directives_has_directives(state);
+    bool allow_object = valid_symbols[TRAILING_OBJECT_DECLARATION_START];
+    bool allow_pragma = valid_symbols[PRAGMA_OPERATOR] && state->pragmas;
+    PeekExtrasKind kind = peek_extras_kind(lexer, allow_directive, allow_object, allow_pragma);
+    if (kind == PEEK_EXTRAS_NONE) return false;
+    bool at_line_end = kind != PEEK_EXTRAS_DIRECTIVE && empty_directives_at_line_end(state, lexer);
+    if (kind == PEEK_EXTRAS_DECLARATION && at_line_end) return false;
+    bool consumed_backslash = false;
+    skip_leading_spaces_and_splices(lexer, is_cpp_space, NULL, &consumed_backslash);
+    if (!consumed_backslash && lexer->lookahead == '#') {
+        return allow_directive && scan_cpp_hash_directive(scanner, lexer, valid_symbols, false);
+    }
+    if ((!allow_object && !allow_pragma) || at_line_end) return false;
+    return scan_declaration_attribute(scanner, lexer, valid_symbols, consumed_backslash);
 }
 
-static bool scan_directive_context(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols) {
-    if (valid_symbols[PREPROC_DIRECTIVE_START] && empty_directives_after_keyword(state, lexer)) {
-        lexer->result_symbol = PREPROC_DIRECTIVE_START;
-        lexer->mark_end(lexer);
-        return true;
-    }
-    bool directive_body = valid_symbols[PREPROC_NEWLINE] || valid_symbols[PREPROC_LPAREN] ||
-        valid_symbols[PREPROC_ARG] || valid_symbols[PREPROC_DIRECTIVE_ARG];
-    bool macro_name = valid_symbols[PREPROC_FUNCTION_NAME] && !valid_symbols[PREPROC_LPAREN];
+static bool scan_empty_directive_extra(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols, bool error_recovery) {
+    bool directive_body = !error_recovery && (valid_symbols[PREPROC_NEWLINE] || valid_symbols[PREPROC_LPAREN] ||
+        valid_symbols[PREPROC_ARG] || valid_symbols[PREPROC_DIRECTIVE_ARG] || valid_symbols[GNU_RAW_STRING_BODY]);
+    bool macro_name = !error_recovery && valid_symbols[PREPROC_FUNCTION_NAME];
     if (valid_symbols[PREPROC_EMPTY] && !macro_name && (!directive_body || lexer->lookahead == '#') &&
         empty_directives_consume(lexer, state, true)) {
         lexer->mark_end(lexer);
@@ -503,19 +693,73 @@ static bool scan_preproc_tokens(EmptyDirectives *state, TSLexer *lexer, const bo
         scan_pragma_with(lexer, &(PragmaTrivia){empty_directives_skip, state});
 }
 
-static bool scan_initializer_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+static bool scan_cpp_hash_directive(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool error_recovery) {
+    EmptyDirectives *state = &scanner->directives;
+    bool at_start = empty_directives_at_start(state, lexer);
+    if (!at_start && !error_recovery) return false;
     TSLexerCheckpoint start;
     lexer->get_checkpoint(lexer, &start);
-    InitializerStartKind kind = scan_initializer_start(&scanner->initializer_conditionals, lexer,
-        valid_symbols[EMPTY_INITIALIZER_START], valid_symbols[INITIALIZER_DIRECTIVE_NAME]);
-    lexer->mark_start(lexer, &start);
-    if (kind == INITIALIZER_START_DIRECTIVE) {
-        lexer->result_symbol = INITIALIZER_DIRECTIVE_NAME;
-    } else {
-        lexer->result_symbol = EMPTY_INITIALIZER_START;
-        lexer->mark_end_at(lexer, &start);
+    uint32_t start_byte = 0;
+    bool check_initializer = !error_recovery && valid_symbols[EMPTY_INITIALIZER_START];
+    InitializerConditionalKind cached = check_initializer
+        ? scan_cached_empty_initializer(scanner, lexer, &start, &start_byte)
+        : INITIALIZER_UNKNOWN;
+    if (cached == INITIALIZER_EMPTY) return true;
+    char word[10] = {0};
+    uint32_t keyword_end = 0;
+    if (!empty_directives_scan_word(lexer, word, sizeof word, &keyword_end)) return false;
+    if (!at_start || !empty_directives_has_keyword_end(state, keyword_end)) {
+        if (!error_recovery) return false;
+        lexer->result_symbol = GNU_RAW_STRING_BODY;
+        return true;
     }
-    return kind != INITIALIZER_START_NONE;
+    TSLexerCheckpoint end;
+    lexer->get_mark_end_checkpoint(lexer, &end);
+    if (check_initializer && cached == INITIALIZER_UNKNOWN &&
+        scan_cpp_empty_initializer(scanner, lexer, &start, &end, start_byte, word)) {
+        return true;
+    }
+    if (!error_recovery && scan_cpp_conditional_marker(state, lexer, valid_symbols, word, &end)) return true;
+    return empty_directives_select_symbol(word, &directive_symbols, valid_symbols, &lexer->result_symbol);
+}
+
+static InitializerConditionalKind scan_cached_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, uint32_t *start_byte) {
+    TSLexerPosition start_position;
+    lexer->get_position(lexer, &start_position);
+    *start_byte = start_position.bytes;
+    InitializerConditionalKind cached = initializer_conditional_lookup(&scanner->initializer_conditionals, *start_byte);
+    if (cached == INITIALIZER_EMPTY) {
+        lexer->mark_end_at(lexer, start);
+        lexer->result_symbol = EMPTY_INITIALIZER_START;
+    }
+    return cached;
+}
+
+static bool scan_cpp_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, const TSLexerCheckpoint *end, uint32_t start_byte, const char *word) {
+    if (strcmp(word, "ifdef") != 0 && strcmp(word, "ifndef") != 0 && strcmp(word, "if") != 0) return false;
+    bool empty = scan_empty_initializer_after_keyword(&scanner->initializer_conditionals, lexer, start_byte);
+    lexer->mark_start(lexer, start);
+    lexer->mark_end_at(lexer, empty ? start : end);
+    if (empty) lexer->result_symbol = EMPTY_INITIALIZER_START;
+    return empty;
+}
+
+static bool scan_cpp_conditional_marker(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols, const char *word, const TSLexerCheckpoint *end) {
+    bool ifdef = strcmp(word, "ifdef") == 0;
+    if (!ifdef && strcmp(word, "ifndef") != 0) return false;
+    if (!valid_symbols[LEADING_CONDITIONAL_MARKER_IFDEF] && !valid_symbols[LEADING_CONDITIONAL_MARKER_IFNDEF] &&
+        !valid_symbols[CONDITIONAL_MARKER_IFDEF] && !valid_symbols[CONDITIONAL_MARKER_IFNDEF]) {
+        return false;
+    }
+    const ConditionalMacroSymbols symbols = {
+        .ifdef = CONDITIONAL_MARKER_IFDEF, .ifndef = CONDITIONAL_MARKER_IFNDEF,
+        .leading_ifdef = LEADING_CONDITIONAL_MARKER_IFDEF, .leading_ifndef = LEADING_CONDITIONAL_MARKER_IFNDEF,
+        .reserved_words = reserved_words, .reserved_word_count = RESERVED_WORD_COUNT,
+        .skip_empty = empty_directives_skip, .empty_context = state,
+    };
+    if (scan_conditional_macro_after_keyword(lexer, ifdef, &symbols, valid_symbols)) return true;
+    lexer->mark_end_at(lexer, end);
+    return false;
 }
 
 static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer) {
@@ -532,18 +776,8 @@ static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer) {
     return true;
 }
 
-static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip, bool *newline) {
-    for (;;) {
-        if (is_unicode_whitespace(lexer->lookahead)) {
-            *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
-            lexer->advance(lexer, skip);
-        } else if (lexer->lookahead == '\\') {
-            lexer->advance(lexer, skip);
-            if (!scan_preproc_newline(lexer, skip)) return false;
-        } else {
-            return true;
-        }
-    }
+static bool is_cpp_space(int32_t c) {
+    return c == ' ' || (uint32_t)(c - '\t') <= '\r' - '\t';
 }
 
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close) {
@@ -579,26 +813,8 @@ static bool skip_template_splices(TSLexer *lexer, bool skip) {
     return true;
 }
 
-static bool scan_declaration_macro(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
-    EmptyDirectives *state = &scanner->directives;
-    bool conditional = valid_symbols[LEADING_CONDITIONAL_MARKER_IFDEF] ||
-        valid_symbols[LEADING_CONDITIONAL_MARKER_IFNDEF] ||
-        valid_symbols[CONDITIONAL_MARKER_IFDEF] ||
-        valid_symbols[CONDITIONAL_MARKER_IFNDEF];
-    if (conditional && lexer->lookahead == '#') {
-        if (!empty_directives_at_start(state, lexer)) return false;
-        const ConditionalMacroSymbols symbols = {
-            .ifdef = CONDITIONAL_MARKER_IFDEF, .ifndef = CONDITIONAL_MARKER_IFNDEF,
-            .leading_ifdef = LEADING_CONDITIONAL_MARKER_IFDEF, .leading_ifndef = LEADING_CONDITIONAL_MARKER_IFNDEF,
-            .reserved_words = reserved_words, .reserved_word_count = RESERVED_WORD_COUNT,
-            .skip_empty = empty_directives_skip, .empty_context = state,
-        };
-        return scan_conditional_macro(lexer, &symbols, valid_symbols);
-    }
-    return scan_declaration_attribute(scanner, lexer, valid_symbols);
-}
-
-static bool scan_declaration_attribute(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+static bool scan_declaration_attribute(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool consumed_backslash) {
+    if (!starts_macro_scan(lexer->lookahead, consumed_backslash)) return false;
     EmptyDirectives *state = &scanner->directives;
     static const TSSymbol attribute_tokens[] = {
         FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, POST_TYPE_FUNCTION_ATTRIBUTE_START,
@@ -615,13 +831,21 @@ static bool scan_declaration_attribute(Scanner *scanner, TSLexer *lexer, const b
         TSSymbol token = attribute_tokens[i];
         if (!valid_symbols[token]) continue;
         lexer->result_symbol = token;
-        return scan_function_attribute_guard(lexer,
+        return scan_function_attribute_guard_from(lexer,
             token == FUNCTION_ATTRIBUTE_START || token == POST_TYPE_FUNCTION_ATTRIBUTE_START,
-            token != FUNCTION_ATTRIBUTE_START, token == TRAILING_MACRO_ATTRIBUTE_NAME, &symbols);
+            token != FUNCTION_ATTRIBUTE_START, token == TRAILING_MACRO_ATTRIBUTE_NAME, consumed_backslash, &symbols);
     }
+    if (consumed_backslash) return false;
     lexer->result_symbol = PRAGMA_OPERATOR;
     return valid_symbols[PRAGMA_OPERATOR] && empty_directives_pragma_possible(state) &&
         scan_pragma_with(lexer, &symbols.trivia);
+}
+
+static bool starts_macro_scan(int32_t c, bool consumed_backslash) {
+    if (consumed_backslash) return c == 'u' || c == 'U';
+    if (c < 0) return false;
+    if (c < 0x80) return c == '\\' || ((preproc_identifier_start_ascii[c / 64] >> (c % 64)) & 1);
+    return preproc_identifier_character(c, false);
 }
 
 static bool scan_macro_name_rest(TSLexer *lexer, MacroName *name, bool has_name) {

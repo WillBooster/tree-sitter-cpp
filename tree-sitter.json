@@ -16,6 +16,7 @@
         "src/macroProof.h",
         "src/conditionalMacro.h",
         "src/emptyDirectives.h",
+        "src/directiveFacts.h",
         "src/directiveScan.h",
         "src/directiveUnits.h",
         "src/directiveBuffer.h",

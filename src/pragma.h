@@ -37,9 +37,16 @@ typedef enum {
 } MacroNameCharacter;
 
 static bool scan_macro_name(TSLexer *lexer, MacroName *name);
-static void scan_macro_name_start(TSLexer *lexer, bool lookahead_only);
+static bool scan_macro_name_from(TSLexer *lexer, MacroName *name, bool consumed_backslash);
+static bool scan_macro_name_tail(TSLexer *lexer, MacroName *name, bool has_name);
+static bool scan_macro_name_ascii(TSLexer *lexer, MacroName *name);
+static void scan_macro_name_start(TSLexer *lexer, const MacroName *name);
 static MacroNameCharacter scan_macro_name_character(TSLexer *lexer, bool continuation, MacroName *name);
 static bool scan_macro_name_ucn(TSLexer *lexer);
+static void skip_leading_spaces_and_splices(TSLexer *lexer, bool (*is_space)(int32_t), bool *newline, bool *consumed_backslash);
+static bool skip_leading_space_run(TSLexer *lexer, bool (*is_space)(int32_t), bool *newline);
+static uint32_t skip_ascii_space_units(TSLexer *lexer, bool *newline);
+static int32_t peek_after_ascii_spaces(const TSLexer *lexer);
 
 static bool scan_pragma_argument(TSLexer *lexer);
 static bool scan_pragma_spacing(TSLexer *lexer);
@@ -478,10 +485,110 @@ static bool scan_function_macro_name(TSLexer *lexer, bool allow_pragma, TSSymbol
     return adjacent;
 }
 
-static bool scan_macro_name(TSLexer *lexer, MacroName *name) {
-    bool has_name = false;
+static void skip_leading_spaces_and_splices(TSLexer *lexer, bool (*is_space)(int32_t), bool *newline, bool *consumed_backslash) {
+    *consumed_backslash = false;
+    if (lexer->lookahead == ' ') {
+        lexer->advance(lexer, true);
+        if (!is_space(lexer->lookahead) && lexer->lookahead != '\\') return;
+    } else if (!is_space(lexer->lookahead) && lexer->lookahead != '\\') {
+        return;
+    }
+    bool marked = false;
     for (;;) {
-        if (!has_name) scan_macro_name_start(lexer, name->lookahead_only && !name->preserve_end);
+        marked |= skip_leading_space_run(lexer, is_space, newline);
+        if (lexer->lookahead != '\\') break;
+        TSLexerCheckpoint slash;
+        lexer->get_checkpoint(lexer, &slash);
+        lexer->advance(lexer, false);
+        if (!scan_preproc_newline(lexer, false)) {
+            lexer->mark_start(lexer, &slash);
+            lexer->mark_end_at(lexer, &slash);
+            *consumed_backslash = true;
+            return;
+        }
+        marked = true;
+    }
+    if (!marked) return;
+    TSLexerCheckpoint after;
+    lexer->get_checkpoint(lexer, &after);
+    lexer->mark_start(lexer, &after);
+}
+
+static bool skip_leading_space_run(TSLexer *lexer, bool (*is_space)(int32_t), bool *newline) {
+    bool used_units = false;
+    for (;;) {
+        if (skip_ascii_space_units(lexer, newline)) {
+            used_units = true;
+            continue;
+        }
+        if (!is_space(lexer->lookahead)) return used_units;
+        if (newline) *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
+        lexer->advance(lexer, true);
+    }
+}
+
+static uint32_t skip_ascii_space_units(TSLexer *lexer, bool *newline) {
+    uint32_t count, size;
+    const char *units = lexer->peek_units(lexer, &count, &size);
+    if (!count) return 0;
+    uint32_t i = 0, line_feeds = 0, tail = 0;
+    while (i < count) {
+        uint16_t c = (uint8_t)units[i * size];
+        if (size == 2) memcpy(&c, units + i * size, sizeof c);
+        if (c == '\n') {
+            line_feeds++;
+            tail = 0;
+        } else if (c == ' ' || c == '\t' || c == '\f' || c == '\v') {
+            tail++;
+        } else {
+            break;
+        }
+        i++;
+    }
+    if (!i) return 0;
+    if (newline && line_feeds) *newline = true;
+    lexer->advance_units(lexer, i, line_feeds, tail);
+    return i;
+}
+
+static int32_t peek_after_ascii_spaces(const TSLexer *lexer) {
+    int32_t look = lexer->lookahead;
+    if (look > 0 && look < 0x80 && look != ' ' && (uint32_t)(look - '\t') >= 5 && look != '\\') return look;
+    uint32_t count, size;
+    const char *units = lexer->peek_units(lexer, &count, &size);
+    if (!count) return -1;
+    uint32_t i = (look == ' ' || (uint32_t)(look - '\t') < 5) ? 1 : 0;
+    for (; i < count; i++) {
+        uint16_t c = (uint8_t)units[i * size];
+        if (size == 2) memcpy(&c, units + 2 * (size_t)i, sizeof c);
+        if (c != ' ' && (uint32_t)(c - '\t') >= 5) return c < 0x80 && c != '\\' ? (int32_t)c : -1;
+    }
+    return -1;
+}
+
+static bool scan_macro_name(TSLexer *lexer, MacroName *name) {
+    return scan_macro_name_from(lexer, name, false);
+}
+
+static bool scan_macro_name_from(TSLexer *lexer, MacroName *name, bool consumed_backslash) {
+    if (consumed_backslash) {
+        name->ascii = false;
+        if (!scan_macro_name_ucn(lexer)) return false;
+        if (!name->lookahead_only) lexer->mark_end(lexer);
+        return scan_macro_name_tail(lexer, name, true);
+    }
+    scan_macro_name_start(lexer, name);
+    if ((uint32_t)lexer->lookahead >= 0x80u || lexer->lookahead == '\\') {
+        return scan_macro_name_tail(lexer, name, false);
+    }
+    if (!scan_macro_name_ascii(lexer, name)) return false;
+    if ((uint32_t)lexer->lookahead < 0x80u && lexer->lookahead != '\\') return true;
+    return scan_macro_name_tail(lexer, name, true);
+}
+
+static bool scan_macro_name_tail(TSLexer *lexer, MacroName *name, bool has_name) {
+    for (;;) {
+        if (!has_name) scan_macro_name_start(lexer, name);
         MacroNameCharacter character = scan_macro_name_character(lexer, has_name, name);
         if (character == MACRO_NAME_INVALID) return false;
         if (character == MACRO_NAME_END) return has_name;
@@ -494,16 +601,31 @@ static bool scan_macro_name(TSLexer *lexer, MacroName *name) {
     }
 }
 
-static void scan_macro_name_start(TSLexer *lexer, bool lookahead_only) {
-    while (pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
-    if (lookahead_only) lexer->mark_end(lexer);
+static bool scan_macro_name_ascii(TSLexer *lexer, MacroName *name) {
+    int32_t c = lexer->lookahead;
+    if (!((preproc_identifier_start_ascii[c / 64] >> (c % 64)) & 1)) return false;
+    do {
+        if (name->ascii) {
+            if (name->length < name->capacity) name->word[name->length++] = (char)c;
+            else name->ascii = false;
+        }
+        lexer->advance(lexer, false);
+        c = lexer->lookahead;
+    } while ((uint32_t)c < 0x80u && c != '\\' && ((preproc_identifier_continue_ascii[c / 64] >> (c % 64)) & 1));
+    if (!name->lookahead_only) lexer->mark_end(lexer);
+    return true;
+}
+
+static void scan_macro_name_start(TSLexer *lexer, const MacroName *name) {
+    while (pragma_space(lexer->lookahead)) lexer->advance(lexer, !name->preserve_end);
+    if (name->lookahead_only && !name->preserve_end) lexer->mark_end(lexer);
 }
 
 static MacroNameCharacter scan_macro_name_character(TSLexer *lexer, bool continuation, MacroName *name) {
     int32_t c = lexer->lookahead;
     if (c == '\\') {
         lexer->advance(lexer, false);
-        if (scan_preproc_newline(lexer, !continuation)) return MACRO_NAME_SPLICE;
+        if (scan_preproc_newline(lexer, !continuation && !name->preserve_end)) return MACRO_NAME_SPLICE;
         name->ascii = false;
         return scan_macro_name_ucn(lexer) ? MACRO_NAME_CHARACTER : MACRO_NAME_INVALID;
     }

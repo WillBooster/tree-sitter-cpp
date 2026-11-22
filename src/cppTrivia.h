@@ -8,6 +8,7 @@
 
 static bool skip_cpp_comment(TSLexer *lexer, bool *newline);
 static bool skip_cpp_space(TSLexer *lexer, bool *newline, uint32_t *failure);
+static void skip_cpp_whitespace_run(TSLexer *lexer, bool *newline);
 static inline bool is_unicode_whitespace(int32_t c);
 static inline bool at_eof(const TSLexer *lexer);
 
@@ -22,24 +23,32 @@ static bool skip_cpp_trivia(TSLexer *lexer, bool *newline, EmptyDirectives *dire
 }
 
 static bool skip_cpp_space(TSLexer *lexer, bool *newline, uint32_t *failure) {
+    if (lexer->lookahead == ' ') lexer->advance(lexer, false);
+    if (!is_unicode_whitespace(lexer->lookahead) && lexer->lookahead != '\\' && lexer->lookahead != '/') return true;
     for (;;) {
-        while (is_unicode_whitespace(lexer->lookahead)) {
-            *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
-            lexer->advance(lexer, false);
-        }
-        if (failure && (lexer->lookahead == '\\' || lexer->lookahead == '/')) {
+        skip_cpp_whitespace_run(lexer, newline);
+        int32_t c = lexer->lookahead;
+        if (c != '\\' && c != '/') return true;
+        if (failure) {
             TSLexerPosition position;
             lexer->get_position(lexer, &position);
             *failure = position.bytes;
         }
-        if (lexer->lookahead == '\\') {
+        if (c == '\\') {
             lexer->advance(lexer, false);
             if (!scan_preproc_newline(lexer, false)) return false;
-        } else if (lexer->lookahead == '/') {
-            if (!skip_cpp_comment(lexer, newline)) return false;
-        } else {
-            return true;
+        } else if (!skip_cpp_comment(lexer, newline)) {
+            return false;
         }
+    }
+}
+
+static void skip_cpp_whitespace_run(TSLexer *lexer, bool *newline) {
+    for (;;) {
+        if (skip_ascii_space_units(lexer, newline)) continue;
+        if (!is_unicode_whitespace(lexer->lookahead)) return;
+        *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
+        lexer->advance(lexer, false);
     }
 }
 
