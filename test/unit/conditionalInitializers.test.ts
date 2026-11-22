@@ -106,6 +106,20 @@ test('preserves directives around values and in value-less initializer arms', ()
       ['<missing/*>', '"missing/*"']
     );
     expect(values[2]!.descendantsOfType('pragma_operator')).toHaveLength(2);
+    expect(
+      values[2]!
+        .descendantsOfType('preproc_call')
+        .map((node) => [node.childForFieldName('directive')?.text, node.childForFieldName('argument')?.text])
+    ).toEqual(
+      expect.arrayContaining([
+        ['#_vendor', 'diagnostic'],
+        ['#__vendor_disabled', undefined],
+        ['#_vendör', 'payload'],
+        ['#ifé', undefined],
+        [String.raw`#_vend\u00f6r`, 'payload'],
+        [String.raw`#\u00e9metteur`, undefined],
+      ])
+    );
     expect(values[2]!.descendantsOfType('preproc_call').some((node) => node.text.startsWith('#error'))).toBe(true);
     expect(tree.rootNode.lastNamedChild?.childForFieldName('declarator')?.text).toBe('after()');
   } finally {
