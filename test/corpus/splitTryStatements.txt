@@ -337,7 +337,6 @@ Guarded handler without a guarded try block
 ================================================================================
 
 int f() {
-  {
     g();
 #if EXCEPTIONS
   } catch (...) {
