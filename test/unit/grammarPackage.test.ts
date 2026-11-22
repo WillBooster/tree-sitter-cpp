@@ -62,7 +62,15 @@ function scannerDependencies(): string[] {
 }
 
 test('keeps vendored C scanner headers synchronized with the installed dependency', () => {
-  execFileSync('script/copy-c-scanner', ['--check'], execOptions);
+  const headers = fs
+    .readdirSync(path.join(Root, 'node_modules/@willbooster/tree-sitter-c/src'))
+    .filter((file) => file.endsWith('.h'));
+  expect(headers).toContain('emptyDirectives.h');
+  for (const file of headers) {
+    expect(fs.readFileSync(path.join(Root, 'src', file)), `${file} differs; run script/copy-c-scanner`).toEqual(
+      fs.readFileSync(path.join(Root, 'node_modules/@willbooster/tree-sitter-c/src', file))
+    );
+  }
 });
 
 test('preserves template and qualified names in explicit destructor calls', async () => {

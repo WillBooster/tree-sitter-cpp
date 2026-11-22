@@ -16,6 +16,7 @@
         "src/macroProof.h",
         "src/conditionalMacro.h",
         "src/emptyDirectives.h",
+        "src/directiveScan.h",
         "src/gnuRawString.h",
         "src/initializerConditional.h",
         "src/cppTrivia.h"

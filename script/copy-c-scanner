@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-
-for header in pragma.h identifier.h keywords.h functionMacro.h macroProof.h conditionalMacro.h emptyDirectives.h gnuRawString.h; do
-  source="node_modules/@willbooster/tree-sitter-c/src/$header"
-  target="src/$header"
-  pattern='s|^([[:blank:]]*//[[:blank:]]*code-gauge-allow(-file)?[[:blank:]]+[[:alnum:]]+)[[:blank:]]+[0-9]+([[:blank:]]+--)|\1\3|'
-  if [[ "${1:-}" == --check ]]; then
-    diff -u "$target" <(sed -E "$pattern" "$source")
-  else
-    sed -E "$pattern" "$source" > "$target"
-  fi
-done
+cp node_modules/@willbooster/tree-sitter-c/src/*.h src/
