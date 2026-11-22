@@ -609,7 +609,7 @@ constexpr int f(int x) {
   if (x) {
     return 1;
 #ifdef A
-  } else [[likely]] [[maybe_unused]] if constexpr (sizeof(int) == 4) [[unlikely]] [[likely]] {
+  } else [[likely]] [[]] if constexpr (sizeof(int) == 4) [[unlikely]] [[]] {
     return 2;
 #endif
 #ifdef B
@@ -645,9 +645,7 @@ constexpr int f(int x) {
               (attribute_declaration
                 (attribute
                   (identifier)))
-              (attribute_declaration
-                (attribute
-                  (identifier)))
+              (attribute_declaration)
               (condition_clause
                 (binary_expression
                   (sizeof_expression
@@ -657,9 +655,7 @@ constexpr int f(int x) {
               (attribute_declaration
                 (attribute
                   (identifier)))
-              (attribute_declaration
-                (attribute
-                  (identifier))))
+              (attribute_declaration))
             (return_statement
               (number_literal)))
           (preproc_ifdef
