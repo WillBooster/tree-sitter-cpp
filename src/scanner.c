@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, GNU_RAW_STRING_BODY, RAW_MACRO_TYPE_TAIL, BRACED_FUNCTION_ATTRIBUTE_START, BRACED_MACRO_TYPE_START, DIRECTIVE_CONTEXT, PREPROC_EMPTY, PREPROC_DIRECTIVE_START, MACRO_CALL_END, MACRO_IDENTIFIER_END, EMPTY_INITIALIZER_START, INITIALIZER_DIRECTIVE_NAME };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, PACK_INDEX_OPERATOR, TEMPLATE_CLOSE, SPLIT_TEMPLATE_CLOSE, PRAGMA_OPERATOR, PREPROC_ARG, PREPROC_NEWLINE, PREPROC_LPAREN, PREPROC_DIRECTIVE_ARG, PREPROC_FUNCTION_NAME, FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_START, POST_TYPE_FUNCTION_ATTRIBUTE_SUFFIX, TRAILING_MACRO_ATTRIBUTE_NAME, TRAILING_OBJECT_DECLARATION_START, CONDITIONAL_MARKER_IFDEF, CONDITIONAL_MARKER_IFNDEF, LEADING_CONDITIONAL_MARKER_IFDEF, LEADING_CONDITIONAL_MARKER_IFNDEF, GNU_RAW_STRING_BODY, RAW_MACRO_TYPE_TAIL, BRACED_FUNCTION_ATTRIBUTE_START, BRACED_MACRO_TYPE_START, DIRECTIVE_CONTEXT, PREPROC_EMPTY, PREPROC_DIRECTIVE_START, MACRO_CALL_END, MACRO_IDENTIFIER_END, EMPTY_INITIALIZER_START, INITIALIZER_DIRECTIVE_NAME, DECLARATOR_MACRO_NAME };
 
 /// C++ [lex.string] limits raw-string d-char-sequences to 16 characters.
 #define MAX_DELIMITER_LENGTH 16
@@ -30,9 +30,20 @@ typedef struct {
     /// The byte after the last null directive scanned, which ends a line like a newline; zero when none.
     uint32_t null_directive_end;
     MacroLineMiss macro_line_miss;
+    /// The end byte of a comment that a line break separates from the token before it; zero when none. Like
+    /// `macro_line_miss`, it depends only on the source text.
+    uint32_t later_line_comment_end;
     uint8_t delimiter_length;
     int32_t delimiter[MAX_DELIMITER_LENGTH];
 } Scanner;
+
+/// The first characters of a scanned word, enough to compare it with the longest word it is compared with, its full
+/// length, and whether it holds upper-case and lower-case letters.
+typedef struct {
+    char start[sizeof("override")];
+    size_t length;
+    bool upper, lower;
+} AsciiWord;
 
 /// Words that cannot continue a declaration that a conditional marker starts.
 static const char *const reserved_words[] = {"namespace", "using", "export", "module", "import"};
@@ -56,9 +67,17 @@ static bool scan_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *vali
 static bool scan_preproc_tokens(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_initializer_token(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer);
-static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip);
+static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip, bool *newline);
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
 static bool skip_template_splices(TSLexer *lexer, bool skip);
+static bool after_later_line_comment(const Scanner *scanner, TSLexer *lexer);
+static void note_later_line_comment(Scanner *scanner, TSLexer *lexer, bool newline);
+static bool scan_declarator_macro_name(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool newline);
+static inline bool starts_declarator_macro_scan(int32_t c);
+static bool scan_ascii_word(TSLexer *lexer, AsciiWord *word);
+static bool ascii_word_is(const AsciiWord *word, const char *text);
+static bool scan_declarator_continuation(Scanner *scanner, TSLexer *lexer, bool newline);
+static bool scan_function_clause(Scanner *scanner, TSLexer *lexer);
 static bool scan_declaration_macro(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_declaration_attribute(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_macro_name_rest(TSLexer *lexer, MacroName *name, bool has_name);
@@ -167,7 +186,8 @@ static bool scan_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *vali
         if (!skip_template_splices(lexer, true)) return false;
         pending_close = lexer->lookahead == '>';
     }
-    if (!skip_pack_index_whitespace(lexer, true)) return false;
+    bool newline = valid_symbols[DECLARATOR_MACRO_NAME] && after_later_line_comment(scanner, lexer);
+    if (!skip_pack_index_whitespace(lexer, true, &newline)) return false;
     if ((valid_symbols[EMPTY_INITIALIZER_START] || valid_symbols[INITIALIZER_DIRECTIVE_NAME]) && lexer->lookahead == '#') {
         return scan_initializer_token(scanner, lexer, valid_symbols);
     }
@@ -177,7 +197,103 @@ static bool scan_spaced_token(Scanner *scanner, TSLexer *lexer, const bool *vali
     if ((valid_symbols[TEMPLATE_CLOSE] || valid_symbols[SPLIT_TEMPLATE_CLOSE]) && lexer->lookahead == '>') {
         return scan_template_close(scanner, lexer, valid_symbols, pending_close);
     }
+    if (valid_symbols[DECLARATOR_MACRO_NAME] && starts_declarator_macro_scan(lexer->lookahead)) {
+        return scan_declarator_macro_name(scanner, lexer, valid_symbols, newline);
+    }
     return scan_declaration_macro(scanner, lexer, valid_symbols);
+}
+
+static bool after_later_line_comment(const Scanner *scanner, TSLexer *lexer) {
+    TSLexerPosition position;
+    lexer->get_position(lexer, &position);
+    return position.bytes == scanner->later_line_comment_end;
+}
+
+/// The parser lexes a comment as a token of its own and scans again after it, so a line break before or inside the
+/// comment is recorded for that scan, which would otherwise take a name after the comment to be on the declarator's line.
+static void note_later_line_comment(Scanner *scanner, TSLexer *lexer, bool newline) {
+    if (!skip_cpp_comment(lexer, &newline) || !newline) return;
+    TSLexerPosition position;
+    lexer->get_position(lexer, &position);
+    scanner->later_line_comment_end = position.bytes;
+}
+
+/// Scans an all-caps name after a function declarator's parameter list as an unexpanded macro, as `NOEXCEPT` in
+/// `int f() NOEXCEPT {}`. No keyword that continues a declarator is spelled in all caps, and what follows the name must
+/// continue or end the declarator, so a name that starts the next declaration after a macro line, as `API` in
+/// `DISABLE_COPY(T)` followed by `API int f();`, is left alone; a name on a later line than the parameter list (`newline`)
+/// is the likelier start of such a declaration, so only a body or the end of the declaration may follow it.
+static bool scan_declarator_macro_name(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool newline) {
+    if (lexer->lookahead == '/') {
+        note_later_line_comment(scanner, lexer, newline);
+        return false;
+    }
+    AsciiWord name = {0};
+    if (!scan_ascii_word(lexer, &name)) return false;
+    // This scan consumed the word that the pragma operator starts with, so it finishes that token itself.
+    if (name.lower) {
+        lexer->result_symbol = PRAGMA_OPERATOR;
+        return valid_symbols[PRAGMA_OPERATOR] && ascii_word_is(&name, pragma_word) &&
+            scan_pragma_suffix_end_with(lexer, true, &(PragmaTrivia){empty_directives_skip, &scanner->directives});
+    }
+    if (!name.upper) return false;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = DECLARATOR_MACRO_NAME;
+    bool line_end = false;
+    return skip_cpp_trivia(lexer, &line_end, &scanner->directives, NULL) && scan_declarator_continuation(scanner, lexer, newline);
+}
+
+/// A macro name's first character, or the start of a comment that may put the name on a later line.
+static inline bool starts_declarator_macro_scan(int32_t c) {
+    return (c >= 'A' && c <= 'Z') || c == '_' || c == '/';
+}
+
+/// Scans a word of ASCII letters, digits, and underscores; false when another identifier character continues it.
+static bool scan_ascii_word(TSLexer *lexer, AsciiWord *word) {
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        bool upper = c >= 'A' && c <= 'Z';
+        bool lower = c >= 'a' && c <= 'z';
+        if (!upper && !lower && c != '_' && !(c >= '0' && c <= '9')) return !preproc_identifier_character(c, true);
+        if (word->length < sizeof(word->start) - 1) word->start[word->length] = (char)c;
+        word->length++;
+        word->upper |= upper;
+        word->lower |= lower;
+        advance(lexer);
+    }
+}
+
+static bool ascii_word_is(const AsciiWord *word, const char *text) {
+    return word->length == strlen(text) && strcmp(word->start, text) == 0;
+}
+
+static bool scan_declarator_continuation(Scanner *scanner, TSLexer *lexer, bool newline) {
+    int32_t c = lexer->lookahead;
+    if (c == '{' || c == ';') return true;
+    if (newline) return false;
+    if (c == ':' || c == '-') {
+        advance(lexer);
+        return c == '-' ? lexer->lookahead == '>' : lexer->lookahead != c;
+    }
+    if (c == '=') {
+        advance(lexer);
+        return scan_function_clause(scanner, lexer);
+    }
+    AsciiWord word = {0};
+    return scan_ascii_word(lexer, &word) &&
+        (ascii_word_is(&word, "final") || ascii_word_is(&word, "override") || ascii_word_is(&word, "try"));
+}
+
+/// Scans what follows the `=` of `= default`, `= delete`, or `= 0;`. Any other value is the default argument of a
+/// parameter, whose trailing name annotates the parameter, as in `void f(int (*callback)(int) UNUSED = nullptr)` and
+/// `(*callback)(int) UNUSED = 0)`.
+static bool scan_function_clause(Scanner *scanner, TSLexer *lexer) {
+    bool line_end = false;
+    AsciiWord word = {0};
+    if (!skip_cpp_trivia(lexer, &line_end, &scanner->directives, NULL) || !scan_ascii_word(lexer, &word)) return false;
+    if (ascii_word_is(&word, "default") || ascii_word_is(&word, "delete")) return true;
+    return ascii_word_is(&word, "0") && skip_cpp_trivia(lexer, &line_end, &scanner->directives, NULL) &&
+        lexer->lookahead == ';';
 }
 
 static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_symbols) {
@@ -185,7 +301,7 @@ static bool only_extras_valid(const EmptyDirectives *state, const bool *valid_sy
         !memchr(valid_symbols, true, PRAGMA_OPERATOR * sizeof(*valid_symbols)) &&
         !memchr(valid_symbols + PREPROC_ARG, true, (DIRECTIVE_CONTEXT - PREPROC_ARG) * sizeof(*valid_symbols)) &&
         !memchr(valid_symbols + MACRO_CALL_END, true,
-            (INITIALIZER_DIRECTIVE_NAME + 1 - MACRO_CALL_END) * sizeof(*valid_symbols));
+            (DECLARATOR_MACRO_NAME + 1 - MACRO_CALL_END) * sizeof(*valid_symbols));
 }
 
 // `starts` marks only `#`, `\`, and spaces/splices before a null directive's `#`, and `line_ends` marks only spaces and
@@ -443,9 +559,10 @@ static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer) {
     return true;
 }
 
-static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip) {
+static bool skip_pack_index_whitespace(TSLexer *lexer, bool skip, bool *newline) {
     for (;;) {
         if (is_unicode_whitespace(lexer->lookahead)) {
+            *newline |= lexer->lookahead == '\n' || lexer->lookahead == '\r';
             lexer->advance(lexer, skip);
         } else if (lexer->lookahead == '\\') {
             lexer->advance(lexer, skip);
