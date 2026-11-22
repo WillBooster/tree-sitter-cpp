@@ -1,34 +1,58 @@
-// code-gauge-allow-file fileNcss 735 -- One source-fact pass shares compact character storage, directive lexing and physical-position conversion.
+// code-gauge-allow-file fileNcss -- One source-fact pass shares on-demand directive-segment storage, directive lexing, physical-position conversion, prefix spans and fact bitsets.
 #ifndef TREE_SITTER_C_EMPTY_DIRECTIVES_H_
 #define TREE_SITTER_C_EMPTY_DIRECTIVES_H_
 
-#include "pragma.h"
+#include "directiveScan.h"
 #include <stdlib.h>
 
 #define DIRECTIVE_PAGE_SHIFT 12
 #define DIRECTIVE_PAGE_SIZE (1 << DIRECTIVE_PAGE_SHIFT)
+#define DIRECTIVE_SEGMENT_UNITS (DIRECTIVE_PAGE_SIZE * 16)
+#define DIRECTIVE_FILL_UNITS 256
 
 typedef struct {
     uint32_t index, byte, width;
 } DirectivePosition;
 
+// The characters of one directive segment, read from the lexer as the line-state pass needs them.
 typedef struct {
     uint16_t **characters;
     DirectivePosition *positions;
-    uint32_t position_count, position_capacity, position_index, previous_byte, before_previous_byte;
-    uint8_t *prefix_barriers;
-    uint32_t length, index, byte, end, page_count;
+    TSLexer *lexer;
+    uint32_t length, page_count, page_capacity, position_count, position_capacity;
+    // The lexer's byte position, which follows the last stored character.
+    uint32_t fill_byte;
     uint32_t conditional_depth;
-    bool utf16, encoding_known, has_hash, has_directives, has_directive_ends, has_empty, has_barriers;
+    // Whether the current segment recorded a null directive or a line-end barrier, which the reverse pass carries.
+    bool utf16, encoding_known, failed, carries;
+} DirectiveBuffer;
+
+// A position in a `DirectiveBuffer`; copies share the buffer, so a lookahead copy reads what the original will.
+typedef struct {
+    DirectiveBuffer *buffer;
+    uint32_t index, byte, position_index, previous_byte, before_previous_byte;
 } DirectiveInput;
 
+#define DIRECTIVE_FACT_PAGE_SHIFT 15
+#define DIRECTIVE_FACT_PAGE_SIZE (1 << DIRECTIVE_FACT_PAGE_SHIFT)
+
+// Each kind of fact is a directory of `pages` pointers, one per `DIRECTIVE_FACT_PAGE_SIZE` source bytes up to and
+// possibly past the furthest fact, to bitset pages allocated only where a fact is set, so a missing directory or page
+// holds no fact; source without facts, such as an excluded range, costs one pointer per page of each directory.
+// `empty_directives_release` frees them.
 typedef struct {
-    uint8_t *starts, *ends, *line_ends, *directive_starts, *directive_ends;
-    uint32_t bytes;
+    uint8_t **starts, **ends, **line_ends, **directive_starts, **directive_ends;
+    uint32_t pages;
     bool built, ready;
 } EmptyDirectives;
 
 typedef enum { DIRECTIVE_ORDINARY, DIRECTIVE_CONDITION, DIRECTIVE_DIAGNOSTIC, DIRECTIVE_REQUIRED, DIRECTIVE_UNDEF, DIRECTIVE_LINE, DIRECTIVE_PRAGMA, DIRECTIVE_HEADER } DirectiveKind;
+
+// The reverse pass's state; the trailing run's open span covers the bytes from `tail_start` to before `tail_end`.
+typedef struct {
+    bool prefix, line_end, tail, tail_open;
+    uint32_t tail_start, tail_end;
+} DirectiveCarry;
 
 typedef struct {
     bool beginning, pending, operand, pragma_pending, pragma_newline, pragma_name;
@@ -37,17 +61,38 @@ typedef struct {
     uint32_t start, required_end;
 } DirectiveLine;
 
-static void directive_prefixes(EmptyDirectives *state, DirectiveInput *input);
-static uint32_t directive_skip_inert(const DirectiveInput *input, uint32_t end, uint32_t position, uint32_t *byte);
-static bool directive_append(DirectiveInput *input, uint32_t *capacity, uint32_t *byte, TSLexer *lexer);
-static bool directive_reserve(DirectiveInput *input, uint32_t *capacity, unsigned width);
-static bool directive_position(DirectiveInput *input, uint32_t index, uint32_t byte, uint32_t width);
-static void directive_encode(DirectiveInput *input, uint32_t c);
+static bool directive_scan_buffered(DirectiveScan *scan, DirectiveInput *input);
+static bool directive_scan_lexer(DirectiveScan *scan, DirectiveBuffer *buffer);
+static void directive_scan_resume(DirectiveScan *scan, DirectiveSpans *run, DirectiveSpans *tail);
+static void directive_scan_handoff(DirectiveScan *scan, uint32_t hash, bool skipped);
+static bool directive_segment(EmptyDirectives *state, DirectiveInput *input);
+static bool directive_segment_ends(const DirectiveInput *input);
+static bool directive_short_line_comment(const DirectiveInput *input, uint32_t index, uint32_t limit);
+static bool directive_line_clean(const DirectiveLine *line);
+static void directive_shift(DirectiveBuffer *buffer, uint32_t start);
+static bool directive_finish(EmptyDirectives *state, DirectiveBuffer *buffer);
+static void directive_prefixes(EmptyDirectives *state, const DirectiveInput *input, const DirectiveSpans *prefix, DirectiveSpans *tail);
+static bool directive_step_back(const DirectiveInput *input, uint32_t *index, uint32_t *position, uint32_t *byte, int32_t *c, uint32_t *width);
+static void directive_carry(EmptyDirectives *state, DirectiveBuffer *buffer, DirectiveCarry *carry, int32_t c, uint32_t byte);
+static void directive_carry_tail(DirectiveCarry *carry, DirectiveSpans *tail, uint32_t byte, uint32_t width);
+static void directive_spans_reverse(DirectiveSpans *spans);
+static void directive_mark_spans(EmptyDirectives *state, DirectiveBuffer *buffer, const DirectiveSpans *spans);
+static uint32_t directive_skip_inert(const EmptyDirectives *state, const DirectiveInput *input, uint32_t end, uint32_t position, uint32_t *byte);
+static inline bool directive_has(const DirectiveInput *input, uint32_t index);
+static bool directive_fill(DirectiveBuffer *buffer, uint32_t index);
+static bool directive_append(DirectiveBuffer *buffer);
+static bool directive_append_ascii(DirectiveBuffer *buffer, uint16_t c);
+static bool directive_reserve(DirectiveBuffer *buffer, unsigned width);
+static bool directive_position(DirectiveBuffer *buffer, uint32_t index, uint32_t byte, uint32_t width);
+static void directive_encode(DirectiveBuffer *buffer, uint32_t c);
 static uint16_t directive_character(const DirectiveInput *input, uint32_t index);
-static void directive_store(DirectiveInput *input, uint16_t c);
-static void directive_release(DirectiveInput *input);
+static void directive_store(DirectiveBuffer *buffer, uint16_t c);
+static void directive_release(DirectiveBuffer *buffer);
 static unsigned directive_utf8_width(uint32_t c);
-static void directive_barrier(DirectiveInput *input);
+static void directive_set(EmptyDirectives *state, DirectiveBuffer *buffer, uint8_t ***facts, uint32_t byte);
+static bool directive_bit(const EmptyDirectives *state, uint8_t *const *facts, uint32_t byte);
+static bool directive_grow_directories(EmptyDirectives *state, uint32_t pages);
+static void directive_barrier(EmptyDirectives *state, DirectiveInput *input);
 static void directive_line_end(EmptyDirectives *state, DirectiveInput *input, DirectiveLine *line);
 static void directive_complete_required(EmptyDirectives *state, DirectiveInput *input, DirectiveLine *line);
 static bool directive_requires_operand(DirectiveKind kind);
@@ -62,11 +107,10 @@ static void directive_line_comment(EmptyDirectives *state, DirectiveInput *input
 static uint32_t directive_splice_end(const DirectiveInput *input);
 
 static bool empty_directives_build(EmptyDirectives *state, TSLexer *lexer);
-static void empty_directives_prune(EmptyDirectives *state, DirectiveInput *input);
+static void empty_directives_release(EmptyDirectives *state);
 static bool empty_directives_line_end_at(const EmptyDirectives *state, uint32_t byte);
 static bool empty_directives_start_at(const EmptyDirectives *state, uint32_t byte);
 static void empty_directives_consume_started(TSLexer *lexer, EmptyDirectives *state, bool skip_prefix);
-static void empty_directives_find(EmptyDirectives *state, DirectiveInput *input);
 static int32_t directive_next(DirectiveInput *input);
 static int32_t directive_physical_next(DirectiveInput *input);
 static uint32_t directive_expected_width(const DirectiveInput *input, uint32_t index, int32_t *c);
@@ -75,6 +119,7 @@ static int32_t directive_plain(const DirectiveInput *input);
 static void directive_skip_plain(DirectiveInput *input);
 typedef enum { DIRECTIVE_RUN_WORD, DIRECTIVE_RUN_CODE, DIRECTIVE_RUN_SPACE, DIRECTIVE_RUN_LINE_COMMENT, DIRECTIVE_RUN_BLOCK_COMMENT } DirectiveRun;
 static inline uint32_t directive_plain_run(DirectiveInput *input, DirectiveRun run);
+static uint32_t directive_run_end(const DirectiveBuffer *buffer, DirectiveRun run, uint32_t index, uint32_t end);
 static bool directive_run_continues(DirectiveRun run, uint16_t c);
 static void directive_pragma_name(DirectiveLine *line, const DirectiveInput *input);
 static bool directive_pragma_operator(const DirectiveInput *input);
@@ -95,8 +140,6 @@ static void directive_word_run(DirectiveInput *input, DirectiveWord *word, bool 
 static DirectiveKind directive_word_kind(const DirectiveWord *word);
 static void directive_word_character(DirectiveWord *word, int32_t c);
 static void directive_word_role(DirectiveLine *line, DirectiveKind kind, bool name, bool pragma, bool had_operand, bool identifier);
-static bool directive_horizontal(int32_t c);
-static bool directive_newline(int32_t c);
 static uint32_t directive_byte(const DirectiveInput *input);
 static void directive_record(EmptyDirectives *state, DirectiveInput *input, uint32_t start, uint32_t end);
 
@@ -116,14 +159,14 @@ static bool empty_directives_after_keyword(const EmptyDirectives *state, TSLexer
     if (!state || !state->directive_ends) return false;
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
-    return position.bytes <= state->bytes && (state->directive_ends[position.bytes / 8] & (1u << (position.bytes % 8)));
+    return directive_bit(state, state->directive_ends, position.bytes);
 }
 
 static bool empty_directives_at_start(const EmptyDirectives *state, TSLexer *lexer) {
     if (!state || !state->directive_starts) return false;
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
-    return position.bytes < state->bytes && (state->directive_starts[position.bytes / 8] & (1u << (position.bytes % 8)));
+    return directive_bit(state, state->directive_starts, position.bytes);
 }
 
 static bool empty_directives_at_line_end(const EmptyDirectives *state, TSLexer *lexer) {
@@ -134,7 +177,7 @@ static bool empty_directives_at_line_end(const EmptyDirectives *state, TSLexer *
 }
 
 static bool empty_directives_line_end_at(const EmptyDirectives *state, uint32_t byte) {
-    return state->line_ends && byte < state->bytes && (state->line_ends[byte / 8] & (1u << (byte % 8)));
+    return directive_bit(state, state->line_ends, byte);
 }
 
 static bool empty_directives_consume(TSLexer *lexer, EmptyDirectives *state, bool skip_prefix);
@@ -155,7 +198,7 @@ static bool empty_directives_consume(TSLexer *lexer, EmptyDirectives *state, boo
 }
 
 static bool empty_directives_start_at(const EmptyDirectives *state, uint32_t byte) {
-    return state->starts && byte < state->bytes && (state->starts[byte / 8] & (1u << (byte % 8)));
+    return directive_bit(state, state->starts, byte);
 }
 
 // Consumes the rest of a null directive whose start was confirmed at a position the lexer has not left except over
@@ -166,202 +209,444 @@ static void empty_directives_consume_started(TSLexer *lexer, EmptyDirectives *st
     do {
         lexer->advance(lexer, false);
         lexer->get_position(lexer, &position);
-    } while (!pragma_eof(lexer) && position.bytes < state->bytes &&
-        !(state->ends[position.bytes / 8] & (1u << (position.bytes % 8))));
+    } while (!pragma_eof(lexer) && !directive_bit(state, state->ends, position.bytes));
 }
 
-// code-gauge-allow functionNcss 35 -- The source-fact buffers are allocated and released together so initialization fails atomically.
+// Ordinary code goes through `DirectiveScan` without being stored, and only directive segments, each from a directive's
+// `#` to the end of the logical line where no directive state is left, are stored for the line-state pass and the
+// reverse prefix pass. The facts are stored as `EmptyDirectives` describes.
 static bool empty_directives_build(EmptyDirectives *state, TSLexer *lexer) {
-    TSLexerPosition start;
-    lexer->get_position(lexer, &start);
-    DirectiveInput input = {.byte = start.bytes};
-    uint32_t capacity = 0, byte = start.bytes;
-    while (!pragma_eof(lexer)) {
-        if (!directive_append(&input, &capacity, &byte, lexer)) goto failed;
+    TSLexerPosition position;
+    lexer->get_position(lexer, &position);
+    DirectiveBuffer buffer = {.lexer = lexer, .fill_byte = position.bytes};
+    DirectiveInput input = {.buffer = &buffer, .byte = position.bytes};
+    // `run` holds the run before a segment's `#`, and `tail` the segment's trailing run.
+    DirectiveSpans run = {0}, tail = {0};
+    DirectiveScan scan = {.beginning = true, .run = &run};
+    for (;;) {
+        if (!directive_scan_buffered(&scan, &input)) {
+            buffer.length = buffer.position_count = 0;
+            if (!directive_scan_lexer(&scan, &buffer)) break;
+            input = (DirectiveInput){.buffer = &buffer, .byte = buffer.fill_byte};
+        }
+        directive_shift(&buffer, input.index);
+        buffer.carries = false;
+        uint32_t start = input.byte;
+        input = (DirectiveInput){.buffer = &buffer, .byte = start, .previous_byte = start, .before_previous_byte = start};
+        bool more = directive_segment(state, &input);
+        directive_prefixes(state, &input, &run, &tail);
+        if (!more || buffer.failed) break;
+        directive_scan_resume(&scan, &run, &tail);
     }
-    input.end = byte;
-    state->bytes = byte;
-    if (!input.has_hash) {
-        directive_release(&input);
-        return true;
+    if (run.failed || tail.failed) buffer.failed = true;
+    free(run.items);
+    free(tail.items);
+    return directive_finish(state, &buffer);
+}
+
+// Restarts `scan` on ordinary code, continuing the run with a segment's trailing run, whose spans `tail` holds in byte
+// order; the lists swap so that `run` holds them.
+static void directive_scan_resume(DirectiveScan *scan, DirectiveSpans *run, DirectiveSpans *tail) {
+    DirectiveSpans before = *run;
+    *run = *tail;
+    *tail = before;
+    *scan = (DirectiveScan){.beginning = true, .run = run};
+    if (!run->count) return;
+    DirectiveSpan last = run->items[--run->count];
+    scan->run_spans = run->count;
+    scan->in_run = true;
+    scan->run_start = last.start;
+    scan->run_end = last.end;
+}
+
+// Completes the run's spans before the directive's `#` at `hash`, which follows bytes left out when `skipped`.
+static void directive_scan_handoff(DirectiveScan *scan, uint32_t hash, bool skipped) {
+    if (scan->in_run) directive_scan_close_run(scan, hash, skipped);
+    scan->run->count = scan->in_run ? scan->run_spans : 0;
+}
+
+// Feeds the characters a directive segment's lookahead stored past its end. Returns true at a directive's `#`, which
+// is left at `input`.
+static bool directive_scan_buffered(DirectiveScan *scan, DirectiveInput *input) {
+    while (input->index < input->buffer->length) {
+        DirectiveInput before = *input;
+        int32_t c = directive_physical_next(input);
+        if (directive_scan_feed(scan, c)) {
+            *input = before;
+            directive_scan_handoff(scan, before.byte, before.byte != scan->run_end);
+            return true;
+        }
+        directive_scan_run(scan, c, input->previous_byte, input->byte);
     }
-    state->starts = calloc((size_t)state->bytes / 8 + 1, 1);
-    state->ends = calloc((size_t)state->bytes / 8 + 1, 1);
-    state->directive_starts = calloc((size_t)state->bytes / 8 + 1, 1);
-    state->directive_ends = calloc((size_t)state->bytes / 8 + 1, 1);
-    input.prefix_barriers = calloc((size_t)state->bytes / 8 + 1, 1);
-    if (!state->starts || !state->ends || !state->directive_starts || !state->directive_ends || !input.prefix_barriers) goto failed;
-    empty_directives_find(state, &input);
-    if (input.has_empty || input.has_barriers) directive_prefixes(state, &input);
-    empty_directives_prune(state, &input);
-    directive_release(&input);
-    return true;
-failed:
-    free(input.prefix_barriers);
-    directive_release(&input);
-    free(state->starts);
-    free(state->ends);
-    free(state->directive_starts);
-    free(state->directive_ends);
-    state->starts = state->ends = state->directive_starts = state->directive_ends = NULL;
     return false;
 }
 
-static void empty_directives_prune(EmptyDirectives *state, DirectiveInput *input) {
-    if (!input->has_empty) {
-        free(state->starts);
-        free(state->ends);
-        state->starts = state->ends = NULL;
+// Feeds the lexer's characters until a directive's `#`, which is left as the lookahead, or the end of the input.
+static bool directive_scan_lexer(DirectiveScan *scan, DirectiveBuffer *buffer) {
+    TSLexer *lexer = buffer->lexer;
+    TSLexerPosition position;
+    for (;;) {
+        directive_scan_plain_run(scan, lexer);
+        if (pragma_eof(lexer)) break;
+        int32_t c = lexer->lookahead;
+        if (directive_scan_feed(scan, c)) {
+            lexer->get_position(lexer, &position);
+            buffer->fill_byte = position.bytes;
+            directive_scan_handoff(scan, position.bytes, lexer->is_at_included_range_start(lexer));
+            return true;
+        }
+        directive_scan_lexer_run(scan, lexer, pragma_space(c) || c == '\\');
+        lexer->advance(lexer, false);
     }
-    if (!input->has_directives) {
-        free(state->directive_starts);
-        state->directive_starts = NULL;
-    }
-    if (!input->has_directive_ends) {
-        free(state->directive_ends);
-        state->directive_ends = NULL;
-    }
-    if (input->has_barriers) state->line_ends = input->prefix_barriers;
-    else free(input->prefix_barriers);
+    lexer->get_position(lexer, &position);
+    buffer->fill_byte = position.bytes;
+    return false;
 }
 
-// code-gauge-allow functionCognitiveComplexity 29 -- The reverse lexical pass applies sparse physical-position corrections while carrying null-prefix and line-end facts.
-static void directive_prefixes(EmptyDirectives *state, DirectiveInput *input) {
-    bool prefix = false, line_end = false;
-    uint32_t byte = input->end, position = input->position_count;
-    for (uint32_t i = input->length; i > 0;) {
-        if (!prefix && !line_end) i = directive_skip_inert(input, i, position, &byte);
-        if (!i) break;
-        i--;
-        if (i && directive_character(input, i) >= 0xdc00 && directive_character(input, i) <= 0xdfff &&
-            directive_character(input, i - 1) >= 0xd800 && directive_character(input, i - 1) <= 0xdbff) continue;
-        int32_t c;
-        uint32_t width = directive_expected_width(input, i, &c);
-        if (position && input->positions[position - 1].index == i) byte = input->positions[--position].byte;
-        else {
-            if (width > byte) return;
-            byte -= width;
-        }
-        if (byte > state->bytes) return;
-        bool hash = c == '#' && (state->starts[byte / 8] & (1u << (byte % 8)));
-        bool condition_end = input->prefix_barriers[byte / 8] & (1u << (byte % 8));
-        line_end = condition_end || (line_end && directive_horizontal(c));
-        if (line_end) input->prefix_barriers[byte / 8] |= 1u << (byte % 8);
-        prefix = !condition_end && (hash || (prefix && (pragma_space(c) || c == '\\')));
-        if (prefix) state->starts[byte / 8] |= 1u << (byte % 8);
+// Runs the line-state pass from a directive's `#` until a logical line ends with no directive state left and
+// `directive_segment_ends` lets `DirectiveScan` take over again. Returns false at the end of the input.
+static bool directive_segment(EmptyDirectives *state, DirectiveInput *input) {
+    DirectiveLine line = {.beginning = true};
+    for (;;) {
+        // Horizontal spaces never change the line state.
+        directive_plain_run(input, DIRECTIVE_RUN_SPACE);
+        int32_t c = directive_next(input);
+        if (c < 0) break;
+        directive_line_character(state, input, &line, c);
+        if (directive_line_clean(&line) && directive_segment_ends(input)) return true;
     }
+    directive_complete_required(state, input, &line);
+    if (line.pending) directive_record(state, input, line.start, input->buffer->fill_byte);
+    return false;
+}
+
+// A segment goes on over a following line that, after its indentation, starts another directive, is blank, or is a
+// line comment that ends within `DIRECTIVE_FILL_UNITS` characters, because handing each short line over costs more than
+// the line-state pass on it, until the segment holds `DIRECTIVE_SEGMENT_UNITS` characters. Code or another comment,
+// which may run on for any length, goes back to `DirectiveScan`.
+static bool directive_segment_ends(const DirectiveInput *input) {
+    if (input->index >= DIRECTIVE_SEGMENT_UNITS) return true;
+    uint32_t index = input->index, limit = input->index + DIRECTIVE_FILL_UNITS;
+    while (index < limit && directive_has(input, index) && directive_horizontal(directive_character(input, index))) index++;
+    if (index >= limit || !directive_has(input, index)) return true;
+    uint16_t c = directive_character(input, index);
+    return c != '#' && !directive_newline(c) && !directive_short_line_comment(input, index, limit);
+}
+
+// A line splice would continue the comment, so the line holds no `\`.
+static bool directive_short_line_comment(const DirectiveInput *input, uint32_t index, uint32_t limit) {
+    if (directive_character(input, index) != '/' || !directive_has(input, index + 1) ||
+        directive_character(input, index + 1) != '/') return false;
+    for (index += 2; index < limit && directive_has(input, index); index++) {
+        uint16_t c = directive_character(input, index);
+        if (c == '\\') return false;
+        if (directive_newline(c)) return true;
+    }
+    return false;
+}
+
+static bool directive_line_clean(const DirectiveLine *line) {
+    return line->beginning && !line->pending && !line->operand && !line->pragma_pending && !line->pragma_newline &&
+        !line->pragma_name && !line->pragma_depth && !line->header && line->kind == DIRECTIVE_ORDINARY && !line->required_end;
+}
+
+// Drops the characters before `start`, which `DirectiveScan` has consumed.
+static void directive_shift(DirectiveBuffer *buffer, uint32_t start) {
+    if (!start) return;
+    uint32_t length = buffer->length - start;
+    for (uint32_t i = 0; i < length; i++) {
+        uint32_t from = start + i;
+        buffer->characters[i >> DIRECTIVE_PAGE_SHIFT][i & (DIRECTIVE_PAGE_SIZE - 1)] =
+            buffer->characters[from >> DIRECTIVE_PAGE_SHIFT][from & (DIRECTIVE_PAGE_SIZE - 1)];
+    }
+    buffer->length = length;
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < buffer->position_count; i++) {
+        DirectivePosition position = buffer->positions[i];
+        if (position.index < start) continue;
+        position.index -= start;
+        buffer->positions[count++] = position;
+    }
+    buffer->position_count = count;
+}
+
+static bool directive_finish(EmptyDirectives *state, DirectiveBuffer *buffer) {
+    directive_release(buffer);
+    if (!buffer->failed) return true;
+    empty_directives_release(state);
+    return false;
+}
+
+static void empty_directives_release(EmptyDirectives *state) {
+    uint8_t **directories[] = {state->starts, state->ends, state->line_ends, state->directive_starts, state->directive_ends};
+    for (unsigned i = 0; i < sizeof directories / sizeof *directories; i++) {
+        if (!directories[i]) continue;
+        for (uint32_t page = 0; page < state->pages; page++) free(directories[i][page]);
+        free(directories[i]);
+    }
+    state->starts = state->ends = state->line_ends = state->directive_starts = state->directive_ends = NULL;
+    state->pages = 0;
+}
+
+// Marks the prefixes of the segment's null directives and the spaces before its directive line ends, reading the
+// segment backwards from `input`, where its forward pass stopped. A prefix reaching the segment's `#` extends over the
+// run before the segment, whose spans `prefix` holds. Stores in `tail`, in byte order, the spans of the segment's
+// trailing run of spaces and backslashes after its last line end, over which a later null directive's prefix may extend.
+static void directive_prefixes(EmptyDirectives *state, const DirectiveInput *input, const DirectiveSpans *prefix, DirectiveSpans *tail) {
+    DirectiveCarry carry = {.tail = true};
+    uint32_t byte = input->byte, position = input->position_index, width;
+    bool complete = true;
+    tail->count = 0;
+    for (uint32_t i = input->index; i > 0;) {
+        if (!carry.prefix && !carry.line_end && !carry.tail) i = directive_skip_inert(state, input, i, position, &byte);
+        if (!i) break;
+        int32_t c;
+        complete = directive_step_back(input, &i, &position, &byte, &c, &width);
+        if (!complete) break;
+        directive_carry(state, input->buffer, &carry, c, byte);
+        if (carry.tail) directive_carry_tail(&carry, tail, byte, width);
+        else if (!input->buffer->carries) break;
+    }
+    if (carry.tail_open) directive_spans_push(tail, carry.tail_start, carry.tail_end);
+    directive_spans_reverse(tail);
+    if (complete && carry.prefix) directive_mark_spans(state, input->buffer, prefix);
+}
+
+static void directive_spans_reverse(DirectiveSpans *spans) {
+    for (uint32_t i = 0; i < spans->count / 2; i++) {
+        DirectiveSpan span = spans->items[i];
+        spans->items[i] = spans->items[spans->count - 1 - i];
+        spans->items[spans->count - 1 - i] = span;
+    }
+}
+
+static void directive_mark_spans(EmptyDirectives *state, DirectiveBuffer *buffer, const DirectiveSpans *spans) {
+    for (uint32_t i = 0; i < spans->count; i++) {
+        for (uint32_t b = spans->items[i].start; b < spans->items[i].end; b++) directive_set(state, buffer, &state->starts, b);
+    }
+}
+
+// Moves back to the character before `*index`, reading a surrogate pair as one character, and decodes it into `*c` and
+// its byte width into `*width`; false when its width exceeds the bytes left.
+static bool directive_step_back(const DirectiveInput *input, uint32_t *index, uint32_t *position, uint32_t *byte, int32_t *c, uint32_t *width) {
+    const DirectiveBuffer *buffer = input->buffer;
+    uint32_t i = --*index;
+    if (i && directive_character(input, i) >= 0xdc00 && directive_character(input, i) <= 0xdfff &&
+        directive_character(input, i - 1) >= 0xd800 && directive_character(input, i - 1) <= 0xdbff) i = --*index;
+    *width = directive_expected_width(input, i, c);
+    if (*position && buffer->positions[*position - 1].index == i) {
+        DirectivePosition recorded = buffer->positions[--*position];
+        *byte = recorded.byte;
+        *width = recorded.width;
+        return true;
+    }
+    if (*width > *byte) return false;
+    *byte -= *width;
+    return true;
+}
+
+// Carries null-directive prefixes back from their `#` and line ends back from their barriers over the character `c` at
+// `byte`, and whether the trailing run continues.
+static void directive_carry(EmptyDirectives *state, DirectiveBuffer *buffer, DirectiveCarry *carry, int32_t c, uint32_t byte) {
+    bool hash = c == '#' && directive_bit(state, state->starts, byte);
+    bool condition_end = directive_bit(state, state->line_ends, byte);
+    bool space = pragma_space(c) || c == '\\';
+    carry->line_end = condition_end || (carry->line_end && directive_horizontal(c));
+    if (carry->line_end) directive_set(state, buffer, &state->line_ends, byte);
+    carry->prefix = !condition_end && (hash || (carry->prefix && space));
+    if (carry->prefix) directive_set(state, buffer, &state->starts, byte);
+    carry->tail = carry->tail && !condition_end && space;
+}
+
+// Extends the trailing run back over the character at `byte`, starting a span where an included range left bytes out.
+static void directive_carry_tail(DirectiveCarry *carry, DirectiveSpans *tail, uint32_t byte, uint32_t width) {
+    if (width > DIRECTIVE_CHARACTER_BYTES) width = DIRECTIVE_CHARACTER_BYTES;
+    if (carry->tail_open && byte + width == carry->tail_start) {
+        carry->tail_start = byte;
+        return;
+    }
+    if (carry->tail_open) directive_spans_push(tail, carry->tail_start, carry->tail_end);
+    carry->tail_start = byte;
+    carry->tail_end = byte + width;
+    carry->tail_open = true;
 }
 
 // Steps back from the character before `end` over characters that cannot change the reverse pass's state while no
 // prefix or line end is carried: plain-width characters that are neither `#` nor barriers. Returns the new end.
-static uint32_t directive_skip_inert(const DirectiveInput *input, uint32_t end, uint32_t position, uint32_t *byte) {
-    uint32_t stop = position ? input->positions[position - 1].index + 1 : 0, ascii_width = input->utf16 ? 2 : 1;
+static uint32_t directive_skip_inert(const EmptyDirectives *state, const DirectiveInput *input, uint32_t end, uint32_t position, uint32_t *byte) {
+    const DirectiveBuffer *buffer = input->buffer;
+    uint32_t stop = position ? buffer->positions[position - 1].index + 1 : 0, ascii_width = buffer->utf16 ? 2 : 1;
     while (end > stop) {
         uint32_t c = directive_character(input, end - 1);
-        uint32_t width = c < 0x80 ? ascii_width : input->utf16 && (c < 0xd800 || c > 0xdfff) ? 2 : 0;
+        uint32_t width = c < 0x80 ? ascii_width : buffer->utf16 && (c < 0xd800 || c > 0xdfff) ? 2 : 0;
         if (!width || c == '#' || width > *byte) break;
         uint32_t previous = *byte - width;
-        if (input->prefix_barriers[previous / 8] & (1u << (previous % 8))) break;
+        if (directive_bit(state, state->line_ends, previous)) break;
         *byte = previous;
         end--;
     }
     return end;
 }
 
-// `*byte` is the lexer's position before the character and is advanced past it.
-static bool directive_append(DirectiveInput *input, uint32_t *capacity, uint32_t *byte, TSLexer *lexer) {
-    uint32_t c = lexer->lookahead, index = input->length, start = *byte;
-    if (c == '#') input->has_hash = true;
+// Reads characters from the lexer until `index` is stored; false at the end of the input.
+static inline bool directive_has(const DirectiveInput *input, uint32_t index) {
+    return index < input->buffer->length || directive_fill(input->buffer, index);
+}
+
+// Reads ahead to the end of the line or `DIRECTIVE_FILL_UNITS` characters past `index`, since the pass reads each
+// stored character several times and the characters it leaves behind go back to `DirectiveScan`.
+static bool directive_fill(DirectiveBuffer *buffer, uint32_t index) {
+    uint32_t limit = index + DIRECTIVE_FILL_UNITS;
+    while (buffer->length < limit && !buffer->failed && !pragma_eof(buffer->lexer)) {
+        int32_t c = buffer->lexer->lookahead;
+        if (!directive_append(buffer)) buffer->failed = true;
+        else if (directive_newline(c) && buffer->length > index) break;
+    }
+    return index < buffer->length;
+}
+
+static bool directive_append(DirectiveBuffer *buffer) {
+    TSLexer *lexer = buffer->lexer;
+    uint32_t c = lexer->lookahead, index = buffer->length, start = buffer->fill_byte;
+    if (c < 0x80 && buffer->encoding_known && (index >> DIRECTIVE_PAGE_SHIFT) < buffer->page_count) {
+        return directive_append_ascii(buffer, (uint16_t)c);
+    }
     unsigned width = directive_utf8_width(c), utf16_width = c > 0xffff && c <= 0x10ffff ? 4 : 2;
-    if (!directive_reserve(input, capacity, c > 0xffff && c <= 0x10ffff ? 2 : 1)) return false;
-    directive_encode(input, c);
+    if (!directive_reserve(buffer, c > 0xffff && c <= 0x10ffff ? 2 : 1)) return false;
+    directive_encode(buffer, c);
     TSLexerPosition end;
     lexer->advance(lexer, false);
     lexer->get_position(lexer, &end);
-    *byte = end.bytes;
+    buffer->fill_byte = end.bytes;
     uint32_t measured = end.bytes - start;
-    if (!input->encoding_known && c <= 0x10ffff && width != utf16_width && !lexer->is_at_included_range_start(lexer)) {
-        input->utf16 = measured == utf16_width;
-        input->encoding_known = true;
+    // A character stored before the encoding is known keeps its measured width, which a later choice cannot change.
+    bool known = buffer->encoding_known;
+    if (!known && c <= 0x10ffff && width != utf16_width && !lexer->is_at_included_range_start(lexer)) {
+        buffer->utf16 = measured == utf16_width;
+        buffer->encoding_known = true;
     }
-    if (c > 0x10ffff || measured != (input->utf16 ? utf16_width : width)) {
-        return directive_position(input, index, start, measured);
+    if (!known || c > 0x10ffff || measured != (buffer->utf16 ? utf16_width : width)) {
+        return directive_position(buffer, index, start, measured);
     }
     return true;
 }
 
-static bool directive_position(DirectiveInput *input, uint32_t index, uint32_t byte, uint32_t width) {
-    if (input->position_count == input->position_capacity) {
-        uint32_t capacity = input->position_capacity ? input->position_capacity * 2 : 16;
-        if (capacity < input->position_capacity || (size_t)capacity > SIZE_MAX / sizeof(*input->positions)) return false;
-        void *positions = realloc(input->positions, (size_t)capacity * sizeof(*input->positions));
+static bool directive_position(DirectiveBuffer *buffer, uint32_t index, uint32_t byte, uint32_t width) {
+    if (buffer->position_count == buffer->position_capacity) {
+        uint32_t capacity = buffer->position_capacity ? buffer->position_capacity * 2 : 16;
+        if (capacity < buffer->position_capacity || (size_t)capacity > SIZE_MAX / sizeof(*buffer->positions)) return false;
+        void *positions = realloc(buffer->positions, (size_t)capacity * sizeof(*buffer->positions));
         if (!positions) return false;
-        input->positions = positions;
-        input->position_capacity = capacity;
+        buffer->positions = positions;
+        buffer->position_capacity = capacity;
     }
-    input->positions[input->position_count++] = (DirectivePosition){index, byte, width};
+    buffer->positions[buffer->position_count++] = (DirectivePosition){index, byte, width};
     return true;
 }
 
-static bool directive_reserve(DirectiveInput *input, uint32_t *capacity, unsigned width) {
-    if (input->length > UINT32_MAX - width) return false;
-    uint32_t last = (input->length + width - 1) >> DIRECTIVE_PAGE_SHIFT;
-    if (last >= *capacity) {
-        uint32_t next = *capacity ? *capacity * 2 : 16;
-        if (next < *capacity || (size_t)next > SIZE_MAX / sizeof(*input->characters)) return false;
-        void *characters = realloc(input->characters, (size_t)next * sizeof(*input->characters));
+// An ASCII character on a stored page, once the encoding is known, takes the expected width unless the lexer skipped to
+// another included range after it.
+static bool directive_append_ascii(DirectiveBuffer *buffer, uint16_t c) {
+    TSLexer *lexer = buffer->lexer;
+    uint32_t index = buffer->length, start = buffer->fill_byte;
+    buffer->characters[index >> DIRECTIVE_PAGE_SHIFT][index & (DIRECTIVE_PAGE_SIZE - 1)] = c;
+    buffer->length = index + 1;
+    TSLexerPosition end;
+    lexer->advance(lexer, false);
+    lexer->get_position(lexer, &end);
+    buffer->fill_byte = end.bytes;
+    return end.bytes - start == (buffer->utf16 ? 2u : 1u) || directive_position(buffer, index, start, end.bytes - start);
+}
+
+static bool directive_reserve(DirectiveBuffer *buffer, unsigned width) {
+    if (buffer->length > UINT32_MAX - width) return false;
+    uint32_t last = (buffer->length + width - 1) >> DIRECTIVE_PAGE_SHIFT;
+    if (last >= buffer->page_capacity) {
+        uint32_t next = buffer->page_capacity ? buffer->page_capacity * 2 : 16;
+        if (next < buffer->page_capacity || (size_t)next > SIZE_MAX / sizeof(*buffer->characters)) return false;
+        void *characters = realloc(buffer->characters, (size_t)next * sizeof(*buffer->characters));
         if (!characters) return false;
-        input->characters = characters;
-        *capacity = next;
+        buffer->characters = characters;
+        buffer->page_capacity = next;
     }
-    while (input->page_count <= last) {
+    while (buffer->page_count <= last) {
         uint16_t *page = malloc((size_t)DIRECTIVE_PAGE_SIZE * sizeof(*page));
         if (!page) return false;
-        input->characters[input->page_count++] = page;
+        buffer->characters[buffer->page_count++] = page;
     }
     return true;
 }
 
-static void directive_encode(DirectiveInput *input, uint32_t c) {
-    if (c > 0x10ffff) directive_store(input, 0xdfff);
-    else if (c <= 0xffff) directive_store(input, c);
+// Only the two units of a character above U+FFFF form a surrogate pair. A decoding error is stored as U+FFFD with the
+// recorded position `directive_append` gives it, and a lone surrogate as U+E000, which `preproc_word` and `pragma_space`
+// classify alike, so that neither joins a neighbouring lone surrogate into a character the lexer did not read.
+static void directive_encode(DirectiveBuffer *buffer, uint32_t c) {
+    if (c > 0x10ffff) directive_store(buffer, 0xfffd);
+    else if (c >= 0xd800 && c <= 0xdfff) directive_store(buffer, 0xe000);
+    else if (c <= 0xffff) directive_store(buffer, c);
     else {
         c -= 0x10000;
-        directive_store(input, 0xd800 | (c >> 10));
-        directive_store(input, 0xdc00 | (c & 0x3ff));
+        directive_store(buffer, 0xd800 | (c >> 10));
+        directive_store(buffer, 0xdc00 | (c & 0x3ff));
     }
 }
 
 static uint16_t directive_character(const DirectiveInput *input, uint32_t index) {
-    return input->characters[index >> DIRECTIVE_PAGE_SHIFT][index & (DIRECTIVE_PAGE_SIZE - 1)];
+    return input->buffer->characters[index >> DIRECTIVE_PAGE_SHIFT][index & (DIRECTIVE_PAGE_SIZE - 1)];
 }
 
-static void directive_store(DirectiveInput *input, uint16_t c) {
-    input->characters[input->length >> DIRECTIVE_PAGE_SHIFT][input->length & (DIRECTIVE_PAGE_SIZE - 1)] = c;
-    input->length++;
+static void directive_store(DirectiveBuffer *buffer, uint16_t c) {
+    buffer->characters[buffer->length >> DIRECTIVE_PAGE_SHIFT][buffer->length & (DIRECTIVE_PAGE_SIZE - 1)] = c;
+    buffer->length++;
 }
 
-static void directive_release(DirectiveInput *input) {
-    for (uint32_t i = 0; i < input->page_count; i++) free(input->characters[i]);
-    free(input->characters);
-    free(input->positions);
+static void directive_release(DirectiveBuffer *buffer) {
+    for (uint32_t i = 0; i < buffer->page_count; i++) free(buffer->characters[i]);
+    free(buffer->characters);
+    free(buffer->positions);
 }
 
 static unsigned directive_utf8_width(uint32_t c) {
     return c < 0x80 || c > 0x10ffff ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4;
 }
 
-static void empty_directives_find(EmptyDirectives *state, DirectiveInput *input) {
-    DirectiveLine line = {.beginning = true};
-    while (input->index < input->length) {
-        // Horizontal spaces never change the line state.
-        directive_plain_run(input, DIRECTIVE_RUN_SPACE);
-        int32_t c = directive_next(input);
-        if (c < 0) break;
-        directive_line_character(state, input, &line, c);
+static void directive_set(EmptyDirectives *state, DirectiveBuffer *buffer, uint8_t ***facts, uint32_t byte) {
+    if (buffer->failed) return;
+    uint32_t page = byte >> DIRECTIVE_FACT_PAGE_SHIFT;
+    if (page >= state->pages && !directive_grow_directories(state, state->pages * 2 > page ? state->pages * 2 : page + 1)) {
+        buffer->failed = true;
+        return;
     }
-    directive_complete_required(state, input, &line);
-    if (line.pending) directive_record(state, input, line.start, input->end);
+    if (!*facts && !(*facts = calloc(state->pages, sizeof **facts))) {
+        buffer->failed = true;
+        return;
+    }
+    uint8_t **bits = &(*facts)[page];
+    if (!*bits && !(*bits = calloc(DIRECTIVE_FACT_PAGE_SIZE / 8, 1))) {
+        buffer->failed = true;
+        return;
+    }
+    uint32_t offset = byte & (DIRECTIVE_FACT_PAGE_SIZE - 1);
+    (*bits)[offset / 8] |= 1u << (offset % 8);
+}
+
+static bool directive_bit(const EmptyDirectives *state, uint8_t *const *facts, uint32_t byte) {
+    uint32_t page = byte >> DIRECTIVE_FACT_PAGE_SHIFT, offset = byte & (DIRECTIVE_FACT_PAGE_SIZE - 1);
+    return facts && page < state->pages && facts[page] && (facts[page][offset / 8] & (1u << (offset % 8)));
+}
+
+static bool directive_grow_directories(EmptyDirectives *state, uint32_t pages) {
+    uint8_t ***directories[] = {&state->starts, &state->ends, &state->line_ends, &state->directive_starts, &state->directive_ends};
+    if ((size_t)pages > SIZE_MAX / sizeof(uint8_t *)) return false;
+    for (unsigned i = 0; i < sizeof directories / sizeof *directories; i++) {
+        if (!*directories[i]) continue;
+        uint8_t **directory = realloc(*directories[i], (size_t)pages * sizeof *directory);
+        if (!directory) return false;
+        memset(directory + state->pages, 0, (size_t)(pages - state->pages) * sizeof *directory);
+        *directories[i] = directory;
+    }
+    state->pages = pages;
+    return true;
 }
 
 static void directive_line_character(EmptyDirectives *state, DirectiveInput *input, DirectiveLine *line, int32_t c) {
@@ -380,8 +665,7 @@ static void directive_line_character(EmptyDirectives *state, DirectiveInput *inp
         line->kind = DIRECTIVE_ORDINARY;
         line->operand = false;
         line->start = input->previous_byte;
-        state->directive_starts[line->start / 8] |= 1u << (line->start % 8);
-        input->has_directives = true;
+        directive_set(state, input->buffer, &state->directive_starts, line->start);
         line->beginning = false;
         line->pending = true;
         return;
@@ -390,7 +674,7 @@ static void directive_line_character(EmptyDirectives *state, DirectiveInput *inp
     else directive_code(state, input, line, c);
 }
 
-// code-gauge-allow functionCognitiveComplexity 19 -- Header names, quoted tokens and distinct keyword boundaries update one logical directive's lexical state.
+// code-gauge-allow functionCognitiveComplexity -- Header names, quoted tokens and distinct keyword boundaries update one logical directive's lexical state.
 static void directive_code(EmptyDirectives *state, DirectiveInput *input, DirectiveLine *line, int32_t c) {
     bool name = line->pending;
     bool header = directive_header_ready(line, c);
@@ -468,7 +752,7 @@ static bool directive_header_ready(DirectiveLine *line, int32_t c) {
 }
 
 static bool directive_header(DirectiveInput *input, int32_t close) {
-    while (input->index < input->length) {
+    while (directive_has(input, input->index)) {
         int32_t c = directive_next(input);
         if (c == close) return false;
         if (c == '\n') return true;
@@ -508,7 +792,7 @@ static void directive_line_end(EmptyDirectives *state, DirectiveInput *input, Di
     line->pending = false;
     bool required = line->kind == DIRECTIVE_CONDITION ||
         (directive_requires_operand(line->kind) && !line->operand && !line->pragma_pending);
-    if (required) directive_barrier(input);
+    if (required) directive_barrier(state, input);
     line->header = 0;
     if (line->pragma_pending) line->pragma_newline = true;
     if (!line->pragma_depth && !line->pragma_pending) {
@@ -522,9 +806,7 @@ static void directive_complete_required(EmptyDirectives *state, DirectiveInput *
     line->pragma_name = false;
     if (!line->required_end) return;
     if (line->operand || line->pragma_pending || pragma_name) {
-        uint32_t end = line->required_end;
-        state->directive_ends[end / 8] |= 1u << (end % 8);
-        input->has_directive_ends = true;
+        directive_set(state, input->buffer, &state->directive_ends, line->required_end);
     }
     line->required_end = 0;
 }
@@ -533,16 +815,14 @@ static bool directive_requires_operand(DirectiveKind kind) {
     return kind == DIRECTIVE_REQUIRED || kind == DIRECTIVE_UNDEF || kind == DIRECTIVE_LINE || kind == DIRECTIVE_HEADER;
 }
 
-static void directive_barrier(DirectiveInput *input) {
+static void directive_barrier(EmptyDirectives *state, DirectiveInput *input) {
     if (!input->index || !directive_newline(directive_character(input, input->index - 1))) return;
-    uint32_t byte = input->previous_byte;
-    input->prefix_barriers[byte / 8] |= 1u << (byte % 8);
-    input->has_barriers = true;
+    input->buffer->carries = true;
+    directive_set(state, input->buffer, &state->line_ends, input->previous_byte);
     if (input->index < 2) return;
     int32_t previous = directive_character(input, input->index - 2);
     if (directive_newline(previous) && previous != directive_character(input, input->index - 1)) {
-        byte = input->before_previous_byte;
-        input->prefix_barriers[byte / 8] |= 1u << (byte % 8);
+        directive_set(state, input->buffer, &state->line_ends, input->before_previous_byte);
     }
 }
 
@@ -552,7 +832,7 @@ static int32_t directive_next(DirectiveInput *input) {
         directive_skip_plain(input);
         return plain;
     }
-    while (input->index < input->length) {
+    while (directive_has(input, input->index)) {
         int32_t c = directive_physical_next(input);
         uint32_t after = c == '\\' ? directive_splice_end(input) : input->index;
         if (after != input->index) {
@@ -560,7 +840,7 @@ static int32_t directive_next(DirectiveInput *input) {
             continue;
         }
         if (directive_newline(c)) {
-            if (input->index < input->length && directive_newline(directive_character(input, input->index)) &&
+            if (directive_has(input, input->index) && directive_newline(directive_character(input, input->index)) &&
                 directive_character(input, input->index) != c) directive_physical_next(input);
             return '\n';
         }
@@ -570,14 +850,15 @@ static int32_t directive_next(DirectiveInput *input) {
 }
 
 static int32_t directive_physical_next(DirectiveInput *input) {
+    const DirectiveBuffer *buffer = input->buffer;
     uint32_t index = input->index;
     int32_t c;
     uint32_t width = directive_expected_width(input, index, &c);
     input->index += c > 0xffff ? 2 : 1;
     input->before_previous_byte = input->previous_byte;
     input->previous_byte = input->byte;
-    if (input->position_index < input->position_count && input->positions[input->position_index].index == index) {
-        DirectivePosition position = input->positions[input->position_index++];
+    if (input->position_index < buffer->position_count && buffer->positions[input->position_index].index == index) {
+        DirectivePosition position = buffer->positions[input->position_index++];
         input->previous_byte = position.byte;
         input->byte = position.byte + position.width;
     } else input->byte += width;
@@ -587,11 +868,7 @@ static int32_t directive_physical_next(DirectiveInput *input) {
 // Decodes the character at `index` into `*c` and returns its byte width when it has no recorded position.
 static uint32_t directive_expected_width(const DirectiveInput *input, uint32_t index, int32_t *c) {
     uint32_t unit = directive_character(input, index);
-    if (unit == 0xdfff) {
-        *c = 0xfffd;
-        return input->utf16 ? 2 : 1;
-    }
-    if (unit >= 0xd800 && unit <= 0xdbff && index + 1 < input->length) {
+    if (unit >= 0xd800 && unit <= 0xdbff && directive_has(input, index + 1)) {
         uint32_t low = directive_character(input, index + 1);
         if (low >= 0xdc00 && low <= 0xdfff) {
             *c = (int32_t)(0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00));
@@ -599,15 +876,15 @@ static uint32_t directive_expected_width(const DirectiveInput *input, uint32_t i
         }
     }
     *c = (int32_t)unit;
-    return input->utf16 ? 2 : directive_utf8_width(unit);
+    return input->buffer->utf16 ? 2 : directive_utf8_width(unit);
 }
 
 static uint32_t directive_splice_end(const DirectiveInput *input) {
     uint32_t after = input->index;
-    while (after < input->length && directive_horizontal(directive_character(input, after))) after++;
-    if (after == input->length || !directive_newline(directive_character(input, after))) return input->index;
+    while (directive_has(input, after) && directive_horizontal(directive_character(input, after))) after++;
+    if (!directive_has(input, after) || !directive_newline(directive_character(input, after))) return input->index;
     int32_t newline = directive_character(input, after++);
-    if (after < input->length && directive_newline(directive_character(input, after)) &&
+    if (directive_has(input, after) && directive_newline(directive_character(input, after)) &&
         directive_character(input, after) != newline) after++;
     return after;
 }
@@ -621,22 +898,40 @@ static int32_t directive_peek(const DirectiveInput *input) {
 
 // Consumes the longest run of plain characters that `run` accepts and returns its length.
 static inline uint32_t directive_plain_run(DirectiveInput *input, DirectiveRun run) {
-    uint32_t index = input->index, end = input->length;
-    if (input->position_index < input->position_count && input->positions[input->position_index].index < end) {
-        end = input->positions[input->position_index].index;
+    const DirectiveBuffer *buffer = input->buffer;
+    uint32_t index = input->index;
+    // Scans the stored characters before the next recorded position and reads more only at their end, because reading
+    // may store a character with a recorded position, which ends the run.
+    while (directive_has(input, index)) {
+        uint32_t end = buffer->length;
+        if (input->position_index < buffer->position_count && buffer->positions[input->position_index].index < end) {
+            end = buffer->positions[input->position_index].index;
+        }
+        uint32_t start = index;
+        index = directive_run_end(buffer, run, index, end);
+        if (index < end || index == start || end < buffer->length) break;
     }
-    while (index < end) {
-        uint16_t c = directive_character(input, index);
-        if (c >= 0x80 || c == '\\' || directive_newline(c) || !directive_run_continues(run, c)) break;
-        index++;
-    }
-    uint32_t length = index - input->index, width = input->utf16 ? 2 : 1;
+    uint32_t length = index - input->index, width = buffer->utf16 ? 2 : 1;
     if (!length) return 0;
     input->before_previous_byte = length > 1 ? input->byte + (length - 2) * width : input->previous_byte;
     input->previous_byte = input->byte + (length - 1) * width;
     input->byte += length * width;
     input->index = index;
     return length;
+}
+
+// The index of the first stored character from `index` to `end` that ends the run, or `end`.
+static uint32_t directive_run_end(const DirectiveBuffer *buffer, DirectiveRun run, uint32_t index, uint32_t end) {
+    while (index < end) {
+        const uint16_t *page = buffer->characters[index >> DIRECTIVE_PAGE_SHIFT];
+        uint32_t page_end = (index | (DIRECTIVE_PAGE_SIZE - 1)) + 1;
+        if (page_end > end) page_end = end;
+        for (; index < page_end; index++) {
+            uint16_t c = page[index & (DIRECTIVE_PAGE_SIZE - 1)];
+            if (c >= 0x80 || c == '\\' || directive_newline(c) || !directive_run_continues(run, c)) return index;
+        }
+    }
+    return end;
 }
 
 // `c` is ASCII.
@@ -662,16 +957,17 @@ static void directive_skip_plain(DirectiveInput *input) {
     input->index++;
     input->before_previous_byte = input->previous_byte;
     input->previous_byte = input->byte;
-    input->byte += input->utf16 ? 2 : 1;
+    input->byte += input->buffer->utf16 ? 2 : 1;
 }
 
 // The next character when it is ASCII, cannot start a line splice or a newline, and has its expected width; otherwise -1.
 static int32_t directive_plain(const DirectiveInput *input) {
-    if (input->index >= input->length) return -1;
+    if (!directive_has(input, input->index)) return -1;
     uint16_t c = directive_character(input, input->index);
     if (c >= 0x80 || c == '\\' || directive_newline(c)) return -1;
-    bool positioned = input->position_index < input->position_count &&
-        input->positions[input->position_index].index == input->index;
+    const DirectiveBuffer *buffer = input->buffer;
+    bool positioned = input->position_index < buffer->position_count &&
+        buffer->positions[input->position_index].index == input->index;
     return positioned ? -1 : c;
 }
 
@@ -708,7 +1004,7 @@ static bool directive_comment(DirectiveInput *input, bool *line) {
     *line = directive_next(input) == '/';
     int32_t previous = 0;
     DirectiveRun run = *line ? DIRECTIVE_RUN_LINE_COMMENT : DIRECTIVE_RUN_BLOCK_COMMENT;
-    while (input->index < input->length) {
+    while (directive_has(input, input->index)) {
         if (previous != '*') {
             uint32_t length = directive_plain_run(input, run);
             if (length) previous = directive_character(input, input->index - 1);
@@ -722,7 +1018,7 @@ static bool directive_comment(DirectiveInput *input, bool *line) {
 }
 
 static bool directive_quoted(DirectiveInput *input, int32_t quote) {
-    while (input->index < input->length) {
+    while (directive_has(input, input->index)) {
         int32_t c = directive_next(input);
         if (c == quote) return false;
         if (c == '\\') c = directive_next(input);
@@ -742,15 +1038,13 @@ static uint32_t directive_keyword_end(const DirectiveInput *input) {
 
 static DirectiveKind directive_keyword(EmptyDirectives *state, DirectiveInput *input, DirectiveLine *line, const DirectiveWord *word, uint32_t end) {
     DirectiveKind kind = directive_word_kind(word);
+    DirectiveBuffer *buffer = input->buffer;
     // Directives in a group that may be skipped need no operand, and the parser cannot tell which groups are skipped.
-    if (directive_requires_operand(kind) && !input->conditional_depth) line->required_end = end;
-    else {
-        state->directive_ends[end / 8] |= 1u << (end % 8);
-        input->has_directive_ends = true;
-    }
+    if (directive_requires_operand(kind) && !buffer->conditional_depth) line->required_end = end;
+    else directive_set(state, buffer, &state->directive_ends, end);
     if (word->length < sizeof word->directive) {
-        if (strcmp(word->directive, "if") == 0 || strcmp(word->directive, "ifdef") == 0 || strcmp(word->directive, "ifndef") == 0) input->conditional_depth++;
-        else if (strcmp(word->directive, "endif") == 0 && input->conditional_depth) input->conditional_depth--;
+        if (strcmp(word->directive, "if") == 0 || strcmp(word->directive, "ifdef") == 0 || strcmp(word->directive, "ifndef") == 0) buffer->conditional_depth++;
+        else if (strcmp(word->directive, "endif") == 0 && buffer->conditional_depth) buffer->conditional_depth--;
     }
     return kind;
 }
@@ -818,13 +1112,13 @@ static bool directive_raw(DirectiveInput *input) {
         if (length == 16 || c < 0x21 || c > 0x7e || c == ')' || c == '\\') return false;
         delimiter[length++] = c;
     }
-    while (candidate.index < candidate.length) {
+    while (directive_has(&candidate, candidate.index)) {
         if (directive_physical_next(&candidate) != ')') continue;
         DirectiveInput closing = candidate;
         unsigned matched = 0;
-        while (matched < length && closing.index < closing.length &&
+        while (matched < length && directive_has(&closing, closing.index) &&
             directive_physical_next(&closing) == delimiter[matched]) matched++;
-        if (matched == length && closing.index < closing.length && directive_physical_next(&closing) == '"') {
+        if (matched == length && directive_has(&closing, closing.index) && directive_physical_next(&closing) == '"') {
             candidate = closing;
             break;
         }
@@ -833,22 +1127,14 @@ static bool directive_raw(DirectiveInput *input) {
     return true;
 }
 
-static bool directive_horizontal(int32_t c) {
-    return c == ' ' || c == '\t' || c == '\v' || c == '\f';
-}
-
-static bool directive_newline(int32_t c) {
-    return c == '\n' || c == '\r';
-}
-
 static uint32_t directive_byte(const DirectiveInput *input) {
     return input->byte;
 }
 
 static void directive_record(EmptyDirectives *state, DirectiveInput *input, uint32_t start, uint32_t end) {
-    state->starts[start / 8] |= 1u << (start % 8);
-    state->ends[end / 8] |= 1u << (end % 8);
-    input->has_empty = true;
+    input->buffer->carries = true;
+    directive_set(state, input->buffer, &state->starts, start);
+    directive_set(state, input->buffer, &state->ends, end);
 }
 
 #endif

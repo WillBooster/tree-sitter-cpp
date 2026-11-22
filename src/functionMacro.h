@@ -1,4 +1,4 @@
-// code-gauge-allow-file fileNcss 575 -- Annotation and argument scanners share lexical helpers and keyword tables.
+// code-gauge-allow-file fileNcss -- Annotation and argument scanners share lexical helpers and keyword tables.
 #ifndef TREE_SITTER_C_FUNCTION_MACRO_H_
 #define TREE_SITTER_C_FUNCTION_MACRO_H_
 
@@ -72,8 +72,8 @@ static bool function_macro_attribute_keyword(const char *word, bool trailing);
 static bool function_macro_keyword(const char *word);
 static bool function_macro_word_in(const char *word, const char *const *words, unsigned count);
 
-// code-gauge-allow functionCognitiveComplexity 18 -- Balanced delimiter recovery, trivia, and braced handoff share one consumed group.
-// code-gauge-allow functionNcss 33 -- Balanced delimiter recovery, trivia, and braced handoff share one consumed group.
+// code-gauge-allow functionCognitiveComplexity -- Balanced delimiter recovery, trivia, and braced handoff share one consumed group.
+// code-gauge-allow functionNcss -- Balanced delimiter recovery, trivia, and braced handoff share one consumed group.
 static inline bool scan_raw_macro_type_tail(TSLexer *lexer, const PragmaTrivia *trivia) {
     while (pragma_space(lexer->lookahead)) lexer->advance(lexer, true);
     if (lexer->lookahead == ')' || pragma_eof(lexer)) return false;
@@ -116,8 +116,8 @@ static bool function_macro_first_word(TSLexer *lexer, const MacroName *name, con
     return false;
 }
 
-// code-gauge-allow functionCognitiveComplexity 17 -- Attribute roles share first-word dispatch, token ranges, and group results.
-// code-gauge-allow functionNcss 32 -- Attribute roles share first-word dispatch, token ranges, and group results.
+// code-gauge-allow functionCognitiveComplexity -- Attribute roles share first-word dispatch, token ranges, and group results.
+// code-gauge-allow functionNcss -- Attribute roles share first-word dispatch, token ranges, and group results.
 static bool scan_function_attribute_guard(TSLexer *lexer, bool prototype, bool require_literal, bool trailing, const MacroAttributeSymbols *symbols) {
     const PragmaTrivia *trivia = &symbols->trivia;
     bool braced_only = symbols->allow_braced_start && lexer->result_symbol == symbols->braced_start;
@@ -259,7 +259,7 @@ static MacroTypeResult function_macro_type_transition(MacroTypeState *state, Mac
     return MACRO_TYPE_REJECT;
 }
 
-// code-gauge-allow functionCognitiveComplexity 20 -- Keyword, modifier, and group alternatives classify one consumed type-prefix word.
+// code-gauge-allow functionCognitiveComplexity -- Keyword, modifier, and group alternatives classify one consumed type-prefix word.
 static MacroTypePrefix function_macro_type_prefix_item(TSLexer *lexer, const MacroName *name, const char *const *reserved_words, unsigned reserved_count, const MacroTypeState *state, const PragmaTrivia *trivia) {
     if (name->ascii && strcmp(name->word, pragma_word) == 0) {
         return scan_pragma_suffix_end_with(lexer, false, trivia) && scan_pragma_spacing_with(lexer, trivia)
@@ -297,7 +297,7 @@ static MacroTypePrefix function_macro_macro_type_item(TSLexer *lexer, const Macr
     return MACRO_TYPE_PREFIX_INVALID;
 }
 
-// code-gauge-allow functionCognitiveComplexity 16 -- Literal prefixes inspect one consumed first argument token without restarting the lexer.
+// code-gauge-allow functionCognitiveComplexity -- Literal prefixes inspect one consumed first argument token without restarting the lexer.
 static bool function_macro_trailing_argument_prefix(TSLexer *lexer, const PragmaTrivia *trivia) {
     do {
         lexer->advance(lexer, false);
@@ -380,7 +380,7 @@ static bool function_macro_modifier_balanced(TSLexer *lexer, int32_t open, int32
     return function_macro_group_contents(lexer, open, close, NULL, NULL, false, true, trivia) == MACRO_GROUP_BALANCED;
 }
 
-// code-gauge-allow functionParameterCount 7 -- One group proof uses its delimiter pair, optional outputs, grammar mode, and trivia context.
+// code-gauge-allow functionParameterCount -- One group proof uses its delimiter pair, optional outputs, grammar mode, and trivia context.
 static MacroGroup function_macro_group_prefix(TSLexer *lexer, int32_t open, int32_t close, bool *literal, bool *unterminated_raw, bool type_argument, const PragmaTrivia *trivia) {
     lexer->advance(lexer, false);
     if (type_argument && (!scan_pragma_spacing_with(lexer, trivia) || (!preproc_word(lexer->lookahead, false) && lexer->lookahead != '\\'))) {
@@ -389,8 +389,8 @@ static MacroGroup function_macro_group_prefix(TSLexer *lexer, int32_t open, int3
     return function_macro_group_contents(lexer, open, close, literal, unterminated_raw, type_argument, false, trivia);
 }
 
-// code-gauge-allow functionCognitiveComplexity 17 -- Trivia and delimiter alternatives update the same nesting and argument-word state.
-// code-gauge-allow functionParameterCount 8 -- The shared group lexer uses its delimiter pair, optional outputs, two grammar modes, and trivia context.
+// code-gauge-allow functionCognitiveComplexity -- Trivia and delimiter alternatives update the same nesting and argument-word state.
+// code-gauge-allow functionParameterCount -- The shared group lexer uses its delimiter pair, optional outputs, two grammar modes, and trivia context.
 static MacroGroup function_macro_group_contents(TSLexer *lexer, int32_t open, int32_t close, bool *literal, bool *unterminated_raw, bool type_argument, bool modifier, const PragmaTrivia *trivia) {
     unsigned depth = 1;
     unsigned nested = 0;
@@ -447,7 +447,7 @@ static void function_macro_note_literal(bool *literal, unsigned depth, unsigned 
     if (c == '"' || (c == '\'' && !word->number) || (c >= '0' && c <= '9' && !word->identifier)) *literal = true;
 }
 
-// code-gauge-allow functionCognitiveComplexity 27 -- Words, groups, and punctuators advance the same declaration-tail state.
+// code-gauge-allow functionCognitiveComplexity -- Words, groups, and punctuators advance the same declaration-tail state.
 static bool function_macro_declaration_continues(TSLexer *lexer, bool post_type, bool allow_braced, const PragmaTrivia *trivia) {
     MacroPrototypeTail tail = {.post_type = post_type, .explicit_type = post_type};
     for (;;) {
@@ -559,7 +559,7 @@ static MacroArgumentToken function_macro_argument_token(TSLexer *lexer, MacroArg
     return MACRO_ARGUMENT_CONSUMED;
 }
 
-// code-gauge-allow functionCognitiveComplexity 18 -- Raw and escaped quote scanning share delimiter, newline, and splice termination.
+// code-gauge-allow functionCognitiveComplexity -- Raw and escaped quote scanning share delimiter, newline, and splice termination.
 static bool function_macro_argument_quote(TSLexer *lexer, int32_t quote, bool raw, bool *unterminated_raw) {
     lexer->advance(lexer, false);
     if (raw) {
@@ -589,7 +589,7 @@ static bool function_macro_argument_slash(TSLexer *lexer, bool allow_division) {
     return allow_division;
 }
 
-// code-gauge-allow functionCognitiveComplexity 16 -- Identifier, pp-number, and GNU raw-string prefix transitions share token-character state.
+// code-gauge-allow functionCognitiveComplexity -- Identifier, pp-number, and GNU raw-string prefix transitions share token-character state.
 static void function_macro_argument_word(MacroArgumentWord *word, int32_t c) {
     bool member = preproc_word(c, word->identifier || word->number);
     bool digit = c >= '0' && c <= '9';

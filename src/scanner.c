@@ -73,12 +73,7 @@ void *tree_sitter_cpp_external_scanner_create(void) {
 
 void tree_sitter_cpp_external_scanner_destroy(void *payload) {
     Scanner *scanner = (Scanner *)payload;
-    EmptyDirectives *state = &scanner->directives;
-    free(state->starts);
-    free(state->ends);
-    free(state->line_ends);
-    free(state->directive_starts);
-    free(state->directive_ends);
+    empty_directives_release(&scanner->directives);
     delete_initializer_conditionals(&scanner->initializer_conditionals);
     ts_free(scanner);
 }
