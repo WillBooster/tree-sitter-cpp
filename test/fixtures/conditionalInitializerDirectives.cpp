@@ -34,6 +34,8 @@ _Pragma("clang diagnostic push")
 #_vendör payload
 #ifé
 #_vend\u00f6r payload
+#_vend\\
+u00f6r value
 #\u00e9metteur
 #define COMPARISON F(< /* replacement
 comment */ >)

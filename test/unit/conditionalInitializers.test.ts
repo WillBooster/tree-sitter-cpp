@@ -117,6 +117,7 @@ test('preserves directives around values and in value-less initializer arms', ()
         ['#_vendör', 'payload'],
         ['#ifé', undefined],
         [String.raw`#_vend\u00f6r`, 'payload'],
+        ['#_vend\\\\\nu00f6r', 'value'],
         [String.raw`#\u00e9metteur`, undefined],
       ])
     );

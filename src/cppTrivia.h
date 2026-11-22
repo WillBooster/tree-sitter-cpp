@@ -207,6 +207,7 @@ static void accept_cpp_directive_character(TSLexer *lexer, CppDirectiveWord *out
 }
 
 static bool scan_cpp_directive_ucn(TSLexer *lexer) {
+    if (!scan_preproc_splices(lexer)) return false;
     int32_t c = lexer->lookahead;
     if (c != 'u' && c != 'U' && c != 'N') return false;
     bool in_number = false;
