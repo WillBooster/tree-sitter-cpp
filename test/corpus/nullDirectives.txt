@@ -108,3 +108,55 @@ _Pragma
         (number_literal)
         (preproc_else
           (number_literal))))))
+
+================================================================================
+Comments after null directives
+================================================================================
+
+# /* Disabled
+   directive */
+int a;
+
+int f() {
+  # /* Disabled macro
+     until the migration is complete.
+  */
+  return 1;
+}
+
+class C {
+  # /* first */ /* second
+     comment */
+  int b;
+  # // line comment
+};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_empty)
+  (comment)
+  (declaration
+    (primitive_type)
+    (identifier))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (preproc_empty)
+      (comment)
+      (return_statement
+        (number_literal))))
+  (class_specifier
+    (type_identifier)
+    (field_declaration_list
+      (preproc_empty)
+      (comment)
+      (comment)
+      (field_declaration
+        (primitive_type)
+        (field_identifier))
+      (preproc_empty)
+      (comment))))
