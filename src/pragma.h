@@ -1,4 +1,4 @@
-// code-gauge-allow-file fileNcss 493 -- Preprocessor tokens and pragma operators share names, spacing, and literal readers.
+// code-gauge-allow-file fileNcss -- Preprocessor tokens and pragma operators share names, spacing, and literal readers.
 #ifndef TREE_SITTER_C_PRAGMA_H_
 #define TREE_SITTER_C_PRAGMA_H_
 
@@ -330,7 +330,7 @@ typedef struct {
 
 static bool scan_preproc_quote_step(TSLexer *lexer, PreprocQuoteState *state, int32_t c);
 
-// code-gauge-allow functionCognitiveComplexity 25 -- Unterminated quote recovery tracks line splices alongside comment fallback boundaries.
+// code-gauge-allow functionCognitiveComplexity -- Unterminated quote recovery tracks line splices alongside comment fallback boundaries.
 static bool scan_preproc_quote(TSLexer *lexer, int32_t quote, bool escaped, bool directive_text) {
     lexer->mark_end(lexer);
     PreprocQuoteState state = {.literal = true, .directive_text = directive_text};
@@ -354,8 +354,8 @@ static bool scan_preproc_quote(TSLexer *lexer, int32_t quote, bool escaped, bool
     return false;
 }
 
-// code-gauge-allow functionCognitiveComplexity 30 -- Comment transitions in unterminated quotes share split-splice and mark-end state.
-// code-gauge-allow functionNcss 36 -- Comment transitions in unterminated quotes share split-splice and mark-end state.
+// code-gauge-allow functionCognitiveComplexity -- Comment transitions in unterminated quotes share split-splice and mark-end state.
+// code-gauge-allow functionNcss -- Comment transitions in unterminated quotes share split-splice and mark-end state.
 static bool scan_preproc_quote_step(TSLexer *lexer, PreprocQuoteState *state, int32_t c) {
     if (state->line) {
         if (!state->after_comment) lexer->mark_end(lexer);
@@ -386,8 +386,8 @@ static bool scan_preproc_quote_step(TSLexer *lexer, PreprocQuoteState *state, in
     return true;
 }
 
-// code-gauge-allow functionCognitiveComplexity 29 -- Standard, delimited, and named universal character names share hex/name validation.
-// code-gauge-allow functionNcss 32 -- Standard, delimited, and named universal character names share hex/name validation.
+// code-gauge-allow functionCognitiveComplexity -- Standard, delimited, and named universal character names share hex/name validation.
+// code-gauge-allow functionNcss -- Standard, delimited, and named universal character names share hex/name validation.
 static bool scan_preproc_ucn(TSLexer *lexer, bool *in_number) {
     while (!scan_preproc_splices(lexer)) *in_number = false;
     int32_t prefix = lexer->lookahead;
