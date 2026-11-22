@@ -708,9 +708,20 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
 
       // A branch continues the chain with `else if` seams in the order `ifBlockBranch` allows; the heads are those of
       // `if_statement`, whose bodies may be attributed except after `consteval`.
-      _else_if_continuation: ($) => seq('}', 'else', 'if', ifConditionHead($), repeat($.attribute_declaration), '{'),
+      // As in `else [[likely]] if (c)`, the `if` that is the substatement of `else` may be attributed.
+      _else_if_continuation: ($) =>
+        seq(
+          '}',
+          'else',
+          repeat($.attribute_declaration),
+          'if',
+          ifConditionHead($),
+          repeat($.attribute_declaration),
+          '{'
+        ),
 
-      _else_if_consteval_continuation: () => seq('}', 'else', 'if', constevalHead(), '{'),
+      _else_if_consteval_continuation: ($) =>
+        seq('}', 'else', repeat($.attribute_declaration), 'if', constevalHead(), '{'),
 
       _else_continuation: ($) => seq('}', 'else', repeat($.attribute_declaration), '{'),
 

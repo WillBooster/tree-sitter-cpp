@@ -74487,6 +74487,13 @@
           "value": "else"
         },
         {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_declaration"
+          }
+        },
+        {
           "type": "STRING",
           "value": "if"
         },
@@ -74538,6 +74545,13 @@
         {
           "type": "STRING",
           "value": "else"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "attribute_declaration"
+          }
         },
         {
           "type": "STRING",

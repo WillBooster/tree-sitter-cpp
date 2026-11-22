@@ -552,3 +552,203 @@ void f(bool x, bool y) {
 --------------------------------------------------------------------------------
 
 (translation_unit)
+
+================================================================================
+Attributed if after a guarded else
+================================================================================
+
+int f(int x) {
+  if (x) {
+    return 1;
+#ifdef X
+  } else [[likely]] if (x == 1) {
+    return 2;
+#endif
+  }
+  return 0;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (attribute_declaration
+                (attribute
+                  (identifier)))
+              (condition_clause
+                (binary_expression
+                  (identifier)
+                  (number_literal))))
+            (return_statement
+              (number_literal)))))
+      (return_statement
+        (number_literal)))))
+
+================================================================================
+Multiple attributes around guarded constexpr and consteval else-if heads
+================================================================================
+
+constexpr int f(int x) {
+  if (x) {
+    return 1;
+#ifdef A
+  } else [[likely]] [[maybe_unused]] if constexpr (sizeof(int) == 4) [[unlikely]] [[likely]] {
+    return 2;
+#endif
+#ifdef B
+  } else [[unlikely]] if consteval {
+    return 3;
+#endif
+  }
+  return 0;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (type_qualifier)
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (attribute_declaration
+                (attribute
+                  (identifier)))
+              (attribute_declaration
+                (attribute
+                  (identifier)))
+              (condition_clause
+                (binary_expression
+                  (sizeof_expression
+                    (type_descriptor
+                      (primitive_type)))
+                  (number_literal)))
+              (attribute_declaration
+                (attribute
+                  (identifier)))
+              (attribute_declaration
+                (attribute
+                  (identifier))))
+            (return_statement
+              (number_literal)))
+          (preproc_ifdef
+            (identifier)
+            (else_continuation
+              (attribute_declaration
+                (attribute
+                  (identifier))))
+            (return_statement
+              (number_literal)))))
+      (return_statement
+        (number_literal)))))
+
+================================================================================
+Attributed guarded else-if heads in nested and #if/#elif/#else conditionals
+================================================================================
+
+int f(int x) {
+  if (x) {
+    return 1;
+#if A
+#ifdef B
+  } else [[likely]] if (x == 1) {
+    return 2;
+#endif
+#elif C
+  } else [[unlikely]] if (x == 2) [[likely]] {
+    return 3;
+#else
+  } else [[likely]] {
+    return 4;
+#endif
+  }
+  return 0;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (identifier))
+        (compound_statement
+          (return_statement
+            (number_literal))
+          (preproc_if
+            (identifier)
+            (preproc_ifdef
+              (identifier)
+              (else_continuation
+                (attribute_declaration
+                  (attribute
+                    (identifier)))
+                (condition_clause
+                  (binary_expression
+                    (identifier)
+                    (number_literal))))
+              (return_statement
+                (number_literal)))
+            (preproc_elif
+              (identifier)
+              (else_continuation
+                (attribute_declaration
+                  (attribute
+                    (identifier)))
+                (condition_clause
+                  (binary_expression
+                    (identifier)
+                    (number_literal)))
+                (attribute_declaration
+                  (attribute
+                    (identifier))))
+              (return_statement
+                (number_literal))
+              (preproc_else
+                (else_continuation
+                  (attribute_declaration
+                    (attribute
+                      (identifier))))
+                (return_statement
+                  (number_literal)))))))
+      (return_statement
+        (number_literal)))))
