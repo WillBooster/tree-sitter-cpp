@@ -165,6 +165,14 @@ test('validates #ifdef, #elifdef, #else, and #endif line ends across comments, p
     const withHeaderPragma = parser.parse('#ifdef FOO _Pragma("once")\nATTR\n#endif\nint f();\n')!;
     expect(withHeaderPragma.rootNode.namedChildren.map((node) => node.type)).toEqual(['preproc_ifdef', 'declaration']);
     withHeaderPragma.delete();
+    const closingSource = 'void f() {\n#ifdef E\n  try {\n#endif\n  g();\n#ifdef E } catch (...) {}\n#endif\n}';
+    const closing = parser.parse(closingSource)!;
+    expect(
+      closing.rootNode
+        .descendantsOfType('ERROR')
+        .some((node) => node.startIndex === closingSource.lastIndexOf('#ifdef') && node.text === '#ifdef')
+    ).toBe(true);
+    closing.delete();
   } finally {
     parser.delete();
   }
