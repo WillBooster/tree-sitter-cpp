@@ -134,7 +134,7 @@ const BUILTIN_TYPE_KEYWORDS = [
   'void',
 ];
 
-const preprocIf = C.preprocIf;
+const preprocIf = cppPreprocIf;
 const preprocessor = C.preprocessor;
 
 // oxlint-disable-next-line unicorn/prefer-module -- This package is CommonJS, so tree-sitter loads grammar.js as CommonJS.
@@ -529,9 +529,24 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
     reserved: { global: () => [], marker: ($) => [$._typedef_primitive_type, $._non_pack_builtin_type] },
 
     rules: {
+      ...inheritedPreprocIfdefRules(),
+
       // C++ ([lex.name]) admits only XID characters, while the C grammar also admits C17 Annex D ranges such as U+200B.
       identifier: () =>
         /(\p{XID_Start}|\$|_|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8})(\p{XID_Continue}|\$|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8})*/u,
+
+      _preproc_ifdef_name: ($) => choice($.identifier, alias($._spliced_preproc_identifier, $.identifier)),
+
+      _spliced_preproc_identifier: () =>
+        token(
+          seq(
+            /\p{XID_Start}|\$|_|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8}/u,
+            repeat(/\p{XID_Continue}|\$|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8}/u),
+            repeat1(
+              seq(repeat1(/\\(\r\n?|\n\r?)/), repeat1(/\p{XID_Continue}|\$|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8}/u))
+            )
+          )
+        ),
 
       _top_level_expression_statement: ($, original = missingOriginalRule()) =>
         choice(
@@ -681,8 +696,6 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           )
         ),
 
-      // Unlike the inherited conditionals, each directive line must end before the branch, so that a seam written on the
-      // directive line stays an error.
       preproc_if_in_if_block: () =>
         prec(
           1,
@@ -734,15 +747,15 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       // `else_continuation`: one of an enclosing `if` whose block the `try` starts, or one in a disabled branch.
       _split_try_statement: () => splitTryStatement('_try_opening_ifdef'),
 
-      // In the block of an `if` statement the `#ifdef` line of the opening ends as that of `preproc_ifdef_in_if_block`
-      // does, which reads the same directive. Outranks `_split_try_statement` as `_if_block_item` does `_block_item`.
+      // In the block of an `if` statement the opening reads `_preproc_newline` as `preproc_ifdef_in_if_block` does,
+      // which shares its `#ifdef` states. Outranks `_split_try_statement` as `_if_block_item` does `_block_item`.
       _split_try_statement_in_if_block: () => prec(1, splitTryStatement('_try_opening_ifdef_in_if_block')),
 
       _try_opening_if: () => seamIf(tryOpening()),
-      _try_opening_ifdef: () =>
+      _try_opening_ifdef: ($) =>
         seq(
           choice(preprocessor('ifdef'), preprocessor('ifndef')),
-          field('name', sym('identifier')),
+          field('name', $._preproc_ifdef_name),
           tryOpening(),
           preprocessor('endif')
         ),
@@ -3727,7 +3740,7 @@ function initializerIf(body) {
 function initializerIfdef(body) {
   return seq(
     choice(preprocessor('ifdef'), preprocessor('ifndef')),
-    field('name', sym('identifier')),
+    field('name', sym('_preproc_ifdef_name')),
     initializerDirectiveNewline(),
     body,
     preprocessor('endif'),
@@ -3749,7 +3762,7 @@ function initializerElif(body) {
 function initializerElifdef(body) {
   return seq(
     choice(preprocessor('elifdef'), preprocessor('elifndef')),
-    field('name', sym('identifier')),
+    field('name', sym('_preproc_ifdef_name')),
     initializerDirectiveNewline(),
     body
   );
@@ -4060,4 +4073,33 @@ function commaSep(rule) {
 /** @param {Rule} rule */
 function commaSep1(rule) {
   return seq(rule, repeat(seq(',', rule)));
+}
+
+/**
+ * @param {string} suffix
+ * @param {Parameters<typeof C.preprocIf>[1]} content
+ * @param {number} [precedence]
+ * @param {boolean} [repeatContent]
+ * @returns {Record<string, ($: GrammarSymbols<string>) => Rule>}
+ */
+function cppPreprocIf(suffix, content, precedence = 0, repeatContent = true) {
+  const generated = /** @type {Record<string, ($: GrammarSymbols<string>) => Rule>} */ (
+    C.preprocIf(suffix, content, precedence, repeatContent)
+  );
+  for (const prefix of ['preproc_ifdef', 'preproc_elifdef']) {
+    const original = generated[prefix + suffix];
+    if (original) generated[prefix + suffix] = ($) => replaceRuleField(original($), 'name', sym('_preproc_ifdef_name'));
+  }
+  return generated;
+}
+
+function inheritedPreprocIfdefRules() {
+  return Object.fromEntries(
+    Object.entries(C.grammar.rules)
+      .filter(([name]) => /^(?:_(?:leading_)?marker_)?preproc_(?:ifdef|elifdef)/.test(name))
+      .map(([name, rule]) => [
+        name,
+        () => replaceRuleField(/** @type {Rule} */ (rule), 'name', sym('_preproc_ifdef_name')),
+      ])
+  );
 }

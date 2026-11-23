@@ -104,6 +104,17 @@ typedef struct {
     bool upper, lower;
 } AsciiWord;
 
+typedef struct {
+    Scanner *scanner;
+    TSLexer *lexer;
+    const bool *valid_symbols;
+    const TSLexerCheckpoint *start;
+    const TSLexerCheckpoint *end;
+    uint32_t start_byte;
+    bool probe_initializer;
+    bool error_recovery;
+} CppHashContext;
+
 /// Words that cannot continue a declaration that a conditional marker starts.
 static const char *const reserved_words[] = {"namespace", "using", "export", "module", "import"};
 #define RESERVED_WORD_COUNT (sizeof(reserved_words) / sizeof(reserved_words[0]))
@@ -140,8 +151,14 @@ static bool can_start_peeked_spaced_token(int32_t peeked, const Scanner *scanner
 static bool scan_preproc_tokens(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols);
 static bool scan_cpp_hash_directive(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool error_recovery);
 static InitializerConditionalKind scan_cached_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, uint32_t *start_byte);
-static bool scan_cpp_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, const TSLexerCheckpoint *end, uint32_t start_byte, const CppDirectiveWord *directive);
-static bool scan_cpp_conditional_marker(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols, const CppDirectiveWord *directive, const TSLexerCheckpoint *end);
+static bool scan_cpp_active_directive(const CppHashContext *ctx, const CppDirectiveWord *directive);
+static bool scan_cpp_ifdef_directive(const CppHashContext *ctx, const CppDirectiveWord *directive, bool ifdef);
+static bool reject_cpp_directive(const CppHashContext *ctx);
+static bool check_cpp_ifdef_line(EmptyDirectives *state, TSLexer *lexer, const CppDirectiveWord *directive, const TSLexerCheckpoint *end);
+static bool check_cpp_empty_tail_line(EmptyDirectives *state, TSLexer *lexer, const CppDirectiveWord *directive, const TSLexerCheckpoint *end);
+static bool scan_cpp_empty_initializer(const CppHashContext *ctx, bool unmatched_backslash, bool at_line_end);
+static bool scan_cpp_conditional_marker(const CppHashContext *ctx, bool ifdef, bool at_line_end);
+static bool scan_conditional_macro_at_line_end(TSLexer *lexer, bool ifdef, const ConditionalMacroSymbols *symbols, const bool *valid_symbols);
 static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer);
 static bool is_cpp_space(int32_t c);
 static bool scan_template_close(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols, bool pending_close);
@@ -717,12 +734,11 @@ static bool scan_cpp_hash_directive(Scanner *scanner, TSLexer *lexer, const bool
     }
     TSLexerCheckpoint end;
     lexer->get_mark_end_checkpoint(lexer, &end);
-    if (check_initializer && cached == INITIALIZER_UNKNOWN &&
-        scan_cpp_empty_initializer(scanner, lexer, &start, &end, start_byte, &directive)) {
-        return true;
-    }
-    if (!error_recovery && scan_cpp_conditional_marker(state, lexer, valid_symbols, &directive, &end)) return true;
-    return empty_directives_select_symbol(directive.keyword, &directive_symbols, valid_symbols, &lexer->result_symbol);
+    CppHashContext ctx = {
+        scanner, lexer, valid_symbols, &start, &end, start_byte,
+        check_initializer && cached == INITIALIZER_UNKNOWN, error_recovery,
+    };
+    return scan_cpp_active_directive(&ctx, &directive);
 }
 
 static InitializerConditionalKind scan_cached_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, uint32_t *start_byte) {
@@ -737,20 +753,81 @@ static InitializerConditionalKind scan_cached_empty_initializer(Scanner *scanner
     return cached;
 }
 
-static bool scan_cpp_empty_initializer(Scanner *scanner, TSLexer *lexer, const TSLexerCheckpoint *start, const TSLexerCheckpoint *end, uint32_t start_byte, const CppDirectiveWord *directive) {
+static bool scan_cpp_active_directive(const CppHashContext *ctx, const CppDirectiveWord *directive) {
     const char *word = directive->keyword;
-    if (strcmp(word, "ifdef") != 0 && strcmp(word, "ifndef") != 0 && strcmp(word, "if") != 0) return false;
-    bool empty = scan_empty_initializer_after_keyword(&scanner->initializer_conditionals, lexer, start_byte, directive->unmatched_backslash);
-    lexer->mark_start(lexer, start);
-    lexer->mark_end_at(lexer, empty ? start : end);
-    if (empty) lexer->result_symbol = EMPTY_INITIALIZER_START;
+    if (strcmp(word, "ifdef") == 0 || strcmp(word, "ifndef") == 0) {
+        return scan_cpp_ifdef_directive(ctx, directive, word[2] == 'd');
+    }
+    if (strcmp(word, "elifdef") == 0 || strcmp(word, "elifndef") == 0) {
+        if (!check_cpp_ifdef_line(&ctx->scanner->directives, ctx->lexer, directive, ctx->end)) {
+            return reject_cpp_directive(ctx);
+        }
+    } else if (strcmp(word, "else") == 0 || strcmp(word, "endif") == 0) {
+        if (!check_cpp_empty_tail_line(&ctx->scanner->directives, ctx->lexer, directive, ctx->end)) {
+            return reject_cpp_directive(ctx);
+        }
+    } else if (ctx->probe_initializer && strcmp(word, "if") == 0 &&
+               scan_cpp_empty_initializer(ctx, directive->unmatched_backslash, false)) {
+        return true;
+    }
+    return empty_directives_select_symbol(word, &directive_symbols, ctx->valid_symbols, &ctx->lexer->result_symbol);
+}
+
+static bool scan_cpp_ifdef_directive(const CppHashContext *ctx, const CppDirectiveWord *directive, bool ifdef) {
+    if (directive->unmatched_backslash) return reject_cpp_directive(ctx);
+    int peeked = peek_cpp_ifdef_header(ctx->lexer);
+    if (peeked < 0) return reject_cpp_directive(ctx);
+    bool at_line_end = peeked == 0;
+    bool had_pragma = false;
+    if (at_line_end && !scan_cpp_ifdef_header(&ctx->scanner->directives, ctx->lexer, &had_pragma)) {
+        ctx->lexer->mark_end_at(ctx->lexer, ctx->end);
+        return reject_cpp_directive(ctx);
+    }
+    if (ctx->probe_initializer && scan_cpp_empty_initializer(ctx, false, at_line_end)) return true;
+    if (!ctx->error_recovery && !ctx->probe_initializer && !had_pragma &&
+        scan_cpp_conditional_marker(ctx, ifdef, at_line_end)) {
+        return true;
+    }
+    if (at_line_end) ctx->lexer->mark_end_at(ctx->lexer, ctx->end);
+    return empty_directives_select_symbol(directive->keyword, &directive_symbols, ctx->valid_symbols, &ctx->lexer->result_symbol);
+}
+
+static bool reject_cpp_directive(const CppHashContext *ctx) {
+    if (!ctx->error_recovery) return false;
+    ctx->lexer->result_symbol = GNU_RAW_STRING_BODY;
+    return true;
+}
+
+static bool check_cpp_ifdef_line(EmptyDirectives *state, TSLexer *lexer, const CppDirectiveWord *directive, const TSLexerCheckpoint *end) {
+    if (directive->unmatched_backslash) return false;
+    int peeked = peek_cpp_ifdef_header(lexer);
+    if (peeked != 0) return peeked > 0;
+    bool valid = scan_cpp_ifdef_header(state, lexer, &(bool){false});
+    lexer->mark_end_at(lexer, end);
+    return valid;
+}
+
+static bool check_cpp_empty_tail_line(EmptyDirectives *state, TSLexer *lexer, const CppDirectiveWord *directive, const TSLexerCheckpoint *end) {
+    if (directive->unmatched_backslash) return false;
+    int peeked = peek_cpp_directive_line_end(lexer);
+    if (peeked != 0) return peeked > 0;
+    bool valid = scan_cpp_directive_line_end(state, lexer, &(bool){false});
+    lexer->mark_end_at(lexer, end);
+    return valid;
+}
+
+static bool scan_cpp_empty_initializer(const CppHashContext *ctx, bool unmatched_backslash, bool at_line_end) {
+    bool empty = at_line_end
+        ? scan_empty_initializer_at_line_end(&ctx->scanner->initializer_conditionals, ctx->lexer, ctx->start_byte)
+        : scan_empty_initializer_after_keyword(&ctx->scanner->initializer_conditionals, ctx->lexer, ctx->start_byte, unmatched_backslash);
+    ctx->lexer->mark_start(ctx->lexer, ctx->start);
+    ctx->lexer->mark_end_at(ctx->lexer, empty ? ctx->start : ctx->end);
+    if (empty) ctx->lexer->result_symbol = EMPTY_INITIALIZER_START;
     return empty;
 }
 
-static bool scan_cpp_conditional_marker(EmptyDirectives *state, TSLexer *lexer, const bool *valid_symbols, const CppDirectiveWord *directive, const TSLexerCheckpoint *end) {
-    if (directive->unmatched_backslash) return false;
-    bool ifdef = strcmp(directive->keyword, "ifdef") == 0;
-    if (!ifdef && strcmp(directive->keyword, "ifndef") != 0) return false;
+static bool scan_cpp_conditional_marker(const CppHashContext *ctx, bool ifdef, bool at_line_end) {
+    const bool *valid_symbols = ctx->valid_symbols;
     if (!valid_symbols[LEADING_CONDITIONAL_MARKER_IFDEF] && !valid_symbols[LEADING_CONDITIONAL_MARKER_IFNDEF] &&
         !valid_symbols[CONDITIONAL_MARKER_IFDEF] && !valid_symbols[CONDITIONAL_MARKER_IFNDEF]) {
         return false;
@@ -759,11 +836,31 @@ static bool scan_cpp_conditional_marker(EmptyDirectives *state, TSLexer *lexer, 
         .ifdef = CONDITIONAL_MARKER_IFDEF, .ifndef = CONDITIONAL_MARKER_IFNDEF,
         .leading_ifdef = LEADING_CONDITIONAL_MARKER_IFDEF, .leading_ifndef = LEADING_CONDITIONAL_MARKER_IFNDEF,
         .reserved_words = reserved_words, .reserved_word_count = RESERVED_WORD_COUNT,
-        .skip_empty = empty_directives_skip, .empty_context = state,
+        .skip_empty = empty_directives_skip, .empty_context = &ctx->scanner->directives,
     };
-    if (scan_conditional_macro_after_keyword(lexer, ifdef, &symbols, valid_symbols)) return true;
-    lexer->mark_end_at(lexer, end);
-    return false;
+    bool matched = at_line_end
+        ? scan_conditional_macro_at_line_end(ctx->lexer, ifdef, &symbols, valid_symbols)
+        : scan_conditional_macro_after_keyword(ctx->lexer, ifdef, &symbols, valid_symbols);
+    ctx->lexer->mark_end_at(ctx->lexer, ctx->end);
+    return matched;
+}
+
+static bool scan_conditional_macro_at_line_end(TSLexer *lexer, bool ifdef, const ConditionalMacroSymbols *symbols, const bool *valid_symbols) {
+    TSSymbol leading_symbol = ifdef ? symbols->leading_ifdef : symbols->leading_ifndef;
+    TSSymbol generic_symbol = ifdef ? symbols->ifdef : symbols->ifndef;
+    if (!valid_symbols[leading_symbol] && !valid_symbols[generic_symbol]) return false;
+    bool escaped = false;
+    if (!conditional_macro_next_line(lexer, symbols, &escaped) || !conditional_macro_marker_line(lexer, symbols, &escaped) ||
+        !conditional_macro_closing(lexer) || !conditional_macro_skip_lines(lexer, symbols, &escaped) ||
+        pragma_eof(lexer) || lexer->lookahead == '#') {
+        return false;
+    }
+    if (valid_symbols[leading_symbol] && conditional_macro_type_prefix(lexer, symbols, escaped)) {
+        lexer->result_symbol = leading_symbol;
+        return true;
+    }
+    lexer->result_symbol = generic_symbol;
+    return valid_symbols[generic_symbol];
 }
 
 static bool scan_pack_index_operator(Scanner *scanner, TSLexer *lexer) {
