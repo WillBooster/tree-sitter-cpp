@@ -37,7 +37,7 @@ static int peek_cpp_units_line_end(const char *units, uint32_t size, uint32_t i,
 static int peek_cpp_units_line_comment(const char *units, uint32_t size, uint32_t i, uint32_t count);
 static bool scan_cpp_ifdef_word(TSLexer *lexer, char *word, unsigned capacity, bool *ascii, bool escaped);
 static bool scan_cpp_ifdef_word_tail(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii);
-static void append_cpp_ifdef_character(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii);
+static void append_cpp_ifdef_character(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii, bool spliced);
 static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer, bool *had_pragma);
 static bool skip_cpp_ifdef_trivia(TSLexer *lexer, bool allow_line_comment, bool *escaped);
 static bool skip_cpp_inline_spacing(TSLexer *lexer, bool spaced_splices, bool allow_line_comment);
@@ -289,7 +289,7 @@ static bool scan_cpp_ifdef_word(TSLexer *lexer, char *word, unsigned capacity, b
     } else if (lexer->lookahead == '\\' || !preproc_identifier_character(lexer->lookahead, false)) {
         return false;
     } else {
-        append_cpp_ifdef_character(lexer, word, capacity, &length, ascii);
+        append_cpp_ifdef_character(lexer, word, capacity, &length, ascii, false);
     }
     if (!scan_cpp_ifdef_word_tail(lexer, word, capacity, &length, ascii)) return false;
     word[*ascii ? length : 0] = '\0';
@@ -297,23 +297,27 @@ static bool scan_cpp_ifdef_word(TSLexer *lexer, char *word, unsigned capacity, b
 }
 
 static bool scan_cpp_ifdef_word_tail(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii) {
+    bool spliced = false;
     for (;;) {
         int32_t c = lexer->lookahead;
         if (c != '\\') {
             if (!preproc_identifier_character(c, true)) return true;
-            append_cpp_ifdef_character(lexer, word, capacity, length, ascii);
+            append_cpp_ifdef_character(lexer, word, capacity, length, ascii, spliced);
             continue;
         }
         lexer->advance(lexer, false);
+        if (scan_preproc_newline(lexer, false)) {
+            spliced = true;
+            continue;
+        }
         *ascii = false;
-        if (scan_preproc_newline(lexer, false)) continue;
         if (!scan_macro_name_ucn(lexer)) return false;
     }
 }
 
-static void append_cpp_ifdef_character(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii) {
+static void append_cpp_ifdef_character(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii, bool spliced) {
     int32_t c = lexer->lookahead;
-    if (*ascii && c < 0x80 && *length < capacity) word[(*length)++] = (char)c;
+    if (!spliced && *ascii && c < 0x80 && *length < capacity) word[(*length)++] = (char)c;
     else *ascii = false;
     lexer->advance(lexer, false);
 }
