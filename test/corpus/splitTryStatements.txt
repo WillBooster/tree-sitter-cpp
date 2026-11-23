@@ -413,7 +413,7 @@ void e() {
 
 void h() {
 #ifdef E\
-FOO
+ FOO
 #endif
 }
 

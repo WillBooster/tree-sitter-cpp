@@ -1305,7 +1305,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -1519,7 +1519,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -1693,7 +1693,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -1877,7 +1877,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -2051,7 +2051,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -2265,7 +2265,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -2454,7 +2454,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -2668,7 +2668,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -2857,7 +2857,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -3071,7 +3071,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -3260,7 +3260,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -3474,7 +3474,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -3663,7 +3663,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -3877,7 +3877,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -4130,7 +4130,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -4536,7 +4536,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -22219,7 +22219,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -22448,7 +22448,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -24328,7 +24328,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -24377,7 +24377,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -25201,6 +25201,68 @@
         ]
       }
     },
+    "_preproc_ifdef_name": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_spliced_preproc_identifier"
+          },
+          "named": true,
+          "value": "identifier"
+        }
+      ]
+    },
+    "_spliced_preproc_identifier": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "PATTERN",
+            "value": "\\p{XID_Start}|\\$|_|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8}",
+            "flags": "u"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "PATTERN",
+              "value": "\\p{XID_Continue}|\\$|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8}",
+              "flags": "u"
+            }
+          },
+          {
+            "type": "REPEAT1",
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "REPEAT1",
+                  "content": {
+                    "type": "PATTERN",
+                    "value": "\\\\(\\r\\n?|\\n\\r?)"
+                  }
+                },
+                {
+                  "type": "REPEAT1",
+                  "content": {
+                    "type": "PATTERN",
+                    "value": "\\p{XID_Continue}|\\$|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8}",
+                    "flags": "u"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
     "_block_statement_item": {
       "type": "CHOICE",
       "members": [
@@ -25449,7 +25511,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -25663,7 +25725,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -26022,7 +26084,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -26589,7 +26651,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -27116,7 +27178,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -27174,7 +27236,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -27351,7 +27413,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -28182,7 +28244,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -28396,7 +28458,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -30535,7 +30597,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -30764,7 +30826,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -30963,7 +31025,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -31192,7 +31254,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -31391,7 +31453,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -31620,7 +31682,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -33627,7 +33689,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -33856,7 +33918,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -34069,7 +34131,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -34328,7 +34390,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -34861,7 +34923,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -34990,7 +35052,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "_preproc_ifdef_name"
           }
         },
         {
@@ -36609,7 +36671,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {
@@ -36838,7 +36900,7 @@
             "name": "name",
             "content": {
               "type": "SYMBOL",
-              "name": "identifier"
+              "name": "_preproc_ifdef_name"
             }
           },
           {

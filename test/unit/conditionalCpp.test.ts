@@ -144,6 +144,7 @@ test('validates #ifdef, #elifdef, #else, and #endif line ends across comments, p
     '#ifdef /* c */ ENABLED /* c */\nATTR\n#endif\n_Pragma("once") int annotated();',
     '#ifdef _Pragma("once") E _Pragma("once")\nint x;\n#elifndef\v/* c */ \\u00e9 \\\n\nint y;\n#else /* m\nl */\nint z;\n#endif\f// end\n',
     '#ifdef _Pragma\nint guardedByPragmaName;\n#endif\n',
+    '#ifdef FOO\\\nBAR\nint spliced;\n#endif\n',
   ];
   const invalid = [
     'void a() {\n#ifndef E /* m\nl */ int x;\n#endif\n}',

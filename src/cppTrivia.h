@@ -303,8 +303,8 @@ static bool scan_cpp_ifdef_word_tail(TSLexer *lexer, char *word, unsigned capaci
             continue;
         }
         lexer->advance(lexer, false);
-        if (scan_preproc_newline(lexer, false)) return true;
         *ascii = false;
+        if (scan_preproc_newline(lexer, false)) continue;
         if (!scan_macro_name_ucn(lexer)) return false;
     }
 }
