@@ -137,3 +137,30 @@ test('captures namespace name ranges after a conditional marker', () => {
     parser.delete();
   }
 });
+
+test('validates #ifdef, #elifdef, #else, and #endif line ends across comments, pragmas, UCNs, and markers', () => {
+  const parser = new Parser().setLanguage(language);
+  const valid = [
+    '#ifdef /* c */ ENABLED /* c */\nATTR\n#endif\n_Pragma("once") int annotated();',
+    '#ifdef _Pragma("once") E _Pragma("once")\nint x;\n#elifndef\v/* c */ \\u00e9 \\\n\nint y;\n#else /* m\nl */\nint z;\n#endif\f// end\n',
+    '#ifdef _Pragma\nint guardedByPragmaName;\n#endif\n',
+  ];
+  const invalid = [
+    'void a() {\n#ifndef E /* m\nl */ int x;\n#endif\n}',
+    'void b() {\n#ifdef _Pragma("once") E int x;\n#endif\n}',
+  ];
+  try {
+    for (const input of valid) {
+      const tree = parser.parse(input)!;
+      expect(tree.rootNode.hasError, `${input}\n${tree.rootNode.toString()}`).toBe(false);
+      tree.delete();
+    }
+    for (const input of invalid) {
+      const tree = parser.parse(input)!;
+      expect(tree.rootNode.hasError, `${input}\n${tree.rootNode.toString()}`).toBe(true);
+      tree.delete();
+    }
+  } finally {
+    parser.delete();
+  }
+});

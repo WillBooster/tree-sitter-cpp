@@ -681,8 +681,6 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           )
         ),
 
-      // Unlike the inherited conditionals, each directive line must end before the branch, so that a seam written on the
-      // directive line stays an error.
       preproc_if_in_if_block: () =>
         prec(
           1,
@@ -734,8 +732,8 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       // `else_continuation`: one of an enclosing `if` whose block the `try` starts, or one in a disabled branch.
       _split_try_statement: () => splitTryStatement('_try_opening_ifdef'),
 
-      // In the block of an `if` statement the `#ifdef` line of the opening ends as that of `preproc_ifdef_in_if_block`
-      // does, which reads the same directive. Outranks `_split_try_statement` as `_if_block_item` does `_block_item`.
+      // In the block of an `if` statement the opening reads `_preproc_newline` as `preproc_ifdef_in_if_block` does,
+      // which shares its `#ifdef` states. Outranks `_split_try_statement` as `_if_block_item` does `_block_item`.
       _split_try_statement_in_if_block: () => prec(1, splitTryStatement('_try_opening_ifdef_in_if_block')),
 
       _try_opening_if: () => seamIf(tryOpening()),

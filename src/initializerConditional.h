@@ -86,6 +86,14 @@ static bool scan_empty_initializer_after_keyword(InitializerConditionals *state,
     return scan_empty_initializer_tail(state, lexer);
 }
 
+static bool scan_empty_initializer_at_line_end(InitializerConditionals *state, TSLexer *lexer, uint32_t position) {
+    if (state->invalid_directive_order) return false;
+    state->frame_count = 0;
+    initializer_conditional_push(state, initializer_conditional_entry(state, position));
+    if (!scan_preproc_newline(lexer, false)) return initializer_conditional_nonempty(state);
+    return scan_empty_initializer_tail(state, lexer);
+}
+
 static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer *lexer) {
     TSLexerPosition position;
     for (;;) {
