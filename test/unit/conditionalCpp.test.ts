@@ -143,12 +143,14 @@ test('validates #ifdef, #elifdef, #else, and #endif line ends across comments, p
   const valid = [
     '#ifdef /* c */ ENABLED /* c */\nATTR\n#endif\n_Pragma("once") int annotated();',
     '#ifdef _Pragma("once") E _Pragma("once")\nint x;\n#elifndef\v/* c */ \\u00e9 \\\n\nint y;\n#else /* m\nl */\nint z;\n#endif\f// end\n',
-    '#ifdef _Pragma\\\n("once") E\nint wrappedPragma;\n#elifdef _Pragma\\\n("once") F\nint wrappedElifdef;\n#endif\n',
+    '#ifdef _Pragma\\\n("once") E _Pragma(\\\n"once")\nint wrappedPragma;\n#elifdef _Pragma\\\n("once") F\nint wrappedElifdef;\n#endif\n',
     '#ifdef _Pragma\nint guardedByPragmaName;\n#endif\n',
   ];
   const invalid = [
     'void a() {\n#ifndef E /* m\nl */ int x;\n#endif\n}',
     'void b() {\n#ifdef _Pragma("once") E int x;\n#endif\n}',
+    'void c() {\n#ifdef E _Pragma(\n"once")\nint x;\n#endif\n}',
+    'void d() {\n#ifdef E\nint x;\n#else _Pragma(\n"once")\nint y;\n#endif\n}',
   ];
   try {
     for (const input of valid) {

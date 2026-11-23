@@ -39,6 +39,7 @@ static bool scan_cpp_ifdef_word(TSLexer *lexer, char *word, unsigned capacity, b
 static bool scan_cpp_ifdef_word_tail(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii);
 static void append_cpp_ifdef_character(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii, bool spliced);
 static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer, bool *had_pragma);
+static bool scan_cpp_directive_pragma_args(TSLexer *lexer);
 static bool skip_cpp_ifdef_trivia(TSLexer *lexer, bool allow_line_comment, bool *escaped);
 static bool skip_cpp_inline_spacing(TSLexer *lexer, bool spaced_splices, bool allow_line_comment);
 static bool skip_cpp_inline_comment(TSLexer *lexer, bool spaced_splices, bool allow_line_comment);
@@ -276,7 +277,7 @@ static bool scan_cpp_ifdef_header(EmptyDirectives *state, TSLexer *lexer, bool *
         bool after_escaped = false;
         if (!skip_cpp_ifdef_trivia(lexer, true, &after_escaped) || after_escaped) return false;
         if (lexer->lookahead != '(') return scan_cpp_directive_line_end(state, lexer, had_pragma);
-        if (!scan_pragma_suffix_end_with(lexer, false, &(PragmaTrivia){empty_directives_skip, state})) return false;
+        if (!scan_cpp_directive_pragma_args(lexer)) return false;
         *had_pragma = true;
     }
 }
@@ -330,9 +331,18 @@ static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer, 
         if (c == '\n' || c == '\r' || at_eof(lexer)) return true;
         if (c != '_' || !empty_directives_pragma_possible(state) || !scan_pragma_word(lexer)) return false;
         if (!skip_cpp_ifdef_trivia(lexer, false, &escaped) || escaped || lexer->lookahead != '(') return false;
-        if (!scan_pragma_suffix_end_with(lexer, false, &(PragmaTrivia){empty_directives_skip, state})) return false;
+        if (!scan_cpp_directive_pragma_args(lexer)) return false;
         *had_pragma = true;
     }
+}
+
+static bool scan_cpp_directive_pragma_args(TSLexer *lexer) {
+    lexer->advance(lexer, false);
+    bool escaped = false;
+    if (!skip_cpp_ifdef_trivia(lexer, false, &escaped) || escaped || !scan_pragma_argument(lexer)) return false;
+    if (!skip_cpp_ifdef_trivia(lexer, false, &escaped) || escaped || lexer->lookahead != ')') return false;
+    lexer->advance(lexer, false);
+    return true;
 }
 
 static bool skip_cpp_ifdef_trivia(TSLexer *lexer, bool allow_line_comment, bool *escaped) {
