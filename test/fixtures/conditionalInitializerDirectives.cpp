@@ -29,6 +29,20 @@ _Pragma("clang diagnostic push")
 #include <missing/*>
 #vendor_specific anything
 #Vendor_123 arbitrary tokens
+#_vendor diagnostic
+#__vendor_disabled
+#_vendör payload
+#ifé
+#_vend\u00f6r payload
+#_vend\\
+u00f6r value
+#_vend\\ 
+U000000f6r spaced
+#\u00e9metteur
+#endif\u00e9
+#endif\\ 
+u00e9
+#undef
 #define COMPARISON F(< /* replacement
 comment */ >)
 #warning can't /* diagnostic

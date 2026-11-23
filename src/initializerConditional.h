@@ -54,10 +54,8 @@ typedef struct {
 
 typedef enum { INITIALIZER_IF, INITIALIZER_ELSE, INITIALIZER_ELIF, INITIALIZER_ENDIF, INITIALIZER_INCLUDE, INITIALIZER_DEFINE, INITIALIZER_OTHER, INITIALIZER_INVALID } InitializerDirective;
 
-typedef enum { INITIALIZER_START_NONE, INITIALIZER_START_EMPTY, INITIALIZER_START_DIRECTIVE } InitializerStartKind;
-
 static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer *lexer);
-static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive);
+static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive, bool unmatched_backslash);
 static bool initializer_conditional_trivia(InitializerConditionals *state, TSLexer *lexer);
 static bool initializer_conditional_splice(TSLexer *lexer);
 static InitializerConditionalKind initializer_conditional_lookup(const InitializerConditionals *state, uint32_t position);
@@ -68,9 +66,8 @@ static void initializer_conditional_insert_branch(InitializerConditionals *state
 static inline uint8_t initializer_conditional_msb(uint32_t diff);
 static void initializer_conditional_push(InitializerConditionals *state, uint32_t entry);
 static bool initializer_conditional_nonempty(InitializerConditionals *state);
-static InitializerDirective initializer_conditional_directive(TSLexer *lexer);
-static bool initializer_conditional_word(TSLexer *lexer, MacroName *word);
-static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode);
+static InitializerDirective initializer_conditional_directive(TSLexer *lexer, bool *unmatched_backslash);
+static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode, bool unmatched_backslash);
 static bool initializer_conditional_header_operand(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_identifier(TSLexer *lexer, InitializerHeaderContext *context);
 static void initializer_conditional_header_punctuation(InitializerHeaderContext *context, int32_t c);
@@ -79,26 +76,14 @@ static bool initializer_conditional_separator(TSLexer *lexer);
 static void initializer_conditional_literal(TSLexer *lexer, int32_t closing);
 static void initializer_conditional_literal_body(TSLexer *lexer, int32_t closing);
 
-static InitializerStartKind scan_initializer_start(InitializerConditionals *state, TSLexer *lexer,
-                                                   bool allow_empty, bool allow_directive) {
-    TSLexerPosition position = {0};
-    if (allow_empty) {
-        lexer->get_position(lexer, &position);
-        InitializerConditionalKind cached = initializer_conditional_lookup(state, position.bytes);
-        if (cached != INITIALIZER_UNKNOWN) {
-            return cached == INITIALIZER_EMPTY ? INITIALIZER_START_EMPTY : INITIALIZER_START_NONE;
-        }
-    }
-    InitializerDirective directive = initializer_conditional_directive(lexer);
-    if (allow_directive && directive == INITIALIZER_OTHER) return INITIALIZER_START_DIRECTIVE;
-    if (!allow_empty || directive != INITIALIZER_IF || state->invalid_directive_order) return INITIALIZER_START_NONE;
+static bool scan_empty_initializer_after_keyword(InitializerConditionals *state, TSLexer *lexer, uint32_t position, bool unmatched_backslash) {
+    if (state->invalid_directive_order) return false;
     state->frame_count = 0;
-    initializer_conditional_push(state, initializer_conditional_entry(state, position.bytes));
-    if (!initializer_conditional_accept_header(state, lexer, directive)) {
-        initializer_conditional_nonempty(state);
-        return INITIALIZER_START_NONE;
+    initializer_conditional_push(state, initializer_conditional_entry(state, position));
+    if (!initializer_conditional_accept_header(state, lexer, INITIALIZER_IF, unmatched_backslash)) {
+        return initializer_conditional_nonempty(state);
     }
-    return scan_empty_initializer_tail(state, lexer) ? INITIALIZER_START_EMPTY : INITIALIZER_START_NONE;
+    return scan_empty_initializer_tail(state, lexer);
 }
 
 static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer *lexer) {
@@ -108,30 +93,31 @@ static bool scan_empty_initializer_tail(InitializerConditionals *state, TSLexer 
             return initializer_conditional_nonempty(state);
         }
         lexer->get_position(lexer, &position);
-        InitializerDirective directive = initializer_conditional_directive(lexer);
+        bool unmatched_backslash = false;
+        InitializerDirective directive = initializer_conditional_directive(lexer, &unmatched_backslash);
         if (directive == INITIALIZER_IF) {
             uint32_t entry = initializer_conditional_entry(state, position.bytes);
             if (state->entries[entry].kind == INITIALIZER_NONEMPTY) return initializer_conditional_nonempty(state);
             initializer_conditional_push(state, entry);
         }
-        if (!initializer_conditional_accept_header(state, lexer, directive)) {
+        if (!initializer_conditional_accept_header(state, lexer, directive, unmatched_backslash)) {
             return initializer_conditional_nonempty(state);
         }
         if (!state->frame_count) return true;
     }
 }
 
-static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive) {
+static bool initializer_conditional_accept_header(InitializerConditionals *state, TSLexer *lexer, InitializerDirective directive, bool unmatched_backslash) {
     if (directive == INITIALIZER_INVALID) return false;
     if (directive == INITIALIZER_OTHER || directive == INITIALIZER_INCLUDE || directive == INITIALIZER_DEFINE) {
         InitializerHeaderMode mode = directive == INITIALIZER_INCLUDE ? INITIALIZER_HEADER :
             directive == INITIALIZER_DEFINE ? INITIALIZER_REPLACEMENT : INITIALIZER_DIRECTIVE_TEXT;
-        initializer_conditional_header(lexer, mode);
+        initializer_conditional_header(lexer, mode, unmatched_backslash);
         return true;
     }
-    if (directive == INITIALIZER_IF) return initializer_conditional_header(lexer, INITIALIZER_CONDITION);
+    if (directive == INITIALIZER_IF) return initializer_conditional_header(lexer, INITIALIZER_CONDITION, unmatched_backslash);
     if (directive == INITIALIZER_ENDIF) {
-        if (initializer_conditional_header(lexer, INITIALIZER_CONDITION)) return false;
+        if (initializer_conditional_header(lexer, INITIALIZER_CONDITION, unmatched_backslash)) return false;
         state->entries[state->frames[--state->frame_count].entry].kind = INITIALIZER_EMPTY;
         return true;
     }
@@ -141,7 +127,7 @@ static bool initializer_conditional_accept_header(InitializerConditionals *state
         return false;
     }
     frame->has_else = directive == INITIALIZER_ELSE;
-    return initializer_conditional_header(lexer, INITIALIZER_CONDITION) != frame->has_else;
+    return initializer_conditional_header(lexer, INITIALIZER_CONDITION, unmatched_backslash) != frame->has_else;
 }
 
 static bool initializer_conditional_trivia(InitializerConditionals *state, TSLexer *lexer) {
@@ -240,13 +226,12 @@ static bool initializer_conditional_nonempty(InitializerConditionals *state) {
     return false;
 }
 
-static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
-    lexer->advance(lexer, false);
-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') lexer->advance(lexer, false);
-    char name[9] = {0};
-    MacroName word = {.word = name, .capacity = sizeof(name) - 1, .ascii = true, .lookahead_only = true};
-    if (!initializer_conditional_word(lexer, &word)) return INITIALIZER_INVALID;
-    if (!word.ascii) return INITIALIZER_OTHER;
+static InitializerDirective initializer_conditional_directive(TSLexer *lexer, bool *unmatched_backslash) {
+    CppDirectiveWord directive = {0};
+    if (!scan_cpp_directive_word(lexer, &directive)) return INITIALIZER_INVALID;
+    *unmatched_backslash = directive.unmatched_backslash;
+    const char *name = directive.keyword;
+    if (!name[0]) return INITIALIZER_OTHER;
     if (!strcmp(name, "if") || !strcmp(name, "ifdef") || !strcmp(name, "ifndef")) return INITIALIZER_IF;
     if (!strcmp(name, "else")) return INITIALIZER_ELSE;
     if (!strcmp(name, "elif") || !strcmp(name, "elifdef") || !strcmp(name, "elifndef")) return INITIALIZER_ELIF;
@@ -256,22 +241,9 @@ static InitializerDirective initializer_conditional_directive(TSLexer *lexer) {
     return INITIALIZER_OTHER;
 }
 
-static bool initializer_conditional_word(TSLexer *lexer, MacroName *word) {
-    bool has_name = false;
-    for (;;) {
-        MacroName next = *word;
-        MacroNameCharacter character = scan_macro_name_character(lexer, true, &next);
-        if (character == MACRO_NAME_SPLICE) continue;
-        if (character != MACRO_NAME_CHARACTER) return has_name;
-        *word = next;
-        has_name = true;
-        lexer->mark_end(lexer);
-    }
-}
-
 // code-gauge-allow functionCognitiveComplexity -- The header loop keeps newline termination and token-role transitions together.
-static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode) {
-    bool content = false;
+static bool initializer_conditional_header(TSLexer *lexer, InitializerHeaderMode mode, bool unmatched_backslash) {
+    bool content = unmatched_backslash;
     InitializerHeaderContext context = {.mode = mode, .argument_start = mode == INITIALIZER_HEADER};
     while (!at_eof(lexer)) {
         if (lexer->lookahead == '\n' || lexer->lookahead == '\r') {

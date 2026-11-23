@@ -500,18 +500,20 @@ static bool directive_newline(int32_t c) {
     return c == '\n' || c == '\r';
 }
 
+static inline bool directive_grow_items(void **items, uint32_t count, uint32_t *capacity, size_t item_size) {
+    if (count < *capacity) return true;
+    uint32_t next = *capacity ? *capacity * 2 : 16;
+    void *grown = next > *capacity && (size_t)next <= SIZE_MAX / item_size ? realloc(*items, (size_t)next * item_size) : NULL;
+    if (!grown) return false;
+    *items = grown;
+    *capacity = next;
+    return true;
+}
+
 static void directive_spans_push(DirectiveSpans *spans, uint32_t start, uint32_t end) {
-    if (spans->count == spans->capacity) {
-        uint32_t capacity = spans->capacity ? spans->capacity * 2 : 8;
-        DirectiveSpan *items = capacity > spans->capacity && (size_t)capacity <= SIZE_MAX / sizeof(*items)
-            ? realloc(spans->items, (size_t)capacity * sizeof(*items))
-            : NULL;
-        if (!items) {
-            spans->failed = true;
-            return;
-        }
-        spans->items = items;
-        spans->capacity = capacity;
+    if (!directive_grow_items((void **)&spans->items, spans->count, &spans->capacity, sizeof(*spans->items))) {
+        spans->failed = true;
+        return;
     }
     spans->items[spans->count++] = (DirectiveSpan){start, end};
 }

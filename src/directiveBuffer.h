@@ -27,7 +27,7 @@ typedef struct {
     uint64_t recent;
     // Whether the current segment recorded a null directive or a line-end barrier, which the reverse pass carries, and
     // whether the characters stored or scanned hold `pragma_word`.
-    bool utf16, encoding_known, failed, carries, pragma;
+    bool utf16, encoding_known, failed, carries, pragma, spaced_splices;
     uint8_t classes[UNIT_CLASS_COUNT];
 } DirectiveBuffer;
 
@@ -39,6 +39,29 @@ typedef struct {
     bool spaced_splice;
 } DirectiveInput;
 
+typedef enum { DIRECTIVE_RUN_WORD, DIRECTIVE_RUN_SPACE, DIRECTIVE_RUN_LINE_COMMENT, DIRECTIVE_RUN_BLOCK_COMMENT } DirectiveRun;
+
+typedef struct {
+    uint32_t value;
+    unsigned digits, limit;
+    bool named, braced;
+} DirectiveUcn;
+
+static void directive_shift(DirectiveBuffer *buffer, uint32_t start);
+static bool directive_step_back(const DirectiveInput *input, uint32_t *index, uint32_t *position, uint32_t *byte, int32_t *c, uint32_t *width);
+static int32_t directive_next(DirectiveInput *input);
+static int32_t directive_physical_next(DirectiveInput *input);
+static uint32_t directive_expected_width(const DirectiveInput *input, uint32_t index, int32_t *c);
+static bool directive_skip_splice(DirectiveInput *input);
+static uint32_t directive_splice_end(const DirectiveInput *input);
+static int32_t directive_peek(const DirectiveInput *input);
+static inline uint32_t directive_plain_run(DirectiveInput *input, DirectiveRun run);
+static void directive_advance_plain(DirectiveInput *input, uint32_t length);
+static uint32_t directive_run_end(const DirectiveBuffer *buffer, DirectiveRun run, uint32_t index, uint32_t end);
+static bool directive_run_continues(DirectiveRun run, uint16_t c);
+static void directive_skip_plain(DirectiveInput *input);
+static int32_t directive_plain(const DirectiveInput *input);
+static uint32_t directive_byte(const DirectiveInput *input);
 static inline bool directive_has(const DirectiveInput *input, uint32_t index);
 static bool directive_fill(DirectiveBuffer *buffer, uint32_t index);
 static uint32_t directive_fill_units(DirectiveBuffer *buffer, uint32_t limit);
@@ -52,6 +75,205 @@ static uint16_t directive_character(const DirectiveInput *input, uint32_t index)
 static void directive_store(DirectiveBuffer *buffer, uint16_t c);
 static void directive_release(DirectiveBuffer *buffer);
 static unsigned directive_utf8_width(uint32_t c);
+static bool directive_ucn_start(DirectiveUcn *ucn, int32_t prefix, bool braced);
+static bool directive_ucn_feed(DirectiveUcn *ucn, int32_t c, bool continuation, bool *done);
+static int directive_hex_digit(int32_t c);
+static bool directive_valid_ucn_scalar(uint32_t value, bool continuation);
+
+// Drops the characters before `start`, which `DirectiveScan` has consumed.
+static void directive_shift(DirectiveBuffer *buffer, uint32_t start) {
+    if (!start) return;
+    uint32_t length = buffer->length - start;
+    for (uint32_t i = 0; i < length; i++) {
+        uint32_t from = start + i;
+        buffer->characters[i >> DIRECTIVE_PAGE_SHIFT][i & (DIRECTIVE_PAGE_SIZE - 1)] =
+            buffer->characters[from >> DIRECTIVE_PAGE_SHIFT][from & (DIRECTIVE_PAGE_SIZE - 1)];
+    }
+    buffer->length = length;
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < buffer->position_count; i++) {
+        DirectivePosition position = buffer->positions[i];
+        if (position.index < start) continue;
+        position.index -= start;
+        buffer->positions[count++] = position;
+    }
+    buffer->position_count = count;
+}
+
+// Moves back to the character before `*index`, reading a surrogate pair as one character, and decodes it into `*c` and
+// its byte width into `*width`; false when its width exceeds the bytes left.
+static bool directive_step_back(const DirectiveInput *input, uint32_t *index, uint32_t *position, uint32_t *byte, int32_t *c, uint32_t *width) {
+    const DirectiveBuffer *buffer = input->buffer;
+    uint32_t i = --*index;
+    if (i && directive_character(input, i) >= 0xdc00 && directive_character(input, i) <= 0xdfff &&
+        directive_character(input, i - 1) >= 0xd800 && directive_character(input, i - 1) <= 0xdbff) i = --*index;
+    *width = directive_expected_width(input, i, c);
+    if (*position && buffer->positions[*position - 1].index == i) {
+        DirectivePosition recorded = buffer->positions[--*position];
+        *byte = recorded.byte;
+        *width = recorded.width;
+        return true;
+    }
+    if (*width > *byte) return false;
+    *byte -= *width;
+    return true;
+}
+
+static int32_t directive_next(DirectiveInput *input) {
+    int32_t plain = directive_plain(input);
+    if (plain >= 0) {
+        directive_skip_plain(input);
+        return plain;
+    }
+    while (directive_has(input, input->index)) {
+        int32_t c = directive_physical_next(input);
+        if (c == '\\' && directive_skip_splice(input)) continue;
+        if (directive_newline(c)) {
+            if (directive_has(input, input->index) && directive_newline(directive_character(input, input->index)) &&
+                directive_character(input, input->index) != c) directive_physical_next(input);
+            return '\n';
+        }
+        return c;
+    }
+    return -1;
+}
+
+static int32_t directive_physical_next(DirectiveInput *input) {
+    const DirectiveBuffer *buffer = input->buffer;
+    uint32_t index = input->index;
+    int32_t c;
+    uint32_t width = directive_expected_width(input, index, &c);
+    input->index += c > 0xffff ? 2 : 1;
+    input->before_previous_byte = input->previous_byte;
+    input->previous_byte = input->byte;
+    if (input->position_index < buffer->position_count && buffer->positions[input->position_index].index == index) {
+        DirectivePosition position = buffer->positions[input->position_index++];
+        input->previous_byte = position.byte;
+        input->byte = position.byte + position.width;
+    } else input->byte += width;
+    return c;
+}
+
+// Decodes the character at `index` into `*c` and returns its byte width when it has no recorded position.
+static uint32_t directive_expected_width(const DirectiveInput *input, uint32_t index, int32_t *c) {
+    uint32_t unit = directive_character(input, index);
+    if (unit >= 0xd800 && unit <= 0xdbff && directive_has(input, index + 1)) {
+        uint32_t low = directive_character(input, index + 1);
+        if (low >= 0xdc00 && low <= 0xdfff) {
+            *c = (int32_t)(0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00));
+            return 4;
+        }
+    }
+    *c = (int32_t)unit;
+    return input->buffer->utf16 ? 2 : directive_utf8_width(unit);
+}
+
+// Consumes the rest of a line splice after its `\\`; false when none follows.
+static bool directive_skip_splice(DirectiveInput *input) {
+    uint32_t after = directive_splice_end(input);
+    if (after == input->index) return false;
+    if (directive_horizontal(directive_character(input, input->index))) input->spaced_splice = true;
+    while (input->index < after) directive_physical_next(input);
+    return true;
+}
+
+static uint32_t directive_splice_end(const DirectiveInput *input) {
+    uint32_t after = input->index;
+    while (directive_has(input, after) && directive_horizontal(directive_character(input, after))) after++;
+    if (!directive_has(input, after) || !directive_newline(directive_character(input, after))) return input->index;
+    int32_t newline = directive_character(input, after++);
+    if (directive_has(input, after) && directive_newline(directive_character(input, after)) &&
+        directive_character(input, after) != newline) after++;
+    return after;
+}
+
+static int32_t directive_peek(const DirectiveInput *input) {
+    int32_t plain = directive_plain(input);
+    if (plain >= 0) return plain;
+    DirectiveInput copy = *input;
+    return directive_next(&copy);
+}
+
+// Consumes the longest run of plain characters that `run` accepts and returns its length.
+static inline uint32_t directive_plain_run(DirectiveInput *input, DirectiveRun run) {
+    const DirectiveBuffer *buffer = input->buffer;
+    uint32_t index = input->index;
+    // Scans the stored characters before the next recorded position and reads more only at their end, because reading
+    // may store a character with a recorded position, which ends the run.
+    while (directive_has(input, index)) {
+        uint32_t end = buffer->length;
+        if (input->position_index < buffer->position_count && buffer->positions[input->position_index].index < end) {
+            end = buffer->positions[input->position_index].index;
+        }
+        uint32_t start = index;
+        index = directive_run_end(buffer, run, index, end);
+        if (index < end || index == start || end < buffer->length) break;
+    }
+    uint32_t length = index - input->index;
+    if (length) directive_advance_plain(input, length);
+    return length;
+}
+
+// Moves `input` over `length` plain characters, at least one.
+static void directive_advance_plain(DirectiveInput *input, uint32_t length) {
+    uint32_t width = input->buffer->utf16 ? 2 : 1;
+    input->before_previous_byte = length > 1 ? input->byte + (length - 2) * width : input->previous_byte;
+    input->previous_byte = input->byte + (length - 1) * width;
+    input->byte += length * width;
+    input->index += length;
+}
+
+// The index of the first stored character from `index` to `end` that ends the run, or `end`.
+static uint32_t directive_run_end(const DirectiveBuffer *buffer, DirectiveRun run, uint32_t index, uint32_t end) {
+    while (index < end) {
+        const uint16_t *page = buffer->characters[index >> DIRECTIVE_PAGE_SHIFT];
+        uint32_t page_end = (index | (DIRECTIVE_PAGE_SIZE - 1)) + 1;
+        if (page_end > end) page_end = end;
+        for (; index < page_end; index++) {
+            uint16_t c = page[index & (DIRECTIVE_PAGE_SIZE - 1)];
+            if (c >= 0x80 || c == '\\' || directive_newline(c) || !directive_run_continues(run, c)) return index;
+        }
+    }
+    return end;
+}
+
+// `c` is ASCII.
+static bool directive_run_continues(DirectiveRun run, uint16_t c) {
+    bool identifier = (preproc_identifier_continue_ascii[c / 64] >> (c % 64)) & 1;
+    switch (run) {
+        case DIRECTIVE_RUN_WORD:
+            return identifier;
+        case DIRECTIVE_RUN_SPACE:
+            return directive_horizontal(c);
+        case DIRECTIVE_RUN_LINE_COMMENT:
+            return true;
+        case DIRECTIVE_RUN_BLOCK_COMMENT:
+            return c != '*';
+    }
+    return false;
+}
+
+static void directive_skip_plain(DirectiveInput *input) {
+    input->index++;
+    input->before_previous_byte = input->previous_byte;
+    input->previous_byte = input->byte;
+    input->byte += input->buffer->utf16 ? 2 : 1;
+}
+
+// The next character when it is ASCII, cannot start a line splice or a newline, and has its expected width; otherwise -1.
+static int32_t directive_plain(const DirectiveInput *input) {
+    if (!directive_has(input, input->index)) return -1;
+    uint16_t c = directive_character(input, input->index);
+    if (c >= 0x80 || c == '\\' || directive_newline(c)) return -1;
+    const DirectiveBuffer *buffer = input->buffer;
+    bool positioned = input->position_index < buffer->position_count &&
+        buffer->positions[input->position_index].index == input->index;
+    return positioned ? -1 : c;
+}
+
+static uint32_t directive_byte(const DirectiveInput *input) {
+    return input->byte;
+}
 
 // Reads characters from the lexer until `index` is stored; false at the end of the input.
 static inline bool directive_has(const DirectiveInput *input, uint32_t index) {
@@ -214,6 +436,48 @@ static void directive_release(DirectiveBuffer *buffer) {
 
 static unsigned directive_utf8_width(uint32_t c) {
     return c < 0x80 || c > 0x10ffff ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4;
+}
+
+static bool directive_ucn_start(DirectiveUcn *ucn, int32_t prefix, bool braced) {
+    if (prefix == 'N') {
+        if (!braced) return false;
+        *ucn = (DirectiveUcn){.named = true, .braced = true};
+        return true;
+    }
+    if ((prefix != 'u' && prefix != 'U') || (prefix == 'U' && braced)) return false;
+    *ucn = (DirectiveUcn){.limit = prefix == 'U' ? 8u : 4u, .braced = braced};
+    return true;
+}
+
+static bool directive_ucn_feed(DirectiveUcn *ucn, int32_t c, bool continuation, bool *done) {
+    *done = false;
+    if (ucn->braced && c == '}') {
+        *done = true;
+        return ucn->digits > 0 && (ucn->named || directive_valid_ucn_scalar(ucn->value, continuation));
+    }
+    if (ucn->named) {
+        if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ' || c == '-')) return false;
+        ucn->digits++;
+        return true;
+    }
+    int digit = directive_hex_digit(c);
+    if (digit < 0) return false;
+    ucn->value = ucn->value <= 0x10ffff ? (ucn->value << 4) | (uint32_t)digit : 0x110000;
+    if (++ucn->digits == ucn->limit && !ucn->braced) {
+        *done = true;
+        return directive_valid_ucn_scalar(ucn->value, continuation);
+    }
+    return true;
+}
+
+static int directive_hex_digit(int32_t c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
+}
+
+static bool directive_valid_ucn_scalar(uint32_t value, bool continuation) {
+    return value >= 0xa0 && value <= 0x10ffff && preproc_identifier_character((int32_t)value, continuation);
 }
 
 #endif

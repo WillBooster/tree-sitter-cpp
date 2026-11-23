@@ -13,6 +13,7 @@ typedef struct {
     void *empty_context;
 } ConditionalMacroSymbols;
 
+static bool scan_conditional_macro_after_keyword(TSLexer *lexer, bool ifdef, const ConditionalMacroSymbols *symbols, const bool *valid_symbols);
 static bool conditional_macro_body(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 static bool conditional_macro_word(TSLexer *lexer, MacroName *name, bool escaped);
 static bool conditional_macro_spacing(TSLexer *lexer, bool *separated, bool *escaped, bool directive);
@@ -27,18 +28,12 @@ static bool conditional_macro_reserved_word(const ConditionalMacroSymbols *symbo
 static bool conditional_macro_modifier_group(TSLexer *lexer, const ConditionalMacroSymbols *symbols, const char *word, bool *escaped);
 static bool conditional_macro_attribute_declaration(TSLexer *lexer, const ConditionalMacroSymbols *symbols, bool *escaped);
 
-static bool scan_conditional_macro(TSLexer *lexer, const ConditionalMacroSymbols *symbols, const bool *valid_symbols) {
-    char directive[7] = {0};
-    MacroName command = {.word = directive, .capacity = sizeof(directive) - 1, .ascii = true};
-    if (!conditional_macro_directive(lexer, &command) || !command.ascii) return false;
-    bool ifdef = strcmp(directive, "ifdef") == 0;
-    if (!ifdef && strcmp(directive, "ifndef") != 0) return false;
+static bool scan_conditional_macro_after_keyword(TSLexer *lexer, bool ifdef, const ConditionalMacroSymbols *symbols, const bool *valid_symbols) {
     TSSymbol leading_symbol = ifdef ? symbols->leading_ifdef : symbols->leading_ifndef;
     TSSymbol generic_symbol = ifdef ? symbols->ifdef : symbols->ifndef;
     bool leading = valid_symbols[leading_symbol];
     bool generic = valid_symbols[generic_symbol];
     if (!leading && !generic) return false;
-    lexer->mark_end(lexer);
 
     bool escaped = false;
     if (!conditional_macro_body(lexer, symbols, &escaped)) return false;

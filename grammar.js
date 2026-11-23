@@ -152,7 +152,6 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
       sym('_macro_call_end'),
       sym('_macro_identifier_end'),
       sym('_empty_initializer_start'),
-      sym('_initializer_directive_name'),
       sym('_declarator_macro_name'),
     ],
 
@@ -1584,19 +1583,7 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
         ),
 
       _initializer_nonconditional_directive: ($) =>
-        choice(
-          $.preproc_include,
-          $.preproc_def,
-          $.preproc_function_def,
-          alias(sym('preproc_call_in_initializer'), $.preproc_call)
-        ),
-
-      preproc_call_in_initializer: () =>
-        replaceRuleField(
-          C.grammar.rules.preproc_call,
-          'directive',
-          alias(sym('_initializer_directive_name'), sym('preproc_directive'))
-        ),
+        choice($.preproc_include, $.preproc_def, $.preproc_function_def, $.preproc_call),
 
       _empty_initializer_content: ($) =>
         choice($._empty_initializer_conditional, $._initializer_nonconditional_directive),
@@ -2387,17 +2374,24 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
           alias(sym('_template_close'), '>')
         ),
 
-      // An unqualified or scoped identifier as a template argument is resolved to a type statically instead of by GLR with
-      // `expression`. Nested template argument lists split into enough versions that, next to the extra versions of
-      // an earlier error recovery, tree-sitter's version limit could drop the type interpretation.
+      // An unqualified or scoped type name or template-id as a template argument is resolved to a type statically instead
+      // of by GLR with `expression`. Nested template argument lists split into enough versions that tree-sitter's version
+      // limit could otherwise drop the type interpretation.
       _template_argument_type_identifier: ($) =>
         prec(
           1,
           field(
             'type',
-            choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
+            choice(
+              $._type_identifier,
+              alias($._template_argument_template_type, $.template_type),
+              alias($._template_argument_qualified_type_identifier, $.qualified_identifier)
+            )
           )
         ),
+
+      _template_argument_template_type: ($) =>
+        prec(1, seq(field('name', $._type_identifier), field('arguments', $.template_argument_list))),
 
       _template_argument_qualified_type_identifier: ($) =>
         prec(
@@ -2406,7 +2400,11 @@ module.exports = C.assertMacroCaseIdentifierSpellsNoKeyword(
             $._scope_resolution,
             field(
               'name',
-              choice($._type_identifier, alias($._template_argument_qualified_type_identifier, $.qualified_identifier))
+              choice(
+                $._type_identifier,
+                alias($._template_argument_template_type, $.template_type),
+                alias($._template_argument_qualified_type_identifier, $.qualified_identifier)
+              )
             )
           )
         ),
