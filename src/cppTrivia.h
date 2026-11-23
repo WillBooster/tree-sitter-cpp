@@ -38,7 +38,7 @@ static int peek_cpp_units_line_comment(const char *units, uint32_t size, uint32_
 static bool scan_cpp_ifdef_word(TSLexer *lexer, char *word, unsigned capacity, bool *ascii, bool escaped);
 static bool scan_cpp_ifdef_word_tail(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii);
 static void append_cpp_ifdef_character(TSLexer *lexer, char *word, unsigned capacity, unsigned *length, bool *ascii);
-static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer);
+static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer, bool *had_pragma);
 static bool skip_cpp_ifdef_trivia(TSLexer *lexer, bool allow_line_comment, bool *escaped);
 static bool skip_cpp_inline_spacing(TSLexer *lexer, bool spaced_splices, bool allow_line_comment);
 static bool skip_cpp_inline_comment(TSLexer *lexer, bool spaced_splices, bool allow_line_comment);
@@ -262,7 +262,8 @@ static int peek_cpp_units_line_comment(const char *units, uint32_t size, uint32_
     return 0;
 }
 
-static bool scan_cpp_ifdef_header(EmptyDirectives *state, TSLexer *lexer) {
+static bool scan_cpp_ifdef_header(EmptyDirectives *state, TSLexer *lexer, bool *had_pragma) {
+    if (had_pragma) *had_pragma = false;
     for (;;) {
         bool escaped = false;
         if (!skip_cpp_ifdef_trivia(lexer, false, &escaped)) return false;
@@ -270,12 +271,13 @@ static bool scan_cpp_ifdef_header(EmptyDirectives *state, TSLexer *lexer) {
         bool ascii = false;
         if (!scan_cpp_ifdef_word(lexer, word, sizeof(word) - 1, &ascii, escaped)) return false;
         if (!ascii || strcmp(word, pragma_word) != 0 || !empty_directives_pragma_possible(state)) {
-            return scan_cpp_directive_line_end(state, lexer);
+            return scan_cpp_directive_line_end(state, lexer, had_pragma);
         }
         bool after_escaped = false;
         if (!skip_cpp_ifdef_trivia(lexer, true, &after_escaped) || after_escaped) return false;
-        if (lexer->lookahead != '(') return scan_cpp_directive_line_end(state, lexer);
+        if (lexer->lookahead != '(') return scan_cpp_directive_line_end(state, lexer, had_pragma);
         if (!scan_pragma_suffix_end_with(lexer, false, &(PragmaTrivia){empty_directives_skip, state})) return false;
+        if (had_pragma) *had_pragma = true;
     }
 }
 
@@ -316,7 +318,7 @@ static void append_cpp_ifdef_character(TSLexer *lexer, char *word, unsigned capa
     lexer->advance(lexer, false);
 }
 
-static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer) {
+static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer, bool *had_pragma) {
     for (;;) {
         bool escaped = false;
         if (!skip_cpp_ifdef_trivia(lexer, true, &escaped) || escaped) return false;
@@ -325,6 +327,7 @@ static bool scan_cpp_directive_line_end(EmptyDirectives *state, TSLexer *lexer) 
         if (c != '_' || !empty_directives_pragma_possible(state) || !scan_pragma_word(lexer)) return false;
         if (!skip_cpp_ifdef_trivia(lexer, false, &escaped) || escaped || lexer->lookahead != '(') return false;
         if (!scan_pragma_suffix_end_with(lexer, false, &(PragmaTrivia){empty_directives_skip, state})) return false;
+        if (had_pragma) *had_pragma = true;
     }
 }
 

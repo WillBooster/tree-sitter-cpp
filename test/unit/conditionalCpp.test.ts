@@ -161,6 +161,9 @@ test('validates #ifdef, #elifdef, #else, and #endif line ends across comments, p
       expect(tree.rootNode.hasError, `${input}\n${tree.rootNode.toString()}`).toBe(true);
       tree.delete();
     }
+    const withHeaderPragma = parser.parse('#ifdef FOO _Pragma("once")\nATTR\n#endif\nint f();\n')!;
+    expect(withHeaderPragma.rootNode.namedChildren.map((node) => node.type)).toEqual(['preproc_ifdef', 'declaration']);
+    withHeaderPragma.delete();
   } finally {
     parser.delete();
   }

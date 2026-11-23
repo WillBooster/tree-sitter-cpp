@@ -778,12 +778,14 @@ static bool scan_cpp_ifdef_directive(const CppHashContext *ctx, const CppDirecti
     int peeked = peek_cpp_ifdef_header(ctx->lexer);
     if (peeked < 0) return reject_cpp_directive(ctx);
     bool at_line_end = peeked == 0;
-    if (at_line_end && !scan_cpp_ifdef_header(&ctx->scanner->directives, ctx->lexer)) {
+    bool had_pragma = false;
+    if (at_line_end && !scan_cpp_ifdef_header(&ctx->scanner->directives, ctx->lexer, &had_pragma)) {
         ctx->lexer->mark_end_at(ctx->lexer, ctx->end);
         return reject_cpp_directive(ctx);
     }
     if (ctx->probe_initializer && scan_cpp_empty_initializer(ctx, false, at_line_end)) return true;
-    if (!ctx->error_recovery && !ctx->probe_initializer && scan_cpp_conditional_marker(ctx, ifdef, at_line_end)) {
+    if (!ctx->error_recovery && !ctx->probe_initializer && !had_pragma &&
+        scan_cpp_conditional_marker(ctx, ifdef, at_line_end)) {
         return true;
     }
     if (at_line_end) ctx->lexer->mark_end_at(ctx->lexer, ctx->end);
@@ -800,7 +802,7 @@ static bool check_cpp_ifdef_line(EmptyDirectives *state, TSLexer *lexer, const C
     if (directive->unmatched_backslash) return false;
     int peeked = peek_cpp_ifdef_header(lexer);
     if (peeked != 0) return peeked > 0;
-    bool valid = scan_cpp_ifdef_header(state, lexer);
+    bool valid = scan_cpp_ifdef_header(state, lexer, NULL);
     lexer->mark_end_at(lexer, end);
     return valid;
 }
@@ -809,7 +811,7 @@ static bool check_cpp_empty_tail_line(EmptyDirectives *state, TSLexer *lexer, co
     if (directive->unmatched_backslash) return false;
     int peeked = peek_cpp_directive_line_end(lexer);
     if (peeked != 0) return peeked > 0;
-    bool valid = scan_cpp_directive_line_end(state, lexer);
+    bool valid = scan_cpp_directive_line_end(state, lexer, NULL);
     lexer->mark_end_at(lexer, end);
     return valid;
 }

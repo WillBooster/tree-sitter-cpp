@@ -4088,7 +4088,7 @@ function cppPreprocIf(suffix, content, precedence = 0, repeatContent = true) {
   );
   for (const prefix of ['preproc_ifdef', 'preproc_elifdef']) {
     const original = generated[prefix + suffix];
-    if (original) generated[prefix + suffix] = ($) => withPreprocIfdefName(original($));
+    if (original) generated[prefix + suffix] = ($) => replaceRuleField(original($), 'name', sym('_preproc_ifdef_name'));
   }
   return generated;
 }
@@ -4097,33 +4097,9 @@ function inheritedPreprocIfdefRules() {
   return Object.fromEntries(
     Object.entries(C.grammar.rules)
       .filter(([name]) => /^(?:_(?:leading_)?marker_)?preproc_(?:ifdef|elifdef)/.test(name))
-      .map(([name, rule]) => [name, () => withPreprocIfdefName(/** @type {Rule} */ (rule))])
+      .map(([name, rule]) => [
+        name,
+        () => replaceRuleField(/** @type {Rule} */ (rule), 'name', sym('_preproc_ifdef_name')),
+      ])
   );
-}
-
-/**
- * @param {Rule} rule
- * @returns {Rule}
- */
-function withPreprocIfdefName(rule) {
-  switch (rule.type) {
-    case 'FIELD': {
-      return rule.name === 'name' && rule.content.type === 'SYMBOL' && rule.content.name === 'identifier'
-        ? { ...rule, content: sym('_preproc_ifdef_name') }
-        : rule;
-    }
-    case 'SEQ':
-    case 'CHOICE': {
-      return { ...rule, members: rule.members.map((member) => withPreprocIfdefName(member)) };
-    }
-    case 'PREC':
-    case 'PREC_DYNAMIC':
-    case 'PREC_LEFT':
-    case 'PREC_RIGHT': {
-      return { ...rule, content: withPreprocIfdefName(rule.content) };
-    }
-    default: {
-      return rule;
-    }
-  }
 }
