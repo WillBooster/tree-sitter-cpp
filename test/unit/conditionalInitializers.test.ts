@@ -118,7 +118,11 @@ test('preserves directives around values and in value-less initializer arms', ()
         ['#ifé', undefined],
         [String.raw`#_vend\u00f6r`, 'payload'],
         ['#_vend\\\\\nu00f6r', 'value'],
+        ['#_vend\\\\ \nU000000f6r', 'spaced'],
         [String.raw`#\u00e9metteur`, undefined],
+        [String.raw`#endif\u00e9`, undefined],
+        ['#endif\\\\ \nu00e9', undefined],
+        ['#undef', undefined],
       ])
     );
     expect(values[2]!.descendantsOfType('preproc_call').some((node) => node.text.startsWith('#error'))).toBe(true);
@@ -143,6 +147,9 @@ test.each([
   'int duplicateElse =\n#if 1\n1\n#else\n2\n#else\n#endif\n;',
   'int lateElif =\n#if 1\n1\n#else\n2\n#elif OTHER\n3\n#endif\n;',
   'int invalidBoundary =\n#if 1\n1\n#else\n2\n#else\\bad\n#endif\n;',
+  '#if 0\n#if\\u00e9\n#endif\n#undef\nint after;\n',
+  '#if 0\n#if\\\\ \nu00e9\n#endif\n#undef\nint after;\n',
+  '#if\\U00110000\nint after;\n',
 ])('reports incomplete or invalid conditional initializer syntax: %s', (input) => {
   const parser = new Parser().setLanguage(language);
   const tree = parser.parse(input)!;

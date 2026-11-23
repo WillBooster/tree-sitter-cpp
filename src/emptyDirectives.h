@@ -102,7 +102,7 @@ static bool directive_raw(DirectiveInput *input);
 
 static uint32_t directive_keyword_end(const DirectiveInput *input);
 static DirectiveKind directive_keyword(EmptyDirectives *state, DirectiveInput *input, DirectiveLine *line, const DirectiveWord *word, uint32_t end);
-static DirectiveWord directive_word(DirectiveInput *input, int32_t first, bool raw, bool classify);
+static DirectiveWord directive_word(DirectiveInput *input, int32_t first, bool raw, bool classify, bool strict_identifier);
 static void directive_word_run(DirectiveInput *input, DirectiveWord *word, bool classify);
 static DirectiveKind directive_word_kind(const DirectiveWord *word);
 static void directive_word_character(DirectiveWord *word, int32_t c);
@@ -139,7 +139,7 @@ static bool empty_directives_initialize(EmptyDirectives *state, TSLexer *lexer, 
 static bool empty_directives_build(EmptyDirectives *state, TSLexer *lexer) {
     TSLexerPosition position;
     lexer->get_position(lexer, &position);
-    DirectiveBuffer buffer = {.lexer = lexer, .fill_byte = position.bytes};
+    DirectiveBuffer buffer = {.lexer = lexer, .fill_byte = position.bytes, .spaced_splices = state->spaced_splices};
     DirectiveInput input = {.buffer = &buffer, .byte = position.bytes};
     // `run` holds the run before a segment's `#`, and `tail` the segment's trailing run.
     DirectiveSpans run = {0}, tail = {0};
@@ -743,20 +743,18 @@ static void directive_code(EmptyDirectives *state, DirectiveInput *input, Direct
     bool operand = line->operand;
     if (!name && !pragma) line->operand = true;
     line->beginning = line->pending = false;
-    if (header) {
-        if (directive_header(input, c == '<' ? '>' : '"')) directive_line_end(state, input, line);
+    if (header || c == '"' || c == '\'') {
+        bool ended = header ? directive_header(input, c == '<' ? '>' : '"') : directive_quoted(input, c);
+        if (ended) directive_line_end(state, input, line);
         return;
     }
-    if (c == '"' || c == '\'') {
-        if (directive_quoted(input, c)) directive_line_end(state, input, line);
-        return;
-    }
-    if (!preproc_word(c, false) && !(c >= '0' && c <= '9')) return;
+    bool ucn_start = name && c == '\\' && directive_ucn(input, false);
+    if (!ucn_start && !preproc_word(c, false) && !(c >= '0' && c <= '9')) return;
     uint32_t end = name ? directive_keyword_end(input) : 0;
-    DirectiveWord word = directive_word(input, c, line->kind != DIRECTIVE_DIAGNOSTIC, true);
+    DirectiveWord word = directive_word(input, ucn_start ? 0x80 : c, line->kind != DIRECTIVE_DIAGNOSTIC, true, name);
     DirectiveKind kind = name ? directive_keyword(state, input, line, &word, end) : directive_word_kind(&word);
     if (!name && !pragma && kind == DIRECTIVE_PRAGMA) directive_pragma_name(line, input);
-    directive_word_role(line, kind, name, pragma, operand, preproc_word(c, false));
+    directive_word_role(line, kind, name, pragma, operand, ucn_start || preproc_word(c, false));
 }
 
 // Outside a directive name, a line with no `_Pragma` or header operand in progress keeps its state through every token
@@ -823,7 +821,7 @@ static void directive_neutral_code(EmptyDirectives *state, DirectiveInput *input
             return;
         }
     } else if (preproc_word(c, false) || (c >= '0' && c <= '9')) {
-        directive_word(input, c, true, false);
+        directive_word(input, c, true, false, false);
     }
     directive_neutral_units(input);
 }
@@ -1031,19 +1029,16 @@ static DirectiveKind directive_keyword(EmptyDirectives *state, DirectiveInput *i
 }
 
 // Without `classify`, only `raw` of the result is complete.
-static DirectiveWord directive_word(DirectiveInput *input, int32_t first, bool raw, bool classify) {
+static DirectiveWord directive_word(DirectiveInput *input, int32_t first, bool raw, bool classify, bool strict_identifier) {
     DirectiveWord word = {0};
     directive_word_character(&word, first);
     bool number = first >= '0' && first <= '9';
     int32_t previous = first;
     if (!number) directive_word_run(input, &word, classify);
-    for (;;) {
-        int32_t c = directive_peek(input);
-        bool exponent_sign = number && (c == '+' || c == '-') &&
-            (previous == 'e' || previous == 'E' || previous == 'p' || previous == 'P');
-        if (!preproc_word(c, true) && !(number && (c == '.' || c == '\'' || exponent_sign))) break;
-        previous = directive_next(input);
-        directive_word_character(&word, previous);
+    bool in_identifier = classify;
+    while (directive_word_continues(input, number, strict_identifier, &in_identifier, &previous)) {
+        if (in_identifier) directive_word_character(&word, previous);
+        else gnu_raw_string_prefix_character(&word.raw, previous);
     }
     if (raw && gnu_raw_string_prefix(&word.raw) && directive_peek(input) == '"') directive_raw(input);
     return word;

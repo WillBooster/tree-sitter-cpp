@@ -162,7 +162,10 @@ static inline void advance(TSLexer *lexer);
 
 void *tree_sitter_cpp_external_scanner_create(void) {
     Scanner *scanner = ts_calloc(1, sizeof(Scanner));
-    if (scanner) scanner->initializer_conditionals.directives = &scanner->directives;
+    if (scanner) {
+        scanner->directives.spaced_splices = true;
+        scanner->initializer_conditionals.directives = &scanner->directives;
+    }
     return scanner;
 }
 

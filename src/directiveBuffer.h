@@ -27,7 +27,7 @@ typedef struct {
     uint64_t recent;
     // Whether the current segment recorded a null directive or a line-end barrier, which the reverse pass carries, and
     // whether the characters stored or scanned hold `pragma_word`.
-    bool utf16, encoding_known, failed, carries, pragma;
+    bool utf16, encoding_known, failed, carries, pragma, spaced_splices;
     uint8_t classes[UNIT_CLASS_COUNT];
 } DirectiveBuffer;
 
@@ -40,6 +40,12 @@ typedef struct {
 } DirectiveInput;
 
 typedef enum { DIRECTIVE_RUN_WORD, DIRECTIVE_RUN_SPACE, DIRECTIVE_RUN_LINE_COMMENT, DIRECTIVE_RUN_BLOCK_COMMENT } DirectiveRun;
+
+typedef struct {
+    uint32_t value;
+    unsigned digits, limit;
+    bool named, braced;
+} DirectiveUcn;
 
 static void directive_shift(DirectiveBuffer *buffer, uint32_t start);
 static bool directive_step_back(const DirectiveInput *input, uint32_t *index, uint32_t *position, uint32_t *byte, int32_t *c, uint32_t *width);
@@ -69,6 +75,10 @@ static uint16_t directive_character(const DirectiveInput *input, uint32_t index)
 static void directive_store(DirectiveBuffer *buffer, uint16_t c);
 static void directive_release(DirectiveBuffer *buffer);
 static unsigned directive_utf8_width(uint32_t c);
+static bool directive_ucn_start(DirectiveUcn *ucn, int32_t prefix, bool braced);
+static bool directive_ucn_feed(DirectiveUcn *ucn, int32_t c, bool continuation, bool *done);
+static int directive_hex_digit(int32_t c);
+static bool directive_valid_ucn_scalar(uint32_t value, bool continuation);
 
 // Drops the characters before `start`, which `DirectiveScan` has consumed.
 static void directive_shift(DirectiveBuffer *buffer, uint32_t start) {
@@ -426,6 +436,48 @@ static void directive_release(DirectiveBuffer *buffer) {
 
 static unsigned directive_utf8_width(uint32_t c) {
     return c < 0x80 || c > 0x10ffff ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4;
+}
+
+static bool directive_ucn_start(DirectiveUcn *ucn, int32_t prefix, bool braced) {
+    if (prefix == 'N') {
+        if (!braced) return false;
+        *ucn = (DirectiveUcn){.named = true, .braced = true};
+        return true;
+    }
+    if ((prefix != 'u' && prefix != 'U') || (prefix == 'U' && braced)) return false;
+    *ucn = (DirectiveUcn){.limit = prefix == 'U' ? 8u : 4u, .braced = braced};
+    return true;
+}
+
+static bool directive_ucn_feed(DirectiveUcn *ucn, int32_t c, bool continuation, bool *done) {
+    *done = false;
+    if (ucn->braced && c == '}') {
+        *done = true;
+        return ucn->digits > 0 && (ucn->named || directive_valid_ucn_scalar(ucn->value, continuation));
+    }
+    if (ucn->named) {
+        if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ' || c == '-')) return false;
+        ucn->digits++;
+        return true;
+    }
+    int digit = directive_hex_digit(c);
+    if (digit < 0) return false;
+    ucn->value = ucn->value <= 0x10ffff ? (ucn->value << 4) | (uint32_t)digit : 0x110000;
+    if (++ucn->digits == ucn->limit && !ucn->braced) {
+        *done = true;
+        return directive_valid_ucn_scalar(ucn->value, continuation);
+    }
+    return true;
+}
+
+static int directive_hex_digit(int32_t c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
+}
+
+static bool directive_valid_ucn_scalar(uint32_t value, bool continuation) {
+    return value >= 0xa0 && value <= 0x10ffff && preproc_identifier_character((int32_t)value, continuation);
 }
 
 #endif

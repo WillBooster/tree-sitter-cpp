@@ -27,10 +27,11 @@ static inline bool is_unicode_whitespace(int32_t c);
 static inline bool at_eof(const TSLexer *lexer);
 static bool has_plain_ascii_directive_word(const TSLexer *lexer);
 static bool scan_cpp_extended_directive_word(TSLexer *lexer, CppDirectiveWord *out);
-static bool skip_cpp_directive_prefix(TSLexer *lexer, bool *consumed_backslash);
+static bool skip_cpp_directive_prefix(TSLexer *lexer, bool *starts_with_ucn);
+static bool skip_cpp_directive_comment(TSLexer *lexer);
 static void scan_cpp_directive_tail(TSLexer *lexer, CppDirectiveWord *out, CppDirectiveScanState *scan, TSLexerPosition *prefix_end);
+static bool scan_cpp_directive_backslash(TSLexer *lexer, bool continuation, bool *spliced);
 static void accept_cpp_directive_character(TSLexer *lexer, CppDirectiveWord *out, CppDirectiveScanState *scan, int32_t c, bool first, TSLexerPosition *prefix_end);
-static bool scan_cpp_directive_ucn(TSLexer *lexer);
 
 /// Skips the trivia a lookahead crosses, null directives included, which end a line like the newline they contain.
 /// Returns false at a `\\` or `/` that starts no trivia, setting `*failure` (when given) to its byte.
@@ -127,14 +128,10 @@ static bool has_plain_ascii_directive_word(const TSLexer *lexer) {
 
 static bool scan_cpp_extended_directive_word(TSLexer *lexer, CppDirectiveWord *out) {
     lexer->advance(lexer, false);
-    bool consumed_backslash = false;
-    if (!skip_cpp_directive_prefix(lexer, &consumed_backslash)) return false;
-    CppDirectiveScanState scan = {.plain_ascii = true, .keyword_prefix = true};
+    if (!skip_cpp_directive_prefix(lexer, &out->starts_with_ucn)) return false;
+    CppDirectiveScanState scan = {.plain_ascii = !out->starts_with_ucn, .keyword_prefix = !out->starts_with_ucn};
     TSLexerPosition prefix_end = {0};
-    if (consumed_backslash) {
-        if (!scan_cpp_directive_ucn(lexer)) return false;
-        out->starts_with_ucn = true;
-        scan.plain_ascii = scan.keyword_prefix = false;
+    if (out->starts_with_ucn) {
         lexer->mark_end(lexer);
     } else {
         int32_t first = lexer->lookahead;
@@ -150,48 +147,70 @@ static bool scan_cpp_extended_directive_word(TSLexer *lexer, CppDirectiveWord *o
     return true;
 }
 
-static bool skip_cpp_directive_prefix(TSLexer *lexer, bool *consumed_backslash) {
-    *consumed_backslash = false;
+static bool skip_cpp_directive_prefix(TSLexer *lexer, bool *starts_with_ucn) {
+    *starts_with_ucn = false;
     for (;;) {
         int32_t c = lexer->lookahead;
         if (directive_horizontal(c)) {
             lexer->advance(lexer, false);
-        } else if (c == '/') {
-            lexer->advance(lexer, false);
-            if (!scan_preproc_splices(lexer) || lexer->lookahead != '*' || !scan_preproc_block_comment(lexer)) {
-                return false;
-            }
-        } else if (c == '\\') {
-            lexer->advance(lexer, false);
-            if (!scan_preproc_newline(lexer, false)) {
-                *consumed_backslash = true;
-                return true;
-            }
-        } else {
+            continue;
+        }
+        if (c == '/') {
+            if (!skip_cpp_directive_comment(lexer)) return false;
+            continue;
+        }
+        if (c != '\\') return true;
+        bool spliced = false;
+        if (!scan_cpp_directive_backslash(lexer, false, &spliced)) return false;
+        if (!spliced) {
+            *starts_with_ucn = true;
             return true;
         }
     }
 }
 
+static bool skip_cpp_directive_comment(TSLexer *lexer) {
+    lexer->advance(lexer, false);
+    if (!empty_directives_skip_splices(lexer, true) || lexer->lookahead != '*') return false;
+    lexer->advance(lexer, false);
+    bool star = false;
+    while (!pragma_eof(lexer)) {
+        int32_t c = lexer->lookahead;
+        lexer->advance(lexer, false);
+        if (c == '\\' && empty_directives_skip_line_splice(lexer, true)) continue;
+        if (star && c == '/') return true;
+        star = c == '*';
+    }
+    return false;
+}
+
 static void scan_cpp_directive_tail(TSLexer *lexer, CppDirectiveWord *out, CppDirectiveScanState *scan, TSLexerPosition *prefix_end) {
     for (;;) {
         int32_t c = lexer->lookahead;
-        if (c == '\\') {
-            if (scan->keyword_prefix && !scan->trailing_splice) lexer->get_position(lexer, prefix_end);
-            scan->trailing_splice = true;
-            lexer->advance(lexer, false);
-            if (scan_preproc_newline(lexer, false)) continue;
-            if (!scan_cpp_directive_ucn(lexer)) {
-                out->unmatched_backslash = true;
-                return;
-            }
-            scan->keyword_prefix = scan->plain_ascii = false;
-            lexer->mark_end(lexer);
+        if (c != '\\') {
+            if (!preproc_identifier_character(c, true)) return;
+            accept_cpp_directive_character(lexer, out, scan, c, false, prefix_end);
             continue;
         }
-        if (!preproc_identifier_character(c, true)) return;
-        accept_cpp_directive_character(lexer, out, scan, c, false, prefix_end);
+        if (scan->keyword_prefix && !scan->trailing_splice) lexer->get_position(lexer, prefix_end);
+        scan->trailing_splice = true;
+        bool spliced = false;
+        if (!scan_cpp_directive_backslash(lexer, true, &spliced)) {
+            out->unmatched_backslash = true;
+            return;
+        }
+        if (spliced) continue;
+        scan->keyword_prefix = scan->plain_ascii = false;
+        lexer->mark_end(lexer);
     }
+}
+
+static bool scan_cpp_directive_backslash(TSLexer *lexer, bool continuation, bool *spliced) {
+    lexer->advance(lexer, false);
+    bool had_space = directive_horizontal(lexer->lookahead);
+    *spliced = empty_directives_skip_line_splice(lexer, true);
+    if (*spliced) return true;
+    return !had_space && empty_directives_ucn_follows_splices(lexer, continuation, true);
 }
 
 static void accept_cpp_directive_character(TSLexer *lexer, CppDirectiveWord *out, CppDirectiveScanState *scan, int32_t c, bool first, TSLexerPosition *prefix_end) {
@@ -204,14 +223,6 @@ static void accept_cpp_directive_character(TSLexer *lexer, CppDirectiveWord *out
     lexer->advance(lexer, false);
     lexer->mark_end(lexer);
     if (scan->keyword_prefix) scan->trailing_splice = false;
-}
-
-static bool scan_cpp_directive_ucn(TSLexer *lexer) {
-    if (!scan_preproc_splices(lexer)) return false;
-    int32_t c = lexer->lookahead;
-    if (c != 'u' && c != 'U' && c != 'N') return false;
-    bool in_number = false;
-    return scan_preproc_ucn(lexer, &in_number);
 }
 
 #endif
