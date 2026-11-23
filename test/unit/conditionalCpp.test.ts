@@ -145,7 +145,6 @@ test('validates #ifdef, #elifdef, #else, and #endif line ends across comments, p
     '#ifdef _Pragma("once") E _Pragma("once")\nint x;\n#elifndef\v/* c */ \\u00e9 \\\n\nint y;\n#else /* m\nl */\nint z;\n#endif\f// end\n',
     '#ifdef _Pragma\\\n("once") E\nint wrappedPragma;\n#elifdef _Pragma\\\n("once") F\nint wrappedElifdef;\n#endif\n',
     '#ifdef _Pragma\nint guardedByPragmaName;\n#endif\n',
-    '#ifdef FOO\\\nBAR\nint spliced;\n#endif\n',
   ];
   const invalid = [
     'void a() {\n#ifndef E /* m\nl */ int x;\n#endif\n}',
@@ -162,6 +161,11 @@ test('validates #ifdef, #elifdef, #else, and #endif line ends across comments, p
       expect(tree.rootNode.hasError, `${input}\n${tree.rootNode.toString()}`).toBe(true);
       tree.delete();
     }
+    const spliced = parser.parse('#ifdef FOO\\\nBAR\nint spliced;\n#endif\n')!;
+    expect(spliced.rootNode.hasError, spliced.rootNode.toString()).toBe(false);
+    expect(spliced.rootNode.descendantsOfType('preproc_ifdef')[0]?.childForFieldName('name')?.text).toBe('FOO\\\nBAR');
+    expect(spliced.rootNode.descendantsOfType('macro_specifier')).toHaveLength(0);
+    spliced.delete();
     const withHeaderPragma = parser.parse('#ifdef FOO _Pragma("once")\nATTR\n#endif\nint f();\n')!;
     expect(withHeaderPragma.rootNode.namedChildren.map((node) => node.type)).toEqual(['preproc_ifdef', 'declaration']);
     withHeaderPragma.delete();
