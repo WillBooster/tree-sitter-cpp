@@ -802,7 +802,7 @@ static bool check_cpp_ifdef_line(EmptyDirectives *state, TSLexer *lexer, const C
     if (directive->unmatched_backslash) return false;
     int peeked = peek_cpp_ifdef_header(lexer);
     if (peeked != 0) return peeked > 0;
-    bool valid = scan_cpp_ifdef_header(state, lexer, NULL);
+    bool valid = scan_cpp_ifdef_header(state, lexer, &(bool){false});
     lexer->mark_end_at(lexer, end);
     return valid;
 }
@@ -811,7 +811,7 @@ static bool check_cpp_empty_tail_line(EmptyDirectives *state, TSLexer *lexer, co
     if (directive->unmatched_backslash) return false;
     int peeked = peek_cpp_directive_line_end(lexer);
     if (peeked != 0) return peeked > 0;
-    bool valid = scan_cpp_directive_line_end(state, lexer, NULL);
+    bool valid = scan_cpp_directive_line_end(state, lexer, &(bool){false});
     lexer->mark_end_at(lexer, end);
     return valid;
 }
