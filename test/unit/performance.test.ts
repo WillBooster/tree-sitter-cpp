@@ -119,7 +119,8 @@ function expectLinearParseTime(small: string, large: string, hasError: boolean):
   let smallFastest = Infinity;
   let largeFastest = Infinity;
   for (let run = 0; run < 5; run++) {
-    smallFastest = Math.min(smallFastest, parseCpuTime(small, hasError));
+    // Batch the short parses so Linux CPU timer granularity does not distort their average.
+    smallFastest = Math.min(smallFastest, parseCpuTime(small, hasError, 10));
     largeFastest = Math.min(largeFastest, parseCpuTime(large, hasError));
   }
   const largeBytes = Buffer.byteLength(large);
@@ -129,13 +130,18 @@ function expectLinearParseTime(small: string, large: string, hasError: boolean):
   expect(largeFastest, timings).toBeLessThan(largeBytes * 25);
 }
 
-function parseCpuTime(source: string, expectedError: boolean): number {
+function parseCpuTime(source: string, expectedError: boolean, iterations = 1): number {
+  const trees: NonNullable<ReturnType<typeof parser.parse>>[] = [];
   const start = process.threadCpuUsage();
-  const tree = parser.parse(source);
+  for (let i = 0; i < iterations; i++) {
+    const tree = parser.parse(source);
+    if (!tree) throw new Error('The parser returned no tree');
+    trees.push(tree);
+  }
   const { system, user } = process.threadCpuUsage(start);
-  if (!tree) throw new Error('The parser returned no tree');
-  const { hasError } = tree.rootNode;
-  tree.delete();
-  expect(hasError).toBe(expectedError);
-  return system + user;
+  for (const tree of trees) {
+    expect(tree.rootNode.hasError).toBe(expectedError);
+    tree.delete();
+  }
+  return (system + user) / iterations;
 }
